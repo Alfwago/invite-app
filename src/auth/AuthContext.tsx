@@ -13,6 +13,7 @@ import * as SecureStore from "expo-secure-store";
 import { setTokenProvider } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { Me } from "@/src/api/types";
+import { registerForPush, unregisterForPush } from "@/src/push";
 
 const TOKEN_KEY = "obh.authToken";
 
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokenRef.current = saved;
           try {
             await loadMe();
+            registerForPush();
           } catch {
             // Stale/rejected token — drop it.
             await SecureStore.deleteItemAsync(TOKEN_KEY);
@@ -88,11 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       await SecureStore.setItemAsync(TOKEN_KEY, newToken);
       setToken(newToken);
+      registerForPush();
     },
     [loadMe],
   );
 
   const signOut = useCallback(async () => {
+    await unregisterForPush();
     try {
       await api.logout();
     } catch {

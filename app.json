@@ -27,6 +27,12 @@
         {
           "photosPermission": "OBH Invites uses your photos so you can attach a picture to a message board post."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#e6b422"
+        }
       ]
     ],
     "experiments": {
