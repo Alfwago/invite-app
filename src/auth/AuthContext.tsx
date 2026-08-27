@@ -77,10 +77,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     async (username: string, password: string) => {
       const { token: newToken } = await api.login(username.trim(), password);
+      // Make the token available for the /api/me/ call, but don't commit it to
+      // state/storage (which triggers navigation into the app) until we know it works.
+      tokenRef.current = newToken;
+      try {
+        await loadMe();
+      } catch (e) {
+        tokenRef.current = null;
+        throw e;
+      }
       await SecureStore.setItemAsync(TOKEN_KEY, newToken);
       setToken(newToken);
-      tokenRef.current = newToken;
-      await loadMe();
     },
     [loadMe],
   );
