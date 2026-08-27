@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "OBH Skate Invites",
+    "slug": "invite-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "obhinvites",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.falcon83.obhinvites"
+    },
+    "android": {
+      "package": "com.falcon83.obhinvites",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "https://invites.falcon83.com"
+    }
+  }
+}
