@@ -26,7 +26,15 @@ export class ApiError extends Error {
   /** Best-effort human-readable message pulled from a DRF error body. */
   get detail(): string {
     const p = this.payload as Record<string, unknown> | string | null;
-    if (typeof p === "string" && p) return p;
+    if (typeof p === "string" && p) {
+      // An HTML error page (Django 404/500) isn't worth showing verbatim.
+      if (/^\s*<(!doctype|html)/i.test(p)) {
+        return this.status === 404
+          ? "That endpoint doesn't exist on this server — check the API URL / that the server is up to date."
+          : `Server error (${this.status}).`;
+      }
+      return p;
+    }
     if (p && typeof p === "object") {
       if (typeof p.detail === "string") return p.detail;
       const firstKey = Object.keys(p)[0];
