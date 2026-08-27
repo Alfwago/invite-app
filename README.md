@@ -44,17 +44,19 @@ For local backend testing, run the Django server and set
 ```
 app/                       Expo Router file-based routes
   _layout.tsx              providers (React Query, Auth) + auth-gated Stack
-  index.tsx                redirect to login or the tabs
   login.tsx                token login (POST /api/auth/login/)
+  (tabs)/_layout.tsx       Home · Events · Messages · Profile
+  (tabs)/index.tsx         Home: notices, "your next skate", night-by-night list
   (tabs)/events.tsx        upcoming / recent events list
-  (tabs)/profile.tsx       /api/me/ + sign out
+  (tabs)/messages.tsx      message board: board switcher, posts (text + photo)
+  (tabs)/profile.tsx       /api/me/ + sign out (header "Log out" button too)
   event/[id].tsx           event detail, RSVP, director panel
   new-event.tsx            director "create next event" (modal)
 src/
   api/                     client.ts (fetch wrapper), endpoints.ts, types.ts
   auth/AuthContext.tsx     token in expo-secure-store, restores on cold start
   hooks/queries.ts         React Query hooks + mutations
-  components/              RsvpControls, DirectorPanel, shared ui.tsx
+  components/              EventCard, RsvpControls, DirectorPanel, LogoutButton, ui.tsx
   theme.ts, format.ts
 ```
 
@@ -64,9 +66,11 @@ src/
 | --- | --- |
 | login | `POST /api/auth/login/` |
 | profile | `GET /api/me/`, `POST /api/auth/logout/` |
+| home | `GET /api/home/` |
 | events list | `GET /api/events/` (`?past=1`) |
 | event detail | `GET /api/events/<id>/` |
 | RSVP | `POST /api/events/<id>/rsvp/` |
+| messages | `GET /api/boards/`, `GET/POST /api/messages/`, `DELETE /api/messages/<id>/` |
 | new event | `GET /api/nights/`, `POST /api/events/next/` |
 | director panel | `PATCH /api/events/<id>/`, `POST .../send-invites/`, `POST .../send-batch/` |
 
@@ -77,5 +81,6 @@ src/
 - Guest RSVPs — the API supports `guests[]` but `EventDetailSerializer` doesn't
   expose `allow_guests`, so the UI hides it. Add that field server-side when
   building this.
+- Directors' "email / SMS the group" option when posting to a board.
 - App icon / splash screen (using Expo defaults).
 - EAS Build / Submit config (`eas.json`), store listings.

@@ -58,13 +58,15 @@ export function setTokenProvider(fn: TokenProvider) {
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
+  /** A FormData body — sent as-is, letting fetch set the multipart boundary. */
+  form?: FormData;
   /** Skip the Authorization header (used by the login call). */
   anonymous?: boolean;
   signal?: AbortSignal;
 }
 
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, anonymous = false, signal } = opts;
+  const { method = "GET", body, form, anonymous = false, signal } = opts;
 
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -77,7 +79,7 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: form ?? (body !== undefined ? JSON.stringify(body) : undefined),
     signal,
   });
 

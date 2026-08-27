@@ -27,17 +27,16 @@ export default function ProfileScreen() {
         ) : null}
       </Card>
 
+      <Button label="Sign out" variant="danger" onPress={signOut} />
+
       <Card>
         <Text style={styles.rowLabel}>Phone</Text>
         <Text style={styles.rowValue}>{me?.phone_number || "—"}</Text>
         <Text style={styles.rowLabel}>Text alerts</Text>
         <Text style={styles.rowValue}>{me?.sms_opt_in ? "On" : "Off"}</Text>
-        <Text style={styles.hint}>
-          Profile details are edited on the website for now.
-        </Text>
+        <Text style={styles.hint}>Profile details are edited on the website for now.</Text>
       </Card>
 
-      <Button label="Sign out" variant="danger" onPress={signOut} />
       <Text style={styles.server}>{API_BASE}</Text>
     </ScrollView>
   );

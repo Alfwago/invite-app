@@ -38,7 +38,7 @@ function RootNavigator() {
     if (!token && !inAuthScreen) {
       router.replace("/login");
     } else if (token && inAuthScreen) {
-      router.replace("/(tabs)/events");
+      router.replace("/");
     }
   }, [ready, token, segments, router]);
 

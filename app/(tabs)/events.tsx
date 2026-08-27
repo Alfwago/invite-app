@@ -2,13 +2,12 @@ import { useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 
-import type { EventSummary } from "@/src/api/types";
-import { useAuth } from "@/src/auth/AuthContext";
-import { Badge, EmptyState, ErrorState, Loading } from "@/src/components/ui";
 import { ApiError } from "@/src/api/client";
-import { formatEventDate, formatTime, rosterLabel } from "@/src/format";
+import { useAuth } from "@/src/auth/AuthContext";
+import { EventCard } from "@/src/components/EventCard";
+import { EmptyState, ErrorState, Loading } from "@/src/components/ui";
 import { useEvents } from "@/src/hooks/queries";
-import { colors, radius, rsvpColor, spacing } from "@/src/theme";
+import { colors, radius, spacing } from "@/src/theme";
 
 export default function EventsScreen() {
   const { me } = useAuth();
@@ -17,10 +16,9 @@ export default function EventsScreen() {
 
   if (query.isLoading) return <Loading label="Loading events…" />;
   if (query.isError) {
-    const err = query.error;
     return (
       <ErrorState
-        message={err instanceof ApiError ? err.detail : "Couldn't load events."}
+        message={query.error instanceof ApiError ? query.error.detail : "Couldn't load events."}
         onRetry={() => query.refetch()}
       />
     );
@@ -57,7 +55,7 @@ export default function EventsScreen() {
       ListEmptyComponent={
         <EmptyState message={past ? "Nothing in the last month." : "No upcoming events."} />
       }
-      renderItem={({ item }) => <EventRow event={item} />}
+      renderItem={({ item }) => <EventCard event={item} />}
     />
   );
 }
@@ -81,34 +79,6 @@ function ToggleChip({
   );
 }
 
-function EventRow({ event }: { event: EventSummary }) {
-  const status = event.my_rsvp?.status ?? "NO_RESPONSE";
-  return (
-    <Link href={`/event/${event.id}`} asChild>
-      <Pressable style={styles.row}>
-        <View style={styles.rowTop}>
-          <Text style={styles.rowTitle}>{event.display_name}</Text>
-          {event.can_manage ? <Badge text="MANAGE" color={colors.border} /> : null}
-        </View>
-        <Text style={styles.rowMeta}>
-          {formatEventDate(event.date)}
-          {event.start_time ? ` · ${formatTime(event.start_time)}` : ""}
-          {event.location ? ` · ${event.location}` : ""}
-        </Text>
-        <View style={styles.rowBottom}>
-          <Text style={styles.rowRoster}>
-            {rosterLabel(event.roster.skaters, event.roster.capacity)}
-            {event.roster.goalies_needed != null
-              ? ` · ${event.roster.goalies} / ${event.roster.goalies_needed} G`
-              : ""}
-          </Text>
-          <Badge text={status.replace("_", " ")} color={rsvpColor[status] ?? colors.textMuted} />
-        </View>
-      </Pressable>
-    </Link>
-  );
-}
-
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
   listContent: { padding: spacing.lg, gap: spacing.md },
@@ -123,22 +93,4 @@ const styles = StyleSheet.create({
   chipText: { color: colors.text, fontWeight: "600" },
   newBtn: { marginLeft: "auto", paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   newBtnText: { color: colors.gold, fontWeight: "700" },
-  row: {
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.xs,
-  },
-  rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  rowTitle: { color: colors.text, fontSize: 17, fontWeight: "700", flexShrink: 1 },
-  rowMeta: { color: colors.textMuted, fontSize: 13 },
-  rowBottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: spacing.sm,
-  },
-  rowRoster: { color: colors.text, fontSize: 14, flexShrink: 1 },
 });

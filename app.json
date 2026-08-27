@@ -21,7 +21,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "OBH Invites uses your photos so you can attach a picture to a message board post."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

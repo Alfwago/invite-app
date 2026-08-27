@@ -123,6 +123,50 @@ export interface RsvpBody {
   whiskey_guy?: boolean;
 }
 
+export interface LeagueNotice {
+  id: number;
+  message: string;
+}
+
+export interface HomeNight {
+  id: number;
+  name: string;
+  weekday: number;
+  next_event: EventSummary | null;
+}
+
+export interface HomeData {
+  notices: LeagueNotice[];
+  next_skate: EventSummary | null;
+  nights: HomeNight[];
+  custom_events: EventSummary[];
+}
+
+export interface BoardMessage {
+  id: number;
+  body: string;
+  image_url: string | null;
+  author_id: number;
+  author_name: string;
+  author_is_director: boolean;
+  created_at: string;
+  mine: boolean;
+  can_delete: boolean;
+}
+
+export interface MessagesResponse {
+  board: { id: number; name: string } | null;
+  messages: BoardMessage[];
+}
+
+/** null board = the Main site-wide board. */
+export interface NewMessage {
+  body: string;
+  board: number | null;
+  /** local file uri from expo-image-picker */
+  imageUri?: string;
+}
+
 export interface CreateNextEventBody {
   night_id: number | null;
   base_date?: string;
