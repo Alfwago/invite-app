@@ -12,12 +12,7 @@ import { colors, rsvpColor, spacing } from "@/src/theme";
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const navigation = useNavigation();
   const query = useEvent(id);
-
-  useEffect(() => {
-    if (query.data) navigation.setOptions({ title: query.data.display_name });
-  }, [query.data, navigation]);
 
   if (query.isLoading) return <Loading label="Loading event…" />;
   if (query.isError || !query.data) {
