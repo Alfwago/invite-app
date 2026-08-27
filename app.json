@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "OBH Skate Invites",
-    "slug": "invite-app",
+    "slug": "jvmalone",
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "obhinvites",
@@ -13,7 +13,10 @@
     },
     "android": {
       "package": "com.falcon83.obhinvites",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -21,13 +24,24 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "OBH Invites uses your photos so you can attach a picture to a message board post."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://invites.falcon83.com"
-    }
+      "apiUrl": "https://invites.falcon83.com",
+      "router": {},
+      "eas": {
+        "projectId": "ccd02292-6cd0-4556-96ca-55ae6762d0e0"
+      }
+    },
+    "owner": "alfwagos-team"
   }
 }

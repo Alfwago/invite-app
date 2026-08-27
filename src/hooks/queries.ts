@@ -11,11 +11,17 @@ import type {
   EventDetail,
   EventPatchBody,
   EventSummary,
+  HomeData,
+  MessagesResponse,
+  NewMessage,
   RsvpBody,
 } from "@/src/api/types";
 
 export const keys = {
   nights: ["nights"] as const,
+  boards: ["boards"] as const,
+  home: ["home"] as const,
+  messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
 };
@@ -25,6 +31,41 @@ export function useNights() {
     queryKey: keys.nights,
     queryFn: ({ signal }) => api.fetchNights(signal),
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useHome(): UseQueryResult<HomeData> {
+  return useQuery({ queryKey: keys.home, queryFn: ({ signal }) => api.fetchHome(signal) });
+}
+
+export function useBoards() {
+  return useQuery({
+    queryKey: keys.boards,
+    queryFn: ({ signal }) => api.fetchBoards(signal),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useMessages(board: number | null): UseQueryResult<MessagesResponse> {
+  return useQuery({
+    queryKey: keys.messages(board),
+    queryFn: ({ signal }) => api.fetchMessages(board, signal),
+  });
+}
+
+export function usePostMessage(board: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (msg: NewMessage) => api.postMessage(msg),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.messages(board) }),
+  });
+}
+
+export function useDeleteMessage(board: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteMessage(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.messages(board) }),
   });
 }
 

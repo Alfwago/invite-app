@@ -1,10 +1,15 @@
 import { apiFetch } from "./client";
 import type {
+  BoardMessage,
   CreateNextEventBody,
   EventDetail,
   EventPatchBody,
   EventSummary,
+  HomeData,
+  LeagueNotice,
   Me,
+  MessagesResponse,
+  NewMessage,
   Night,
   RsvpBody,
   SendInvitesResult,
@@ -33,6 +38,52 @@ export function fetchMe(signal?: AbortSignal): Promise<Me> {
 export async function fetchNights(signal?: AbortSignal): Promise<Night[]> {
   const data = await apiFetch<{ nights: Night[] }>("/api/nights/", { signal });
   return data.nights;
+}
+
+// ---- Home / notices / message board -------------------------------------
+
+export function fetchHome(signal?: AbortSignal): Promise<HomeData> {
+  return apiFetch("/api/home/", { signal });
+}
+
+export async function fetchNotices(signal?: AbortSignal): Promise<LeagueNotice[]> {
+  const data = await apiFetch<{ notices: LeagueNotice[] }>("/api/notices/", { signal });
+  return data.notices;
+}
+
+export async function fetchBoards(signal?: AbortSignal): Promise<Night[]> {
+  const data = await apiFetch<{ boards: Night[] }>("/api/boards/", { signal });
+  return data.boards;
+}
+
+export function fetchMessages(
+  board: number | null,
+  signal?: AbortSignal,
+): Promise<MessagesResponse> {
+  const qs = board != null ? `?board=${board}` : "";
+  return apiFetch(`/api/messages/${qs}`, { signal });
+}
+
+export function postMessage(msg: NewMessage): Promise<BoardMessage> {
+  if (msg.imageUri) {
+    const form = new FormData();
+    form.append("body", msg.body);
+    if (msg.board != null) form.append("board", String(msg.board));
+    const name = msg.imageUri.split("/").pop() || "photo.jpg";
+    const ext = name.split(".").pop()?.toLowerCase();
+    const type = ext === "png" ? "image/png" : "image/jpeg";
+    // React Native's FormData file shape:
+    form.append("image", { uri: msg.imageUri, name, type } as unknown as Blob);
+    return apiFetch("/api/messages/", { method: "POST", form });
+  }
+  return apiFetch("/api/messages/", {
+    method: "POST",
+    body: { body: msg.body, board: msg.board },
+  });
+}
+
+export function deleteMessage(id: number): Promise<void> {
+  return apiFetch(`/api/messages/${id}/`, { method: "DELETE" });
 }
 
 // ---- Events (read) --------------------------------------------------------
