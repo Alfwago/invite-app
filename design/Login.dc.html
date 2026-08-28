@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body{margin:0;background:#000;color:#fff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  *{box-sizing:border-box;}
+  a{color:#d4af37;text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  h1,p{margin:0;}
+  .screen{min-height:100%;background:#000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px 22px;gap:26px;}
+  .wordmark{width:min(300px,84%);height:auto;display:block;}
+  .tagline{color:#d4af37;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;text-align:center;}
+  .card{width:100%;border:1px solid #1a1a1a;border-radius:16px;background:#0a0a0a;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 12px 30px rgba(0,0,0,0.4);}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:13px;font-weight:700;}
+  .input{width:100%;padding:12px;border-radius:10px;border:1px solid #1a1a1a;background:#0e0e0e;color:#fff;font-size:16px;}
+  .optrow{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px;color:#9aa0a6;}
+  .optrow label{display:inline-flex;align-items:center;gap:8px;}
+  .check{width:18px;height:18px;border-radius:5px;border:1px solid #2a2a2a;background:#0e0e0e;flex-shrink:0;}
+  .check.on{background:#d4af37;border-color:#d4af37;position:relative;}
+  .check.on::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:2px solid #111;border-top:0;border-left:0;transform:rotate(45deg);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:10px;border:1px solid #d4af37;background:#d4af37;color:#111;font-weight:700;font-size:15px;min-height:48px;width:100%;}
+  .forgot{font-size:13px;text-align:center;}
+</style>
+</helmet>
+
+<div class="screen">
+  <img class="wordmark" src="wordmark.png" alt="OBH Invites">
+  <div class="tagline">Four Decades · One Brotherhood</div>
+
+  <div class="card">
+    <div class="field">
+      <label>Username or email</label>
+      <input class="input" type="text" value="jesse.malone">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input class="input" type="text" value="rangers94">
+    </div>
+    <div class="optrow">
+      <label><span class="check on"></span> Show password</label>
+      <label><span class="check"></span> Keep me signed in</label>
+    </div>
+    <button class="btn">Sign in</button>
+    <div class="forgot"><a href="#">Forgot your password?</a></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

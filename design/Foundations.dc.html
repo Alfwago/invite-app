@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body{margin:0;background:#000;color:#fff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  *{box-sizing:border-box;}
+  h1,h2,h3,p{margin:0;}
+  .wrap{padding:20px 16px 28px;display:flex;flex-direction:column;gap:22px;}
+  .sec{display:flex;flex-direction:column;gap:12px;}
+  .sec > h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#9aa0a6;}
+  .swatches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .sw{border:1px solid #1a1a1a;border-radius:12px;overflow:hidden;}
+  .sw .chip{height:52px;}
+  .sw .cap{padding:8px 10px;font-size:12px;display:flex;justify-content:space-between;gap:6px;background:#0a0a0a;}
+  .sw .cap b{font-weight:700;}
+  .sw .cap span{color:#9aa0a6;font-family:ui-monospace,Menlo,monospace;}
+  .type > div{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #141414;padding-bottom:8px;}
+  .type small{color:#9aa0a6;font-family:ui-monospace,Menlo,monospace;font-size:11px;flex-shrink:0;width:56px;}
+  .btnrow{display:flex;flex-wrap:wrap;gap:10px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 16px;border-radius:10px;border:1px solid #1a1a1a;background:#101010;color:#fff;font-weight:600;font-size:14px;}
+  .btn-gold{background:#d4af37;color:#111;border-color:#d4af37;}
+  .btn-danger{background:#ff5a5f;color:#111;border-color:#ff5a5f;}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:600;background:#0c0c0c;border:1px solid #1a1a1a;color:#cfcfcf;}
+  .badge.ok{background:#00140a;border-color:#33d17a;color:#33d17a;}
+  .badge.warn{background:#141000;border-color:#d4af37;color:#d4af37;}
+  .badge.need{background:#1a0000;border-color:#ff5a5f;color:#ff5a5f;}
+  .badge.amber{background:#2a1a05;border-color:#f0a63a;color:#f0a63a;}
+  .badge.blue{background:#05141f;border-color:#5aa9e6;color:#5aa9e6;}
+  .badge-goalie{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#d4af37;color:#111;}
+  .tabs{display:flex;gap:6px;}
+  .tab{padding:7px 12px;border-radius:12px;border:1px solid #1a1a1a;background:#0a0a0a;font-size:13px;font-weight:600;}
+  .tab.active{box-shadow:inset 0 0 0 1px #d4af37;border-color:#d4af37;}
+  .fill{position:relative;width:100%;height:8px;border-radius:999px;background:#1f1f1f;overflow:hidden;margin:6px 0;}
+  .fill > span{position:absolute;left:0;top:0;bottom:0;border-radius:999px;}
+  .card{border:1px solid #1a1a1a;border-radius:16px;background:#0a0a0a;padding:14px;font-size:13px;color:#9aa0a6;}
+  .card--public{border-left:4px solid #d4af37;}
+  .card--director{border-left:4px solid #ff5a5f;}
+  .iconrow{display:flex;gap:14px;color:#d4af37;}
+  .iconrow svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+</style>
+</helmet>
+
+<div class="wrap">
+  <div class="sec">
+    <h3>OBH Invites · App design system</h3>
+    <p style="font-size:13px;color:#9aa0a6;">Lifted from the website's <b style="color:#fff;">theme.css</b> — same tokens, same components, no emoji.</p>
+  </div>
+
+  <div class="sec">
+    <h3>Color</h3>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#000;border-bottom:1px solid #1a1a1a;"></div><div class="cap"><b>Background</b><span>#000000</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0a0a0a;"></div><div class="cap"><b>Card</b><span>#0a0a0a</span></div></div>
+      <div class="sw"><div class="chip" style="background:#d4af37;"></div><div class="cap"><b>Gold</b><span>#d4af37</span></div></div>
+      <div class="sw"><div class="chip" style="background:#9aa0a6;"></div><div class="cap"><b>Muted</b><span>#9aa0a6</span></div></div>
+      <div class="sw"><div class="chip" style="background:#33d17a;"></div><div class="cap"><b>Green</b><span>#33d17a</span></div></div>
+      <div class="sw"><div class="chip" style="background:#f0a63a;"></div><div class="cap"><b>Amber</b><span>#f0a63a</span></div></div>
+      <div class="sw"><div class="chip" style="background:#ff5a5f;"></div><div class="cap"><b>Red</b><span>#ff5a5f</span></div></div>
+      <div class="sw"><div class="chip" style="background:#5aa9e6;"></div><div class="cap"><b>Blue</b><span>#5aa9e6</span></div></div>
+    </div>
+  </div>
+
+  <div class="sec type">
+    <h3>Type — system sans, one scale</h3>
+    <div><small>28 / 800</small><span style="font-size:28px;font-weight:800;">Monday Mules</span></div>
+    <div><small>22 / 800</small><span style="font-size:22px;font-weight:800;">Your next skate</span></div>
+    <div><small>18 / 700</small><span style="font-size:18px;font-weight:700;">Roster</span></div>
+    <div><small>16 / 400</small><span style="font-size:16px;">Body copy and list rows</span></div>
+    <div><small>13 / 600</small><span style="font-size:13px;font-weight:600;">Labels &amp; chips</span></div>
+    <div><small>11 / 700</small><span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#9aa0a6;">Section label</span></div>
+  </div>
+
+  <div class="sec">
+    <h3>Buttons</h3>
+    <div class="btnrow">
+      <span class="btn btn-gold">Primary</span>
+      <span class="btn">Secondary</span>
+      <span class="btn btn-danger">Danger</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>Roster health — green good · amber caution · red bad</h3>
+    <div class="badges">
+      <span class="badge ok">Full</span>
+      <span class="badge amber">Filling</span>
+      <span class="badge need">Short-handed</span>
+    </div>
+    <p style="font-size:12px;color:#9aa0a6;">Full roster = good. Missing goalies or below a playable skater count = bad. Anything in between = caution.</p>
+  </div>
+
+  <div class="sec">
+    <h3>RSVP &amp; misc badges</h3>
+    <div class="badges">
+      <span class="badge ok">Going</span>
+      <span class="badge amber">Maybe</span>
+      <span class="badge">No response</span>
+      <span class="badge warn">Locked</span>
+      <span class="badge-goalie">G</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>Tabs / chips</h3>
+    <div class="tabs"><span class="tab active">Upcoming</span><span class="tab">Recent</span><span class="tab">Past</span></div>
+  </div>
+
+  <div class="sec">
+    <h3>Capacity bars — same green / amber / red</h3>
+    <div class="fill"><span style="width:35%;background:#ff5a5f;"></span></div>
+    <div class="fill"><span style="width:75%;background:#f0a63a;"></span></div>
+    <div class="fill"><span style="width:100%;background:#33d17a;"></span></div>
+  </div>
+
+  <div class="sec">
+    <h3>Card accents</h3>
+    <div class="card card--public">Gold left border — anything players can see (director message, notices).</div>
+    <div class="card card--director">Red left border — director-only.</div>
+  </div>
+
+  <div class="sec">
+    <h3>Icons — stroke, 24px, gold on active</h3>
+    <div class="iconrow">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18"/><path d="M8 2.5v4"/><path d="M16 2.5v4"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M20 14a2 2 0 0 1-2 2H9l-4 3V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="8" r="4"/></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

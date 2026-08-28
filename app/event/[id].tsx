@@ -1,14 +1,16 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { RosterEntry } from "@/src/api/types";
 import { DirectorPanel } from "@/src/components/DirectorPanel";
 import { RsvpControls } from "@/src/components/RsvpControls";
-import { Badge, Card, ErrorState, Loading } from "@/src/components/ui";
-import { formatEventDate, formatTime, rosterLabel } from "@/src/format";
+import { Badge, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
+import { formatEventDate, formatTime } from "@/src/format";
+import { fillPct, rosterHealth } from "@/src/roster";
 import { useEvent } from "@/src/hooks/queries";
-import { colors, rsvpColor, spacing } from "@/src/theme";
+import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,6 +30,21 @@ export default function EventDetailScreen() {
   const roster = event.roster;
   const going = event.players.filter((p) => p.status === "YES");
   const waitlisted = event.players.filter((p) => p.status === "WAITLIST");
+
+  const pct = fillPct(roster);
+  const health = rosterHealth(roster);
+  const goalieTone = (roster.goalie_spots_open ?? 0) > 0 ? "bad" : "good";
+  const skaterTone = roster.is_full
+    ? "good"
+    : (roster.skater_spots_open ?? 0) > 0
+      ? "caution"
+      : "good";
+
+  const spotsText = roster.is_full
+    ? "Roster full"
+    : roster.skater_spots_open != null
+      ? `${roster.skater_spots_open} spot${roster.skater_spots_open === 1 ? "" : "s"} left`
+      : `${roster.skaters} in`;
 
   return (
     <>
@@ -51,25 +68,39 @@ export default function EventDetailScreen() {
           </Text>
           {event.location ? <Text style={styles.meta}>{event.location}</Text> : null}
           <View style={styles.statusRow}>
-            <Badge text={event.status} color={colors.border} />
-            {roster.rsvp_locked ? <Badge text="RSVP LOCKED" color={colors.red} /> : null}
+            <Badge text={event.status} tone="neutral" />
+            {roster.rsvp_locked ? <Badge text="RSVP LOCKED" tone="bad" /> : null}
           </View>
-          {event.director_message ? (
-            <Text style={styles.dirMessage}>{event.director_message}</Text>
-          ) : null}
         </Card>
+
+        {event.director_message ? (
+          <Card accent="public">
+            <Text style={styles.dirLabel}>From the director</Text>
+            <Text style={styles.dirMessage}>{event.director_message}</Text>
+          </Card>
+        ) : null}
 
         <Card>
           <Text style={styles.heading}>Roster</Text>
-          <Text style={styles.rosterBig}>
-            {rosterLabel(roster.skaters, roster.capacity)}
-          </Text>
+          <View style={styles.tiles}>
+            <StatTile
+              value={`${roster.skaters}`}
+              sub={roster.capacity != null ? `/ ${roster.capacity}` : undefined}
+              label="Skaters"
+              tone={skaterTone}
+            />
+            <StatTile
+              value={`${roster.goalies}`}
+              sub={roster.goalies_needed != null ? `/ ${roster.goalies_needed}` : undefined}
+              label="Goalies"
+              tone={goalieTone}
+            />
+            <StatTile value={`${roster.waitlist}`} label="Waitlist" />
+          </View>
+          {pct != null ? <FillBar pct={pct} tone={health} /> : null}
           <Text style={styles.rosterLine}>
-            Goalies: {roster.goalies}
-            {roster.goalies_needed != null ? ` / ${roster.goalies_needed}` : ""} · Waitlist:{" "}
-            {roster.waitlist} · Maybe: {roster.maybe}
+            {spotsText} · {roster.maybe} maybe
           </Text>
-          {roster.is_full ? <Badge text="ROSTER FULL" color={colors.amber} /> : null}
         </Card>
 
         {event.status === "OPEN" ? (
@@ -90,9 +121,13 @@ export default function EventDetailScreen() {
             going.map((p) => <PlayerLine key={p.player_id} entry={p} />)
           )}
           {event.day_players.map((dp) => (
-            <Text key={`dp-${dp.id}`} style={styles.playerName}>
-              {dp.name} {dp.is_goalie ? "🥅" : ""} · walk-on
-            </Text>
+            <View key={`dp-${dp.id}`} style={styles.playerRow}>
+              <View style={styles.playerNameWrap}>
+                <Text style={styles.playerName}>{dp.name}</Text>
+                {dp.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+                <Text style={styles.walkOn}>walk-on</Text>
+              </View>
+            </View>
           ))}
         </Card>
 
@@ -109,19 +144,55 @@ export default function EventDetailScreen() {
   );
 }
 
+function StatTile({
+  value,
+  sub,
+  label,
+  tone,
+}: {
+  value: string;
+  sub?: string;
+  label: string;
+  tone?: "good" | "caution" | "bad";
+}) {
+  const c =
+    tone === "good"
+      ? colors.green
+      : tone === "bad"
+        ? colors.red
+        : tone === "caution"
+          ? colors.amber
+          : colors.text;
+  return (
+    <View style={styles.tile}>
+      <Text style={styles.tileValue}>
+        <Text style={{ color: c }}>{value}</Text>
+        {sub ? <Text style={styles.tileSub}> {sub}</Text> : null}
+      </Text>
+      <Text style={styles.tileLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function PlayerLine({ entry }: { entry: RosterEntry }) {
   return (
     <View style={styles.playerRow}>
-      <Text style={styles.playerName}>
-        {entry.name}
-        {entry.is_goalie ? " 🥅" : ""}
-        {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
-      </Text>
+      <View style={styles.playerNameWrap}>
+        <Text style={styles.playerName}>
+          {entry.name}
+          {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
+        </Text>
+        {entry.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+      </View>
       <View style={styles.playerTags}>
-        {entry.is_beer_guy ? <Badge text="🍺" color={colors.border} /> : null}
-        {entry.is_whiskey_guy ? <Badge text="🥃" color={colors.border} /> : null}
-        {entry.present ? <Badge text="IN" color={rsvpColor.YES} /> : null}
-        {entry.paid ? <Badge text="PAID" color={colors.green} /> : null}
+        {entry.is_beer_guy ? (
+          <Ionicons name="beer-outline" size={16} color={colors.green} />
+        ) : null}
+        {entry.is_whiskey_guy ? (
+          <Ionicons name="wine-outline" size={16} color={colors.amber} />
+        ) : null}
+        {entry.present ? <Badge text="IN" tone="good" /> : null}
+        {entry.paid ? <Badge text="PAID" tone="good" /> : null}
       </View>
     </View>
   );
@@ -130,25 +201,55 @@ function PlayerLine({ entry }: { entry: RosterEntry }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg },
-  title: { color: colors.text, fontSize: 20, fontWeight: "800" },
-  meta: { color: colors.textMuted, fontSize: 14 },
-  statusRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
-  dirMessage: {
-    color: colors.text,
-    fontSize: 15,
-    marginTop: spacing.sm,
-    fontStyle: "italic",
+  title: { color: colors.text, fontSize: font.lg, fontWeight: "800" },
+  meta: { color: colors.textMuted, fontSize: font.sm },
+  statusRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs, flexWrap: "wrap" },
+  dirLabel: {
+    color: colors.gold,
+    fontSize: font.xs,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
-  heading: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  rosterBig: { color: colors.gold, fontSize: 22, fontWeight: "800" },
-  rosterLine: { color: colors.textMuted, fontSize: 13 },
+  dirMessage: { color: colors.text, fontSize: font.base, fontStyle: "italic" },
+  heading: { color: colors.text, fontSize: font.md, fontWeight: "700" },
+  tiles: { flexDirection: "row", gap: spacing.sm },
+  tile: {
+    flex: 1,
+    backgroundColor: colors.cardRaised,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    alignItems: "center",
+  },
+  tileValue: { fontSize: font.lg, fontWeight: "800", color: colors.text },
+  tileSub: { fontSize: font.sm, fontWeight: "600", color: colors.textMuted },
+  tileLabel: {
+    marginTop: spacing.xs,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: colors.textMuted,
+  },
+  rosterLine: { color: colors.textMuted, fontSize: font.sm },
   muted: { color: colors.textMuted },
   playerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 3,
+    paddingVertical: 4,
+    gap: spacing.sm,
   },
-  playerName: { color: colors.text, fontSize: 15, flexShrink: 1 },
-  playerTags: { flexDirection: "row", gap: spacing.xs },
+  playerNameWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexShrink: 1,
+  },
+  playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
+  walkOn: { color: colors.textMuted, fontSize: font.xs },
+  playerTags: { flexDirection: "row", gap: spacing.sm, alignItems: "center", flexShrink: 0 },
 });

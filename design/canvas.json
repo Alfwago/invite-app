@@ -1,0 +1,22 @@
+{
+  "artboards": [
+    { "file": "Login.dc.html", "x": 0, "y": 0, "w": 390, "h": 844 },
+    { "file": "Main.dc.html", "x": 490, "y": 0, "w": 390, "h": 1180 },
+    { "file": "Foundations.dc.html", "x": 980, "y": 0, "w": 390, "h": 1700 },
+
+    { "file": "Events.dc.html", "x": 0, "y": 1840, "w": 390, "h": 980 },
+    { "file": "EventDetail.dc.html", "x": 490, "y": 1840, "w": 390, "h": 1450 },
+    { "file": "EventDetailDirector.dc.html", "x": 980, "y": 1840, "w": 390, "h": 1060 },
+
+    { "file": "Messages.dc.html", "x": 0, "y": 3430, "w": 390, "h": 844 },
+    { "file": "Profile.dc.html", "x": 490, "y": 3430, "w": 390, "h": 900 },
+    { "file": "NewEvent.dc.html", "x": 980, "y": 3430, "w": 390, "h": 880 },
+
+    { "file": "States.dc.html", "x": 0, "y": 4470, "w": 390, "h": 660 }
+  ],
+  "annotations": [
+    { "id": "note-intro", "x": 0, "y": -150, "w": 900, "text": "OBH Invites — mobile app UI, restyled to match the website (invites.falcon83.com). Same black/gold palette and theme.css tokens, the real OBH wordmark and night team logos, stroke icons instead of emoji. Static mockups for direction — not wired." },
+    { "id": "note-flows", "x": 0, "y": 1740, "w": 900, "text": "Events list → Event detail. Player sees the RSVP card; a director also sees the red director-only card (send invites / batch 2 / message)." }
+  ],
+  "launch": { "view": "canvas" }
+}
