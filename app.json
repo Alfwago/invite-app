@@ -9,7 +9,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.falcon83.obhinvites"
+      "bundleIdentifier": "com.falcon83.obhinvites",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.falcon83.obhinvites",
