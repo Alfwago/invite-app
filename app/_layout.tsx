@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as Notifications from "expo-notifications";
 
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { Loading } from "@/src/components/ui";
@@ -27,10 +28,33 @@ export default function RootLayout() {
   );
 }
 
+/** Tapping a push notification opens the event it's about. */
+function useNotificationRouting() {
+  const router = useRouter();
+
+  useEffect(() => {
+    function open(data: unknown) {
+      const eventId = (data as { eventId?: number | string } | null)?.eventId;
+      if (eventId != null) router.push(`/event/${eventId}`);
+    }
+
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) open(response.notification.request.content.data);
+    });
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      open(response.notification.request.content.data);
+    });
+    return () => sub.remove();
+  }, [router]);
+}
+
 function RootNavigator() {
   const { ready, token } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  useNotificationRouting();
 
   useEffect(() => {
     if (!ready) return;
@@ -47,9 +71,14 @@ function RootNavigator() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.card },
-        headerTintColor: colors.text,
-        headerTitleStyle: { color: colors.text },
+        headerStyle: {
+          backgroundColor: colors.bg,
+          borderBottomWidth: 2,
+          borderBottomColor: colors.gold,
+        },
+        headerShadowVisible: false,
+        headerTintColor: colors.gold,
+        headerTitleStyle: { color: colors.text, fontWeight: "800" },
         contentStyle: { backgroundColor: colors.bg },
       }}
     >

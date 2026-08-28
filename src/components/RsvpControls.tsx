@@ -6,9 +6,17 @@ import { ApiError } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Button, Card } from "@/src/components/ui";
 import { useRsvp } from "@/src/hooks/queries";
-import { colors, radius, rsvpColor, spacing } from "@/src/theme";
+import { colors, radius, spacing } from "@/src/theme";
 
 const CHOICES: RsvpBody["status"][] = ["YES", "NO", "MAYBE"];
+
+// Selected-choice colour for the segmented control (a decision indicator,
+// not a roster-health signal).
+const CHOICE_COLOR: Record<RsvpBody["status"], string> = {
+  YES: colors.green,
+  MAYBE: colors.amber,
+  NO: colors.red,
+};
 
 export function RsvpControls({ event }: { event: EventDetail }) {
   const { me } = useAuth();
@@ -59,10 +67,10 @@ export function RsvpControls({ event }: { event: EventDetail }) {
             onPress={() => setChoice(c)}
             style={[
               styles.segmentItem,
-              choice === c && { backgroundColor: rsvpColor[c], borderColor: rsvpColor[c] },
+              choice === c && { backgroundColor: CHOICE_COLOR[c], borderColor: CHOICE_COLOR[c] },
             ]}
           >
-            <Text style={[styles.segmentText, choice === c && { color: "#fff" }]}>{c}</Text>
+            <Text style={[styles.segmentText, choice === c && { color: colors.goldText }]}>{c}</Text>
           </Pressable>
         ))}
       </View>

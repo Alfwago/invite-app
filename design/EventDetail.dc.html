@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body{margin:0;background:#000;color:#fff;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  *{box-sizing:border-box;}
+  a{color:#d4af37;text-decoration:none;}
+  h1,h2,h3,p{margin:0;}
+  .screen{min-height:100%;background:#000;display:flex;flex-direction:column;}
+  .navbar{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:2px solid #d4af37;background:#000;}
+  .navbar svg{width:22px;height:22px;fill:none;stroke:#d4af37;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .navbar h1{font-size:18px;font-weight:800;}
+  .content{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;}
+  .card{border:1px solid #1a1a1a;border-radius:16px;background:#0a0a0a;padding:16px;display:flex;flex-direction:column;gap:12px;}
+  .card--public{border-left:4px solid #d4af37;}
+  .card h2{font-size:16px;font-weight:700;}
+  .meta{color:#9aa0a6;font-size:13px;}
+  .row{display:flex;align-items:center;gap:12px;}
+  .nlogo{width:52px;height:52px;border-radius:12px;background:#fff;padding:4px;object-fit:contain;flex-shrink:0;}
+  .badge{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:600;background:#0c0c0c;border:1px solid #1a1a1a;color:#cfcfcf;}
+  .badge.ok{background:#00140a;border-color:#33d17a;color:#33d17a;}
+  .badge.need{background:#1a0000;border-color:#ff5a5f;color:#ff5a5f;}
+  .badge.amber{background:#2a1a05;border-color:#f0a63a;color:#f0a63a;}
+  .badge-goalie{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#d4af37;color:#111;}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  .tile{background:#101010;border:1px solid #1a1a1a;border-radius:12px;padding:12px 8px;text-align:center;}
+  .tile b{display:block;font-size:22px;font-weight:800;}
+  .tile b.good{color:#33d17a;}
+  .tile b.warn{color:#f0a63a;}
+  .tile b.bad{color:#ff5a5f;}
+  .tile small{display:block;margin-top:4px;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#9aa0a6;}
+  .fill{position:relative;width:100%;height:8px;border-radius:999px;background:#1f1f1f;overflow:hidden;}
+  .fill > span{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#f0a63a;}
+  .seg{display:flex;gap:8px;}
+  .seg > div{flex:1;text-align:center;padding:12px 0;border-radius:10px;border:1px solid #1a1a1a;font-weight:700;font-size:14px;color:#fff;}
+  .seg > div.on-yes{background:#33d17a;border-color:#33d17a;color:#04240f;}
+  .toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0;}
+  .sw{width:44px;height:26px;border-radius:999px;background:#d4af37;position:relative;flex-shrink:0;}
+  .sw::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:999px;background:#fff;}
+  .sw.off{background:#1a1a1a;}
+  .sw.off::after{right:auto;left:3px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:10px;border:1px solid #d4af37;background:#d4af37;color:#111;font-weight:700;font-size:15px;min-height:48px;width:100%;}
+  .plist > div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #141414;}
+  .plist > div:last-child{border-bottom:0;}
+  .pname{font-size:15px;}
+</style>
+</helmet>
+
+<div class="screen">
+  <div class="navbar">
+    <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    <h1>Monday Mules</h1>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <div class="row">
+        <img class="nlogo" src="night_monday.jpg" alt="">
+        <div>
+          <div style="font-size:20px;font-weight:800;">Monday Mules</div>
+          <div class="meta">Mon, Sep 8 · 8:00 PM</div>
+          <div class="meta">Chelsea Piers · Rink 2</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="badge">OPEN</span>
+        <span class="badge ok">You're going</span>
+      </div>
+    </div>
+
+    <div class="card card--public">
+      <div style="color:#d4af37;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">From the director</div>
+      <p style="font-size:15px;font-style:italic;">Bring a light and a dark. We're testing the new nets — get there early.</p>
+    </div>
+
+    <div class="card">
+      <h2>Roster</h2>
+      <div class="tiles">
+        <div class="tile"><b class="warn">18<span style="color:#9aa0a6;font-weight:600;font-size:15px;">/22</span></b><small>Skaters</small></div>
+        <div class="tile"><b class="good">2<span style="color:#9aa0a6;font-weight:600;font-size:15px;">/2</span></b><small>Goalies</small></div>
+        <div class="tile"><b>3</b><small>Waitlist</small></div>
+      </div>
+      <div class="fill"><span style="width:82%;background:#f0a63a;"></span></div>
+      <span class="meta">4 spots left · 5 maybe</span>
+    </div>
+
+    <div class="card">
+      <h2>Your RSVP</h2>
+      <div class="seg">
+        <div class="on-yes">YES</div>
+        <div>MAYBE</div>
+        <div>NO</div>
+      </div>
+      <div class="toggle"><span style="font-size:15px;">Playing goalie</span><span class="sw off"></span></div>
+      <div class="toggle"><span style="font-size:15px;">I can be Beer Guy</span><span class="sw"></span></div>
+      <div class="toggle"><span style="font-size:15px;">I can be Whiskey Guy</span><span class="sw off"></span></div>
+      <button class="btn">Save RSVP</button>
+      <span class="meta" style="text-align:center;">Currently: Going</span>
+    </div>
+
+    <div class="card">
+      <h2>Going (18)</h2>
+      <div class="plist">
+        <div><span class="pname">Mike Richter <span class="badge-goalie">G</span></span></div>
+        <div><span class="pname">Adam Graves +1</span><span class="badge">IN</span></div>
+        <div><span class="pname">Brian Leetch</span><span class="badge ok">PAID</span></div>
+        <div><span class="pname">Sergei Zubov</span></div>
+        <div><span class="pname">Mark Messier</span><span class="badge ok">PAID</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

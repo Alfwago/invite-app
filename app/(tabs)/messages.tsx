@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { BoardMessage } from "@/src/api/types";
@@ -100,7 +101,7 @@ export default function MessagesScreen() {
 
       <View style={styles.composer}>
         <Pressable onPress={pickImage} style={styles.attachBtn}>
-          <Text style={styles.attachText}>📷</Text>
+          <Ionicons name="image-outline" size={22} color={colors.textMuted} />
         </Pressable>
         <TextInput
           style={styles.input}
@@ -162,10 +163,12 @@ function MessageBubble({ msg, onDelete }: { msg: BoardMessage; onDelete: (id: nu
   return (
     <View style={[styles.bubble, msg.mine && styles.bubbleMine]}>
       <View style={styles.bubbleHead}>
-        <Text style={styles.author}>
-          {msg.author_name}
-          {msg.author_is_director ? " ⭐" : ""}
-        </Text>
+        <View style={styles.authorWrap}>
+          <Text style={styles.author}>{msg.author_name}</Text>
+          {msg.author_is_director ? (
+            <Ionicons name="star" size={12} color={colors.gold} />
+          ) : null}
+        </View>
         <Text style={styles.time}>{new Date(msg.created_at).toLocaleString()}</Text>
       </View>
       {msg.body ? <Text style={styles.body}>{msg.body}</Text> : null}
@@ -230,6 +233,7 @@ const styles = StyleSheet.create({
   },
   bubbleMine: { borderColor: colors.gold },
   bubbleHead: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm },
+  authorWrap: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
   author: { color: colors.text, fontWeight: "700", fontSize: 13, flexShrink: 1 },
   time: { color: colors.textMuted, fontSize: 11 },
   body: { color: colors.text, fontSize: 15 },
@@ -252,8 +256,12 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     borderTopWidth: 1,
   },
-  attachBtn: { paddingVertical: spacing.sm, paddingHorizontal: spacing.xs },
-  attachText: { fontSize: 22 },
+  attachBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   input: {
     flex: 1,
     backgroundColor: colors.card,

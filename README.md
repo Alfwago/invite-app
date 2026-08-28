@@ -74,13 +74,31 @@ src/
 | new event | `GET /api/nights/`, `POST /api/events/next/` |
 | director panel | `PATCH /api/events/<id>/`, `POST .../send-invites/`, `POST .../send-batch/` |
 
+## Push notifications
+
+Wired up (`src/push.ts` + `AuthContext` + the tap handler in `app/_layout.tsx`):
+on login the app asks permission, gets an Expo push token, and POSTs it to
+`/api/push/register/`; logout unregisters. The server pushes on **invite sent**
+and **waitlist promotion**; tapping the notification opens the event.
+
+**Remote push does not work in Expo Go on SDK 53** — it needs a development
+build. To turn it on:
+
+```bash
+npm i -g eas-cli
+eas login
+eas init                       # creates the EAS project + writes extra.eas.projectId
+eas build --profile development --platform ios   # (or android)
+```
+
+Install that build on your phone, run `npx expo start --dev-client`, and
+`registerForPush()` will start working. Until then it logs a warning and no-ops.
+
 ## Not done yet
 
-- Push notifications (server Phase 4: `expo-notifications` + a token-register
-  endpoint). Deep-link target `event/[id]` is already routable.
 - Guest RSVPs — the API supports `guests[]` but `EventDetailSerializer` doesn't
   expose `allow_guests`, so the UI hides it. Add that field server-side when
   building this.
 - Directors' "email / SMS the group" option when posting to a board.
 - App icon / splash screen (using Expo defaults).
-- EAS Build / Submit config (`eas.json`), store listings.
+- Store listings / submission (`eas.json` build+submit profiles are stubbed in).

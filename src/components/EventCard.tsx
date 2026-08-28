@@ -1,51 +1,61 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 
-import type { EventSummary } from "@/src/api/types";
-import { Badge } from "@/src/components/ui";
+import type { EventSummary, RsvpStatus } from "@/src/api/types";
+import { Badge, FillBar, type BadgeTone } from "@/src/components/ui";
 import { formatEventDate, formatTime, rosterLabel } from "@/src/format";
-import { colors, radius, rsvpColor, spacing } from "@/src/theme";
+import { fillPct, rosterBadges, rosterHealth } from "@/src/roster";
+import { colors, font, radius, spacing } from "@/src/theme";
 
-/** Needs-skaters / needs-goalies badges, mirroring the web home page. */
-export function needBadges(e: EventSummary): { label: string; color: string }[] {
-  const r = e.roster;
-  const out: { label: string; color: string }[] = [];
-  if (r.is_full) out.push({ label: "FULL", color: colors.amber });
-  else if (r.skater_spots_open != null && r.skater_spots_open > 0)
-    out.push({ label: "NEED SKATERS", color: colors.green });
-  if (r.goalie_spots_open != null && r.goalie_spots_open > 0)
-    out.push({ label: "NEED GOALIES", color: colors.blue });
-  return out;
-}
+const STATUS_TONE: Record<RsvpStatus, BadgeTone> = {
+  YES: "good",
+  MAYBE: "caution",
+  WAITLIST: "caution",
+  NO: "neutral",
+  NO_RESPONSE: "neutral",
+};
+
+const STATUS_LABEL: Record<RsvpStatus, string> = {
+  YES: "GOING",
+  MAYBE: "MAYBE",
+  WAITLIST: "WAITLIST",
+  NO: "NOT GOING",
+  NO_RESPONSE: "NO RESPONSE",
+};
 
 export function EventCard({ event, compact = false }: { event: EventSummary; compact?: boolean }) {
   const status = event.my_rsvp?.status ?? null;
+  const r = event.roster;
+  const pct = fillPct(r);
+
   return (
     <Link href={`/event/${event.id}`} asChild>
       <Pressable style={styles.card}>
         <View style={styles.topRow}>
           <Text style={styles.title}>{event.display_name}</Text>
           {status ? (
-            <Badge text={status.replace("_", " ")} color={rsvpColor[status] ?? colors.textMuted} />
+            <Badge text={STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
           ) : event.can_manage ? (
-            <Badge text="MANAGE" color={colors.border} />
+            <Badge text="MANAGE" tone="neutral" />
           ) : null}
         </View>
+
         <Text style={styles.meta}>
           {formatEventDate(event.date)}
           {event.start_time ? ` · ${formatTime(event.start_time)}` : ""}
           {!compact && event.location ? ` · ${event.location}` : ""}
         </Text>
+
+        {pct != null ? <FillBar pct={pct} tone={rosterHealth(r)} /> : null}
+
         <View style={styles.bottomRow}>
           <Text style={styles.roster}>
-            {rosterLabel(event.roster.skaters, event.roster.capacity)}
-            {event.roster.goalies_needed != null
-              ? ` · ${event.roster.goalies}/${event.roster.goalies_needed} G`
-              : ""}
+            {rosterLabel(r.skaters, r.capacity)}
+            {r.goalies_needed != null ? ` · ${r.goalies} / ${r.goalies_needed} G` : ""}
           </Text>
           <View style={styles.badges}>
-            {needBadges(event).map((b) => (
-              <Badge key={b.label} text={b.label} color={b.color} />
+            {rosterBadges(r).map((b) => (
+              <Badge key={b.label} text={b.label} tone={b.tone} />
             ))}
           </View>
         </View>
@@ -61,18 +71,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
-  title: { color: colors.text, fontSize: 16, fontWeight: "700", flexShrink: 1 },
-  meta: { color: colors.textMuted, fontSize: 13 },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  title: { color: colors.text, fontSize: font.base, fontWeight: "700", flexShrink: 1 },
+  meta: { color: colors.textMuted, fontSize: font.sm },
   bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: spacing.sm,
     gap: spacing.sm,
+    marginTop: spacing.xs,
   },
-  roster: { color: colors.text, fontSize: 14, flexShrink: 1 },
-  badges: { flexDirection: "row", gap: spacing.xs, flexShrink: 0 },
+  roster: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
+  badges: { flexDirection: "row", gap: spacing.xs, flexShrink: 0, flexWrap: "wrap" },
 });

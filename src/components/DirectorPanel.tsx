@@ -56,7 +56,8 @@ export function DirectorPanel({ event }: { event: EventDetail }) {
   }
 
   return (
-    <Card style={styles.card}>
+    <Card accent="director">
+      <Text style={styles.tag}>Director only</Text>
       <Text style={styles.heading}>Director</Text>
 
       <Text style={styles.label}>Director message</Text>
@@ -99,7 +100,20 @@ function errText(e: unknown): string {
 }
 
 const styles = StyleSheet.create({
-  card: { borderColor: colors.gold },
+  tag: {
+    alignSelf: "flex-start",
+    color: colors.red,
+    backgroundColor: colors.redDim,
+    borderColor: colors.red,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
   heading: { color: colors.gold, fontSize: 16, fontWeight: "800" },
   label: { color: colors.textMuted, fontSize: 12, textTransform: "uppercase" },
   textarea: {

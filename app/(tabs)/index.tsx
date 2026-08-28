@@ -1,5 +1,14 @@
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Link } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ApiError } from "@/src/api/client";
 import type { HomeNight } from "@/src/api/types";
@@ -7,19 +16,45 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { EventCard } from "@/src/components/EventCard";
 import { Card, ErrorState, Loading } from "@/src/components/ui";
 import { useHome } from "@/src/hooks/queries";
-import { colors, radius, spacing } from "@/src/theme";
+import { colors, font, radius, spacing } from "@/src/theme";
+
+const WORDMARK = require("@/assets/brand/wordmark.png");
+const HERO = require("@/assets/brand/hero.jpg");
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const query = useHome();
 
-  if (query.isLoading) return <Loading label="Loading…" />;
+  const brand = (
+    <View>
+      <View style={[styles.brandBar, { paddingTop: insets.top + spacing.sm }]}>
+        <Image source={WORDMARK} style={styles.wordmark} resizeMode="contain" />
+        <Text style={styles.tagline}>Four Decades{"\n"}One Brotherhood</Text>
+      </View>
+      <Image source={HERO} style={styles.hero} resizeMode="cover" />
+    </View>
+  );
+
+  if (query.isLoading) {
+    return (
+      <View style={styles.screen}>
+        {brand}
+        <Loading label="Loading…" />
+      </View>
+    );
+  }
   if (query.isError || !query.data) {
     return (
-      <ErrorState
-        message={query.error instanceof ApiError ? query.error.detail : "Couldn't load the home screen."}
-        onRetry={() => query.refetch()}
-      />
+      <View style={styles.screen}>
+        {brand}
+        <ErrorState
+          message={
+            query.error instanceof ApiError ? query.error.detail : "Couldn't load the home screen."
+          }
+          onRetry={() => query.refetch()}
+        />
+      </View>
     );
   }
 
@@ -37,42 +72,47 @@ export default function HomeScreen() {
         />
       }
     >
-      <Text style={styles.greeting}>Hi {me?.first_name || me?.username} 👋</Text>
+      {brand}
 
-      {notices.length > 0 ? (
-        <View style={styles.noticeBox}>
-          {notices.map((n) => (
-            <Text key={n.id} style={styles.noticeText}>
-              📣 {n.message}
-            </Text>
-          ))}
-        </View>
-      ) : null}
+      <View style={styles.body}>
+        <Text style={styles.greeting}>Hi {me?.first_name || me?.username}</Text>
 
-      {next_skate ? (
-        <View>
-          <Text style={styles.sectionLabel}>Your next skate</Text>
-          <EventCard event={next_skate} />
-        </View>
-      ) : (
-        <Card>
-          <Text style={styles.muted}>You have no upcoming skates.</Text>
-        </Card>
-      )}
+        {notices.length > 0 ? (
+          <Card accent="public">
+            <Text style={styles.noticeLabel}>League notices</Text>
+            {notices.map((n) => (
+              <Text key={n.id} style={styles.noticeText}>
+                {n.message}
+              </Text>
+            ))}
+          </Card>
+        ) : null}
 
-      <Text style={styles.sectionLabel}>Skate groups</Text>
-      {nights.map((night) => (
-        <NightRow key={night.id} night={night} />
-      ))}
+        {next_skate ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Your next skate</Text>
+            <EventCard event={next_skate} />
+          </View>
+        ) : (
+          <Card>
+            <Text style={styles.muted}>You have no upcoming skates.</Text>
+          </Card>
+        )}
 
-      {custom_events.length > 0 ? (
-        <>
-          <Text style={styles.sectionLabel}>Other events</Text>
-          {custom_events.map((e) => (
-            <EventCard key={e.id} event={e} />
-          ))}
-        </>
-      ) : null}
+        <Text style={styles.sectionLabel}>Night status</Text>
+        {nights.map((night) => (
+          <NightRow key={night.id} night={night} />
+        ))}
+
+        {custom_events.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>Other events</Text>
+            {custom_events.map((e) => (
+              <EventCard key={e.id} event={e} />
+            ))}
+          </>
+        ) : null}
+      </View>
     </ScrollView>
   );
 }
@@ -98,26 +138,53 @@ function NightRow({ night }: { night: HomeNight }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, gap: spacing.md },
-  greeting: { color: colors.text, fontSize: 22, fontWeight: "800" },
-  noticeBox: {
-    backgroundColor: "#2a2410",
-    borderColor: colors.gold,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
+  content: { paddingBottom: spacing.xl },
+  brandBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.bg,
   },
-  noticeText: { color: colors.gold, fontSize: 14, fontWeight: "600" },
+  wordmark: { width: 150, height: 42 },
+  tagline: {
+    color: colors.gold,
+    fontSize: font.xs,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    lineHeight: 15,
+  },
+  hero: {
+    width: "100%",
+    height: 104,
+    borderTopWidth: 3,
+    borderTopColor: colors.gold,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  body: { padding: spacing.lg, gap: spacing.md },
+  greeting: { color: colors.text, fontSize: font.lg, fontWeight: "800" },
+  section: { gap: spacing.sm },
+  noticeLabel: {
+    color: colors.gold,
+    fontSize: font.xs,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  noticeText: { color: colors.text, fontSize: font.sm, lineHeight: 20 },
   sectionLabel: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: font.xs,
+    fontWeight: "700",
     textTransform: "uppercase",
-    marginTop: spacing.sm,
     letterSpacing: 0.5,
+    marginTop: spacing.sm,
   },
   nightBlock: { gap: spacing.xs },
-  nightName: { color: colors.textMuted, fontSize: 13, fontWeight: "600" },
+  nightName: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
   nightEmpty: {
     backgroundColor: colors.card,
     borderColor: colors.border,
