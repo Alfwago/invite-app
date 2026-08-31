@@ -6,10 +6,12 @@
     "orientation": "portrait",
     "scheme": "obhinvites",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.falcon83.obhinvites",
       "buildNumber": "1",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -17,6 +19,10 @@
     "android": {
       "package": "com.falcon83.obhinvites",
       "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0d0d"
+      },
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
