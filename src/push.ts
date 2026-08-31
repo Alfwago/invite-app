@@ -1,19 +1,36 @@
 import Constants from "expo-constants";
-import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { apiFetch } from "@/src/api/client";
 
+/**
+ * expo-notifications' remote-push native modules (ExpoPushTokenManager) and
+ * expo-device were removed from / are unavailable in Expo Go as of SDK 53+.
+ * Importing those packages at module scope crashes the whole app in Expo Go, so
+ * everything here stays behind this flag and uses lazy `require()`.
+ *
+ * Push works in a development / production build, not in Expo Go.
+ */
+export const pushSupported =
+  Platform.OS !== "web" &&
+  Constants.appOwnership !== "expo" &&
+  Constants.executionEnvironment !== "storeClient";
+
 // How notifications behave while the app is foregrounded.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (pushSupported) {
+  try {
+    require("expo-notifications").setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch {
+    // native module not present — ignore
+  }
+}
 
 let registeredToken: string | null = null;
 
@@ -27,11 +44,14 @@ function projectId(): string | undefined {
 
 /**
  * Ask permission, fetch the Expo push token, and register it with the server.
- * Silently no-ops on a simulator, when permission is denied, or in Expo Go
- * without an EAS project id (remote push needs a development build on SDK 53).
+ * No-ops in Expo Go / on web / on a simulator / when permission is denied.
  */
 export async function registerForPush(): Promise<void> {
+  if (!pushSupported) return;
   try {
+    const Device = require("expo-device");
+    const Notifications = require("expo-notifications");
+
     if (!Device.isDevice) return;
 
     let { status } = await Notifications.getPermissionsAsync();
