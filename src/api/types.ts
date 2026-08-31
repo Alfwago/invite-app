@@ -8,6 +8,8 @@ export interface Night {
   id: number;
   name: string;
   weekday: number; // 1=Sun … 7=Sat
+  /** Night's board/header art, or null. Present on /api/boards/ and /api/nights/. */
+  image_url?: string | null;
   // Present on GET /api/nights/ (the create-event picker); absent from board lists.
   default_time?: string | null;
   default_location?: string;
