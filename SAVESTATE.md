@@ -1,113 +1,148 @@
 # Save state — OBH mobile app project
 
-Paused 2026-08-27. This is the "how to resume" doc. Also see:
-- `CHANGELOG.md` (this repo) — what was built
-- `invite-server` repo `CHANGELOG.md` + `PICKUP_NOTES.txt` — the API side
-- Claude's persistent memory covers all of this too
+Updated 2026-08-31. "How to resume" doc. See also `CHANGELOG.md` (this repo),
+`HANDOFF.md` (Expo Go boot fix), the `invite-server` repo, and Claude's
+persistent memory.
 
 ---
 
-## Where things stand
+## TL;DR — where things stand
 
-### Server API — DONE and DEPLOYED to production
+Bringing the Expo/React-Native app to **feature parity with the Django
+website** before a first rollout, keeping director functions separate from
+player functions. Working **item by item, server + app together**, each landed
+on the test stack and device-tested by the user before the next.
 
-All on `invite-server`, branch `feature/mobile-api` which **==** `main`.
-Prod HEAD: `b98656e`. Migration `0070_pushtoken` applied. 69 tests pass.
+- **App**: `/Users/jvmalone/invite-app`, branch `main`, HEAD `28e3955`.
+  **46 commits ahead of GitHub `origin/main` — NOT pushed yet.** Also has a
+  `pi` remote. Runs in Expo Go (SDK 54 pinned).
+- **Server**: branch `feature/mobile-director-roster` on `invite-server`.
+  origin HEAD `627196a`. Deployed to the **test** stack only
+  (`https://test-invites.falcon83.com`), Pi worktree `~/invite-server-test`.
+  240 `invitations` tests green. **NOT merged to `main`, NOT on prod.**
+- **User is NOT ready to deploy.** Do not merge the server branch or ship to
+  prod. Do not push the app to GitHub without asking.
 
-Live endpoints (all under `https://invites.falcon83.com/api/`, token auth):
+Test login: **`admin` / `obh-test-2026`** (superuser ⇒ director + president +
+verified). `.env.local` in this repo: `EXPO_PUBLIC_API_URL=https://test-invites.falcon83.com`.
+Run the app: `npx expo start -c --go --lan` (must bind LAN, not localhost, or
+Expo Go on the phone can't fetch the bundle).
 
-| | |
-|---|---|
-| `POST auth/login/` `POST auth/logout/` `GET me/` | auth + profile |
-| `GET events/` `GET events/<id>/` | list + detail (roster stats, my_rsvp) |
-| `POST events/<id>/rsvp/` | player RSVP (yes/no/maybe, goalie, guests, beer/whiskey) |
-| `POST events/next/` `PATCH events/<id>/` | director: create next, edit settings |
-| `POST events/<id>/send-invites/` `POST events/<id>/send-batch/` | director: send |
-| `GET nights/` | director's skate groups (create-event picker) |
-| `GET home/` `GET notices/` `GET boards/` | home screen data |
-| `GET/POST messages/` `DELETE messages/<id>/` | message board (text + photo) |
-| `POST push/register/` `POST push/unregister/` | push tokens |
+---
 
-Server pushes on **invite sent** and **waitlist promotion** (`data.eventId`
-deep-links). Push send is best-effort, prunes dead tokens, smoke-tested live
-against Expo's API.
+## P0 rollout plan — DONE
 
-### App — running in Expo Go; push code in place but dormant
+Plan file: `~/.claude/plans/fluffy-fluttering-hellman.md`. Items 1–7 all
+landed (server + app), deployed to test:
 
-GitHub `github.com/Alfwago/invite-app`, HEAD `0839ed7` ("eas init").
-Dev copy: `~/invite-app` on the Mac.
+1. Forgot password on the sign-in screen (anon `POST /api/auth/password-reset/`)
+2. Email-verification recovery (`POST /api/me/resend-verification/` + `VerifyBanner`)
+3. Guest RSVP (guest editor in `RsvpControls`, `my_rsvp.guests`, roster `guest_names`)
+4. Per-event message thread (`api/event_messages.py` + shared `src/components/chat/ChatThread.tsx`)
+5. Invite-list management (roster-admin actions: remove_invite / add_batch / remove_batch / send_invite)
+6. League notices post & manage — president only (`api/notices.py`, `Me.is_president`, `app/notices.tsx`)
+7. Skate-group members — director (`api/night_admin.py`, `app/night/[id]/members.tsx`)
 
-**GitHub is missing 2 commits from the Pi** (`/home/jvmalone/invite-app`):
-`0eb59be` (push notification app code) and `cf84788` (eas.json tweak). Get them:
-```bash
-cd ~/invite-app
-git fetch pi && git merge pi/main && git push
-npm install && npx expo install --fix
-```
-(The Pi remote: `git remote add pi jvmalone@192.168.86.59:/home/jvmalone/invite-app`)
+**Item 8 — iOS dev build for push — NOT done.** Non-coding parallel track.
+App + server push code is complete and dormant. Blocked on the Apple Developer
+login step of `eas build --profile development --platform ios` (see the old
+notes below). Push cannot be tested in Expo Go.
+
+Director-only screens are reached from a **"Director tools"** section on the
+**Home** screen (gold label, below Night status, above Sign out); the "League
+notices" row shows only for `me.is_president`.
+
+---
+
+## This session's cleanup batch — DONE, needs a final device pass
+
+All committed (`c2c3087`, `5796267`, `2b5d528`, `28e3955`):
+
+- Home: Night status in a bordered card; "Director tools" gold section label
+  outside the card; Sign out is a button.
+- Event screen: Roster and "Your RSVP" are collapsible cards
+  (`CollapsibleCard` in `src/components/ui.tsx`). Roster has
+  Yes / Waitlist / Maybe / No / No-reply tabs — this needs server `627196a`
+  (`EventDetailSerializer.get_players` no longer excludes NO_RESPONSE).
+- RSVP: after submitting, controls grey out + lock; "Save RSVP" → "Change RSVP"
+  which re-enables the form (with Cancel).
+- All times render 12-hour AM/PM (`src/format.ts` `formatTime` / `formatDateTime`,
+  `ChatThread` clock).
+- `src/components/TimeField.tsx` — 12-hour **text** field (type "9:00 PM",
+  "9pm", "930pm", "21:00" — normalises on blur). Used in Manage → Settings,
+  new-event puck drop, schedule-invites. (User rejected a +/- stepper version.)
+- Header back button says "Back" (`headerBackTitle` in `app/_layout.tsx`).
+- Message-board night tiles fixed 44px, wrap centered (`app/(tabs)/messages.tsx`).
+- Keyboard: `src/components/KeyboardAwareScrollView.tsx` on profile / new-event /
+  notices / event detail / manage. `ChatThread` composer now offsets by
+  `useHeaderHeight()` instead of a hard-coded 90 (`28e3955` — was covering the
+  input + send button on Dynamic Island devices; **not yet verified on device**).
 
 ---
 
 ## RESUME HERE
 
-**Goal when paused:** build an iOS development client so push notifications work
-(Expo Go on SDK 53 can't do remote push).
-
-**Blocker:** "won't accept my username and password" — during
-`eas build --profile development --platform ios`, at the **Apple Developer
-login** step (Expo login already worked — `eas init` is committed).
-
-### Next steps
-
-1. Merge the 2 pending Pi commits (above) so `src/push.ts` etc. are present.
-2. `npx eas-cli@latest build --profile development --platform ios`
-   - Apple ID = the Apple Developer account email + password
-   - It then asks for an Apple **2FA code** (pushed to your Apple devices) —
-     the username/password prompt failing is often actually the 2FA step, or a
-     stale session: `npx eas-cli@latest logout` then retry, or check the Apple
-     ID at appleid.apple.com first.
-   - Let EAS **manage credentials** when asked.
-   - Register the iPhone as a test device (follow the link on the phone).
-   - ~15–20 min cloud build → install link.
-3. `npx expo start --dev-client`, open the installed build, log in.
-4. Verify: as a director, send invites for an event → app-installed accounts get
-   a notification → tap opens the event.
+1. **Device-test the keyboard fix** (`28e3955`) and the rest of the cleanup
+   batch in Expo Go.
+2. **Back up the app work**: `git push origin main` (46 commits) and
+   `git push pi main` — ask the user first.
+3. Work the **P1 / P2 punch-list** items — see
+   `<scratchpad>/rollout-punch-list.html` (24 gaps total; the 8 P0 are done).
+4. **iOS dev build** for push (item 8) — parallel track, user-driven.
+5. When the user says ready: full `invitations` suite, PR
+   `feature/mobile-director-roster` → `main`, deploy test → prod.
 
 ---
 
-## Still pending (not started / paused)
+## Server dev workflow (Pi)
 
-- **UI design pass** — `/design` skill (Claude Design canvas). Paused before
-  building. Direction chosen: refine the current dark/gold into a polished
-  system. Wants: style guide + all screens + director flows + empty/error/loading
-  states. Output → `src/theme.ts` + component styles.
-- **Guest RSVP UI** — API supports `guests[]` but `EventDetailSerializer` has no
-  `allow_guests` field, so the app hides guest controls. Add that field first.
-- **Directors "email/SMS the group"** when posting to a message board (web-only).
-- **Click-test** the web `create_next_event` / `send_invites` pages — refactored
-  onto shared services, deployed, but never exercised through the website UI.
-- **Phase 5** — app icon + splash, store listings, `eas submit`.
+Edit in the scratchpad clone, then:
+
+```bash
+# always re-sync the scratchpad clone before new work
+cd <scratchpad>/invite-server
+git fetch origin -q && git reset --hard origin/feature/mobile-director-roster -q
+
+# ... make edits ...
+
+rsync -R <changed files> jvmalone@192.168.86.59:/home/jvmalone/invite-server-test/
+ssh jvmalone@192.168.86.59 'cd ~/invite-server-test && \
+  docker compose exec -T web python manage.py test invitations --settings=invites.settings_test'
+ssh jvmalone@192.168.86.59 'cd ~/invite-server-test && docker compose restart web'
+# smoke-test with curl against https://test-invites.falcon83.com
+# then commit + push ON THE PI:
+ssh jvmalone@192.168.86.59 'cd ~/invite-server-test && git add -A && git commit -m "..." && git push -q origin feature/mobile-director-roster'
+```
+
+`settings_test` = in-memory SQLite + locmem email + `PUSH_NOTIFICATIONS_ENABLED = False`.
+SSH key is passphrase-protected — user runs `ssh-add --apple-use-keychain ~/.ssh/id_ed25519`
+once per session.
+
+**NOTE:** `~/invite-server-test` on the Pi is now the **mobile feature-branch
+worktree** (this changed this session — the old SAVESTATE said it held
+unrelated WIP; that's no longer true).
 
 ---
 
-## Environment quirks (bitten by these)
+## Environment quirks
 
-- **Pi can't push to `Alfwago/invite-app`** (fine-grained token, 403). Claude
-  edits + commits on the Pi (`/home/jvmalone/invite-app`); you `git fetch pi &&
-  git merge pi/main && git push` from the Mac. Pi CAN push to `invite-server`.
-- **Pi has no Node** (aarch64) — app is hand-authored there, built on the Mac.
-- **Server has no `Pillow`, no `requests`/`httpx`** — message images use
-  `FileField` not `ImageField`; push uses stdlib `urllib`.
-- **Mac npm**: global dir + `~/.npm` cache were root-owned from past `sudo npm`.
-  Fixed cache with `sudo chown -R 501:20 ~/.npm`. Don't `npm i -g` — use `npx`.
+- **Expo SDK 54 pinned** — the iPhone's App Store only has Expo Go for SDK 54.
+  Do NOT bump SDK while Expo Go is the test surface.
 - **App API target**: `https://invites.falcon83.com` baked into `app.json`
-  (`extra.apiUrl`); override with `EXPO_PUBLIC_API_URL` in `.env.local`.
-- **Server deploy**: `cd /home/jvmalone/invite-server && git pull --ff-only
-  origin main`, then `docker compose exec web python manage.py migrate` if there
-  are migrations, then `docker restart invite_web invite_scheduler` (or
-  `./restart.sh` to rebuild). Tests: run in a throwaway container —
-  `docker run --rm --env-file /home/jvmalone/invite-server/.env -v
-  /home/jvmalone/invite-server-mobile/app:/code -w /code invite-server-web
-  python manage.py test invitations --settings=invites.settings_test`
-- **Do not touch** `/home/jvmalone/invite-server-test` (worktree on
-  `fix/site-ux-cleanup` with unrelated uncommitted WIP).
+  (`extra.apiUrl`); `.env.local` `EXPO_PUBLIC_API_URL` overrides it → test stack.
+- Metro must serve LAN URLs: start with `--lan` (a stale localhost-bound Metro
+  serves 127.0.0.1 bundle URLs the phone can't reach).
+- `npx tsc --noEmit 2>&1 | grep -E "^(app|src)/"` to check types — the nested
+  `jvmalone/` dir is pre-existing junk, ignore its errors.
+- Bundle check: `curl -s "http://localhost:8081/node_modules/expo-router/entry.bundle?platform=ios&dev=true&hot=false"`
+  — expect JS, not a JSON error payload.
+- **App can't push to GitHub from the Pi** (fine-grained token 403). This Mac
+  can push to both `origin` and `pi`.
+- **Server has no Pillow / requests / httpx** — message images use `FileField`;
+  push uses stdlib `urllib`.
+- `audit()` before/after must go through `DjangoJSONEncoder` (plain JSONField —
+  raw `date`/`time` objects 500 the PATCH). Fixed in `6d06208`.
+- Roster capacity math (`event_roster_stats`):
+  `skaters = max(yes - goalie_yes, 0) + guest_yes + day_skaters`. The waitlist
+  gate in `apply_rsvp` + `_auto_promote_waitlist_if_enabled` must use the same
+  guest-inclusive occupied count (fixed `bbcd4d0`).

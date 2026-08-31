@@ -3,6 +3,49 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-08-31 — website parity rollout (branch work, not shipped)
+
+Server work is on `invite-server` branch `feature/mobile-director-roster`,
+deployed to the **test** stack only. App work is on `main`. Not merged to
+prod, not pushed to GitHub. Full detail in `SAVESTATE.md`.
+
+**Expo Go boot fixes** (`e9c2408`…`7891014`)
+- Pinned to **Expo SDK 54** (only Expo Go build available for the test iPhone).
+- `app.json` cleanup; Expo Go-safe push code (lazy `require`, `pushSupported`).
+
+**Restructure — director vs. player** (`180c691`…`d1fc248`)
+- Split event screen into a player view (`event/[id]/index`) and a separate
+  director "Manage event" screen (`event/[id]/manage`, 5 tabs).
+- New-event form matches the web (night + optional puck drop + roster limit,
+  pulls night defaults / presets). Create-next auto-dates to the night's
+  next weekday.
+
+**P0 parity items 1–7** (`b32d5fe`…`5a1d81d`)
+1. Forgot password on the sign-in screen
+2. Resend email verification (`VerifyBanner` on Home + Profile)
+3. Guest RSVP (add / name guests; shown on the roster)
+4. Per-event message thread — shared `src/components/chat/ChatThread.tsx`,
+   also used by the boards; reactions w/ full emoji picker, edit/delete,
+   email-the-group, unread badges
+5. Invite-list management in Manage → Comms (send/resend, batch 2, remove)
+6. League notices post & manage — president only (`app/notices.tsx`)
+7. Skate-group members — director (`app/night/[id]/members.tsx`)
+- Director-only screens reached from a "Director tools" section on Home.
+- Profile rebuilt to match the web (all fields, metrics, inline edit, password
+  reset). Message board redesigned RCS-style with night board art.
+- Item 8 (iOS dev build so push works) — still blocked on Apple Developer login.
+
+**UI cleanup batch** (`c2c3087`…`28e3955`)
+- Home: Night status in a card; "Director tools" gold label outside it; Sign
+  out as a button.
+- Event: collapsible Roster / RSVP cards (`CollapsibleCard`); roster
+  Yes/Waitlist/Maybe/No/No-reply tabs; RSVP locks after submit with a
+  "Change RSVP" button.
+- 12-hour times everywhere; `TimeField` free-text time entry.
+- `KeyboardAwareScrollView` on the forms; `ChatThread` composer keyboard
+  offset via `useHeaderHeight()`.
+- "Back" header label; fixed-size message-board night tiles.
+
 ## 2026-08-27 — initial build
 
 **Skeleton** (`81db9fa`)
