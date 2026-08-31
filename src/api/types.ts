@@ -34,6 +34,7 @@ export interface Me {
   last_name: string;
   full_name: string;
   is_director: boolean;
+  is_president: boolean;
   is_goalie: boolean;
   is_goalie_skater: boolean;
   is_non_playing: boolean;
@@ -280,6 +281,8 @@ export interface RsvpBody {
 export interface LeagueNotice {
   id: number;
   message: string;
+  is_active: boolean;
+  sort_order: number;
 }
 
 export interface HomeNight {

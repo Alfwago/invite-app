@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 
 import { API_BASE, ApiError } from "@/src/api/client";
@@ -118,6 +120,8 @@ export default function ProfileScreen() {
       )}
 
       <AccountCard verified={me.email_verified} approved={me.director_approved || me.is_director} username={me.username} />
+
+      {me.is_director ? <DirectorToolsCard isPresident={me.is_president} /> : null}
 
       <Text style={styles.server}>{API_BASE}</Text>
     </ScrollView>
@@ -254,6 +258,24 @@ function EditProfileCard({
 
       <Button label="Save changes" onPress={submit} loading={save.isPending} />
       <Button label="Cancel" variant="secondary" onPress={onCancel} disabled={save.isPending} />
+    </Card>
+  );
+}
+
+function DirectorToolsCard({ isPresident }: { isPresident: boolean }) {
+  const router = useRouter();
+  const rows: { label: string; href: string }[] = [];
+  if (isPresident) rows.push({ label: "League notices", href: "/notices" });
+  if (rows.length === 0) return null;
+  return (
+    <Card>
+      <Text style={styles.heading}>Director tools</Text>
+      {rows.map((r) => (
+        <Pressable key={r.href} style={styles.toolRow} onPress={() => router.push(r.href as never)}>
+          <Text style={styles.toolLabel}>{r.label}</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
+      ))}
     </Card>
   );
 }
@@ -475,4 +497,13 @@ const styles = StyleSheet.create({
 
   error: { color: colors.red, fontWeight: "600" },
   server: { color: colors.textMuted, fontSize: font.xs, textAlign: "center", opacity: 0.7 },
+  toolRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  toolLabel: { color: colors.text, fontSize: font.base, fontWeight: "600" },
 });

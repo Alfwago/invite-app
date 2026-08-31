@@ -94,6 +94,7 @@ function RootNavigator() {
       <Stack.Screen name="event/[id]/index" options={{ title: "Event" }} />
       <Stack.Screen name="event/[id]/manage" options={{ title: "Manage event" }} />
       <Stack.Screen name="event/[id]/messages" options={{ title: "Messages" }} />
+      <Stack.Screen name="notices" options={{ title: "League notices" }} />
       <Stack.Screen
         name="new-event"
         options={{ title: "New event", presentation: "modal" }}

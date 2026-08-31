@@ -27,10 +27,41 @@ export const keys = {
   nights: ["nights"] as const,
   boards: ["boards"] as const,
   home: ["home"] as const,
+  manageNotices: ["notices", "manage"] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
 };
+
+export function useManageNotices() {
+  return useQuery({
+    queryKey: keys.manageNotices,
+    queryFn: ({ signal }) => api.fetchManageNotices(signal),
+  });
+}
+
+export function useNoticeMutations() {
+  const qc = useQueryClient();
+  const done = () => {
+    qc.invalidateQueries({ queryKey: keys.manageNotices });
+    qc.invalidateQueries({ queryKey: keys.home });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (message: string) => api.createNotice({ message }),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: (args: { id: number; body: { message?: string; is_active?: boolean } }) =>
+        api.updateNotice(args.id, args.body),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: number) => api.deleteNotice(id),
+      onSuccess: done,
+    }),
+  };
+}
 
 export function useNights() {
   return useQuery({

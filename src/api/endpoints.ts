@@ -80,6 +80,32 @@ export async function fetchNotices(signal?: AbortSignal): Promise<LeagueNotice[]
   return data.notices;
 }
 
+// ---- League notice management (president) ---------------------------
+
+export async function fetchManageNotices(signal?: AbortSignal): Promise<LeagueNotice[]> {
+  const data = await apiFetch<{ notices: LeagueNotice[] }>("/api/notices/manage/", { signal });
+  return data.notices;
+}
+
+export function createNotice(body: {
+  message: string;
+  is_active?: boolean;
+  sort_order?: number;
+}): Promise<LeagueNotice> {
+  return apiFetch("/api/notices/manage/", { method: "POST", body });
+}
+
+export function updateNotice(
+  id: number,
+  body: { message?: string; is_active?: boolean; sort_order?: number },
+): Promise<LeagueNotice> {
+  return apiFetch(`/api/notices/${id}/`, { method: "PATCH", body });
+}
+
+export function deleteNotice(id: number): Promise<void> {
+  return apiFetch(`/api/notices/${id}/`, { method: "DELETE" });
+}
+
 export function fetchBoards(signal?: AbortSignal): Promise<BoardsResponse> {
   return apiFetch("/api/boards/", { signal });
 }
