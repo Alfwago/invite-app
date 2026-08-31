@@ -17,6 +17,8 @@ export default function NewEventScreen() {
 
   const [nightId, setNightId] = useState<number | null>(null);
   const [date, setDate] = useState(""); // optional YYYY-MM-DD
+  const [startTime, setStartTime] = useState(""); // optional HH:MM (24h)
+  const [capacity, setCapacity] = useState(""); // optional roster limit
   const [error, setError] = useState<string | null>(null);
 
   const options = useMemo(() => nightsQuery.data ?? [], [nightsQuery.data]);
@@ -36,16 +38,28 @@ export default function NewEventScreen() {
 
   async function submit() {
     setError(null);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) && date !== "") {
+    if (date !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       setError("Date must be YYYY-MM-DD, or leave it blank for today.");
+      return;
+    }
+    const time = startTime.trim();
+    if (time !== "" && !/^\d{1,2}:\d{2}$/.test(time)) {
+      setError("Puck drop must be HH:MM (24-hour), or leave it blank.");
+      return;
+    }
+    const cap = capacity.trim();
+    if (cap !== "" && !/^\d+$/.test(cap)) {
+      setError("Roster limit must be a whole number, or leave it blank.");
       return;
     }
     try {
       const event = await create.mutateAsync({
         night_id: nightId === CUSTOM ? null : nightId,
         ...(date ? { base_date: date } : {}),
+        ...(time ? { start_time: time } : {}),
+        ...(cap ? { capacity: Number(cap) } : {}),
       });
-      router.replace(`/event/${event.id}`);
+      router.replace(`/event/${event.id}/manage`);
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : "Couldn't create the event.");
     }
@@ -80,8 +94,30 @@ export default function NewEventScreen() {
           value={date}
           onChangeText={setDate}
         />
+
+        <Text style={styles.label}>Puck drop (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="HH:MM — blank = night default"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="numbers-and-punctuation"
+          value={startTime}
+          onChangeText={setStartTime}
+        />
+
+        <Text style={styles.label}>Roster limit (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="blank = night default"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="number-pad"
+          value={capacity}
+          onChangeText={setCapacity}
+        />
+
         <Text style={styles.hint}>
-          Start time, roster limit and the invite list come from the skate group's defaults.
+          Location, goalies needed, the director message, the invite list and any default preset
+          roster all come from the skate group's saved defaults.
         </Text>
       </Card>
 
