@@ -450,6 +450,17 @@ function BoardChip({
   full?: boolean;
   imageUrl?: string | null;
 }) {
+  if (!full && imageUrl) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityLabel={label}
+        style={[styles.boardTile, active && styles.boardTileActive]}
+      >
+        <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="cover" />
+      </Pressable>
+    );
+  }
   return (
     <Pressable
       onPress={onPress}
@@ -460,9 +471,6 @@ function BoardChip({
         active && { backgroundColor: colors.gold, borderColor: colors.gold },
       ]}
     >
-      {!full && imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.chipIcon} resizeMode="cover" />
-      ) : null}
       <Text
         style={[styles.chipText, full && styles.chipTextFull, active && { color: colors.goldText }]}
         numberOfLines={1}
@@ -498,12 +506,18 @@ const styles = StyleSheet.create({
   },
   chipFull: { width: "100%", paddingVertical: spacing.md },
   chipHalf: { flexGrow: 1, flexBasis: "45%" },
-  chipIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.sm,
+  boardTile: {
+    flexGrow: 1,
+    flexBasis: "47%",
+    aspectRatio: 2.2,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    overflow: "hidden",
     backgroundColor: colors.cardRaised,
   },
+  boardTileActive: { borderColor: colors.gold },
+  boardTileImg: { width: "100%", height: "100%" },
   chipText: { color: colors.text, fontWeight: "600", fontSize: 13, flexShrink: 1 },
   chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
 
