@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError } from "@/src/api/client";
 import type { HomeNight } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
+import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Card, ErrorState, Loading } from "@/src/components/ui";
@@ -90,6 +91,7 @@ export default function HomeScreen() {
         <Text style={styles.greeting}>Hi {me?.first_name || me?.username}</Text>
 
         <VerifyBanner />
+        <DirectorToolsCard />
 
         {notices.length > 0 ? (
           <Card accent="public">
