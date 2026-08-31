@@ -8,7 +8,6 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -20,7 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ApiError } from "@/src/api/client";
 import type { BoardMessage } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
-import { EmptyState, ErrorState, Loading } from "@/src/components/ui";
+import { ErrorState, Loading } from "@/src/components/ui";
 import {
   useBoards,
   useDeleteMessage,
@@ -135,13 +134,8 @@ export default function MessagesScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.boardBar}
-        contentContainerStyle={styles.boardBarContent}
-      >
-        <BoardChip label="Main" active={board === MAIN} onPress={() => setBoard(MAIN)} />
+      <View style={styles.boardGrid}>
+        <BoardChip label="Main" active={board === MAIN} onPress={() => setBoard(MAIN)} full />
         {boards.map((b) => (
           <BoardChip
             key={b.id}
@@ -150,7 +144,7 @@ export default function MessagesScreen() {
             onPress={() => setBoard(b.id)}
           />
         ))}
-      </ScrollView>
+      </View>
 
       {messagesQuery.isLoading ? (
         <Loading label="Loading messages…" />
@@ -163,6 +157,10 @@ export default function MessagesScreen() {
           }
           onRetry={() => messagesQuery.refetch()}
         />
+      ) : messages.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>No messages</Text>
+        </View>
       ) : (
         <FlatList
           ref={listRef}
@@ -179,7 +177,6 @@ export default function MessagesScreen() {
               tintColor={colors.gold}
             />
           }
-          ListEmptyComponent={<EmptyState message="No messages yet. Start the conversation." />}
           renderItem={({ item, index }) => {
             const older = messages[index + 1]; // inverted: next index is older
             const showAuthor = !item.mine && older?.author_id !== item.author_id;
@@ -398,17 +395,28 @@ function BoardChip({
   label,
   active,
   onPress,
+  full,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
+  full?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.chip, active && { backgroundColor: colors.gold, borderColor: colors.gold }]}
+      style={[
+        styles.chip,
+        full ? styles.chipFull : styles.chipHalf,
+        active && { backgroundColor: colors.gold, borderColor: colors.gold },
+      ]}
     >
-      <Text style={[styles.chipText, active && { color: colors.goldText }]}>{label}</Text>
+      <Text
+        style={[styles.chipText, full && styles.chipTextFull, active && { color: colors.goldText }]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -416,16 +424,31 @@ function BoardChip({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
-  boardBar: { flexGrow: 0, borderBottomColor: colors.border, borderBottomWidth: 1 },
-  boardBarContent: { gap: spacing.sm, padding: spacing.md },
+  boardGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+  },
   chip: {
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: spacing.xs,
+    backgroundColor: colors.card,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  chipFull: { width: "100%", paddingVertical: spacing.md },
+  chipHalf: { flexGrow: 1, flexBasis: "45%" },
   chipText: { color: colors.text, fontWeight: "600", fontSize: 13 },
+  chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
+
+  emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+  emptyText: { color: colors.textMuted, fontSize: font.base, fontWeight: "600" },
 
   list: { flex: 1 },
   listContent: { padding: spacing.md, gap: 2 },
