@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -68,12 +69,14 @@ export default function MessagesScreen() {
   const [editing, setEditing] = useState<BoardMessage | null>(null);
   const [emailGroup, setEmailGroup] = useState(false);
   const [sheetFor, setSheetFor] = useState<BoardMessage | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const listRef = useRef<FlatList<BoardMessage>>(null);
 
   const boards = useMemo(() => boardsQuery.data ?? [], [boardsQuery.data]);
   const data = messagesQuery.data;
   const messages = data?.messages ?? [];
   const reactionChoices = data?.reaction_choices ?? ["👍", "😂", "🔥", "👎"];
+  const emojiGroups = data?.emoji_groups ?? [];
   const canEmail = !!data?.can_email;
 
   async function pickImage() {
@@ -109,15 +112,20 @@ export default function MessagesScreen() {
     }
   }
 
+  function closeSheet() {
+    setSheetFor(null);
+    setPickerOpen(false);
+  }
+
   function startEdit(msg: BoardMessage) {
     setEditing(msg);
     setDraft(msg.body);
     setImageUri(undefined);
-    setSheetFor(null);
+    closeSheet();
   }
 
   function confirmDelete(msg: BoardMessage) {
-    setSheetFor(null);
+    closeSheet();
     Alert.alert("Delete message?", undefined, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => del.mutate(msg.id) },
@@ -266,48 +274,85 @@ export default function MessagesScreen() {
         </Pressable>
       </View>
 
-      <Modal visible={!!sheetFor} transparent animationType="fade" onRequestClose={() => setSheetFor(null)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setSheetFor(null)}>
+      <Modal visible={!!sheetFor} transparent animationType="fade" onRequestClose={closeSheet}>
+        <Pressable style={styles.sheetBackdrop} onPress={closeSheet}>
           <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.reactRow}>
-              {reactionChoices.map((emoji) => {
-                const on = sheetFor?.reactions.some((r) => r.emoji === emoji && r.mine);
-                return (
-                  <Pressable
-                    key={emoji}
-                    onPress={() => {
-                      if (sheetFor) toggleReaction(sheetFor, emoji);
-                      setSheetFor(null);
-                    }}
-                    style={[styles.reactBig, on && styles.reactBigOn]}
-                  >
-                    <Text style={styles.reactBigText}>{emoji}</Text>
+            {pickerOpen ? (
+              <>
+                <View style={styles.pickerHead}>
+                  <Pressable onPress={() => setPickerOpen(false)} hitSlop={8}>
+                    <Ionicons name="chevron-back" size={22} color={colors.text} />
                   </Pressable>
-                );
-              })}
-            </View>
-            {sheetFor?.can_edit ? (
-              <SheetButton
-                icon="pencil"
-                label="Edit"
-                onPress={() => sheetFor && startEdit(sheetFor)}
-              />
-            ) : null}
-            {sheetFor?.body ? (
-              <SheetButton
-                icon="copy-outline"
-                label="Copy text"
-                onPress={() => setSheetFor(null)}
-              />
-            ) : null}
-            {sheetFor?.can_delete ? (
-              <SheetButton
-                icon="trash-outline"
-                label="Delete"
-                danger
-                onPress={() => sheetFor && confirmDelete(sheetFor)}
-              />
-            ) : null}
+                  <Text style={styles.pickerTitle}>Pick a reaction</Text>
+                  <View style={{ width: 22 }} />
+                </View>
+                <ScrollView style={styles.pickerScroll}>
+                  {emojiGroups.map((g) => (
+                    <View key={g.title}>
+                      <Text style={styles.pickerGroup}>{g.title}</Text>
+                      <View style={styles.pickerGrid}>
+                        {g.emoji.map((emoji) => (
+                          <Pressable
+                            key={emoji}
+                            onPress={() => {
+                              if (sheetFor) toggleReaction(sheetFor, emoji);
+                              closeSheet();
+                            }}
+                            style={styles.pickerCell}
+                          >
+                            <Text style={styles.pickerEmoji}>{emoji}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </>
+            ) : (
+              <>
+                <View style={styles.reactRow}>
+                  {reactionChoices.map((emoji) => {
+                    const on = sheetFor?.reactions.some((r) => r.emoji === emoji && r.mine);
+                    return (
+                      <Pressable
+                        key={emoji}
+                        onPress={() => {
+                          if (sheetFor) toggleReaction(sheetFor, emoji);
+                          closeSheet();
+                        }}
+                        style={[styles.reactBig, on && styles.reactBigOn]}
+                      >
+                        <Text style={styles.reactBigText}>{emoji}</Text>
+                      </Pressable>
+                    );
+                  })}
+                  <Pressable
+                    onPress={() => setPickerOpen(true)}
+                    style={[styles.reactBig, styles.reactPlus]}
+                  >
+                    <Ionicons name="add" size={24} color={colors.text} />
+                  </Pressable>
+                </View>
+                {sheetFor?.can_edit ? (
+                  <SheetButton
+                    icon="pencil"
+                    label="Edit"
+                    onPress={() => sheetFor && startEdit(sheetFor)}
+                  />
+                ) : null}
+                {sheetFor?.body ? (
+                  <SheetButton icon="copy-outline" label="Copy text" onPress={closeSheet} />
+                ) : null}
+                {sheetFor?.can_delete ? (
+                  <SheetButton
+                    icon="trash-outline"
+                    label="Delete"
+                    danger
+                    onPress={() => sheetFor && confirmDelete(sheetFor)}
+                  />
+                ) : null}
+              </>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -613,10 +658,42 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.xs,
   },
-  reactRow: { flexDirection: "row", justifyContent: "space-around", marginBottom: spacing.sm },
-  reactBig: { padding: spacing.sm, borderRadius: radius.pill },
+  reactRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  reactBig: { padding: spacing.sm, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   reactBigOn: { backgroundColor: colors.goldDim },
   reactBigText: { fontSize: 26 },
+  reactPlus: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+    width: 40,
+    height: 40,
+  },
+  pickerHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
+  pickerTitle: { color: colors.text, fontWeight: "800", fontSize: font.base },
+  pickerScroll: { maxHeight: 320 },
+  pickerGroup: {
+    color: colors.textMuted,
+    fontSize: font.xs,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  pickerGrid: { flexDirection: "row", flexWrap: "wrap" },
+  pickerCell: { width: "12.5%", alignItems: "center", paddingVertical: 6 },
+  pickerEmoji: { fontSize: 24 },
   sheetBtn: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md },
   sheetBtnText: { color: colors.text, fontSize: 15, fontWeight: "600" },
 });

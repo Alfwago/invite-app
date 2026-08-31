@@ -264,9 +264,15 @@ export interface BoardMessage {
   reactions: MessageReaction[];
 }
 
+export interface EmojiGroup {
+  title: string;
+  emoji: string[];
+}
+
 export interface MessagesResponse {
   board: { id: number; name: string } | null;
   reaction_choices: string[];
+  emoji_groups: EmojiGroup[];
   can_email: boolean;
   messages: BoardMessage[];
 }
