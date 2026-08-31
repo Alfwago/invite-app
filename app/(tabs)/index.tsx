@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Alert,
   Image,
@@ -9,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { Link } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ApiError } from "@/src/api/client";
@@ -26,6 +28,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { me, signOut } = useAuth();
   const query = useHome();
+  const [nightsOpen, setNightsOpen] = useState(false);
 
   function confirmSignOut() {
     Alert.alert("Log out?", "You'll need to sign in again.", [
@@ -107,10 +110,21 @@ export default function HomeScreen() {
           </Card>
         )}
 
-        <Text style={styles.sectionLabel}>Night status</Text>
-        {nights.map((night) => (
-          <NightRow key={night.id} night={night} />
-        ))}
+        <Pressable
+          onPress={() => setNightsOpen((o) => !o)}
+          style={styles.collapseHeader}
+          hitSlop={8}
+        >
+          <Text style={[styles.sectionLabel, styles.noMargin]}>Night status</Text>
+          <Ionicons
+            name={nightsOpen ? "chevron-down" : "chevron-forward"}
+            size={16}
+            color={colors.textMuted}
+          />
+        </Pressable>
+        {nightsOpen
+          ? nights.map((night) => <NightRow key={night.id} night={night} />)
+          : null}
 
         {custom_events.length > 0 ? (
           <>
@@ -206,6 +220,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   muted: { color: colors.textMuted },
+  collapseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
+  noMargin: { marginTop: 0 },
   signOut: {
     alignSelf: "center",
     marginTop: spacing.lg,
