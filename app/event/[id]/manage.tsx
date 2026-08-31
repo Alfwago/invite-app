@@ -26,6 +26,7 @@ import type {
   WaitlistEntry,
 } from "@/src/api/types";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { TimeField } from "@/src/components/TimeField";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
@@ -284,7 +285,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
       return;
     }
     if (startTime && !/^\d{1,2}:\d{2}$/.test(startTime.trim())) {
-      setError("Start time must be HH:MM (24-hour), or blank.");
+      setError("Pick a valid start time, or clear it.");
       return;
     }
     const body: EventPatchBody = {
@@ -334,15 +335,8 @@ function SettingsCard({ event }: { event: EventDetail }) {
             keyboardType="numbers-and-punctuation"
           />
         </Field>
-        <Field label="Start time (HH:MM)" style={styles.col}>
-          <TextInput
-            style={styles.input}
-            value={startTime}
-            onChangeText={setStartTime}
-            placeholder="20:30"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-          />
+        <Field label="Start time" style={styles.col}>
+          <TimeField value={startTime} onChange={setStartTime} />
         </Field>
       </View>
 
@@ -716,24 +710,15 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
 
       <View style={styles.divider} />
       <Text style={styles.subhead}>Schedule for later</Text>
-      <View style={styles.twoCol}>
-        <TextInput
-          style={[styles.input, styles.grow]}
-          value={schedDate}
-          onChangeText={setSchedDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="numbers-and-punctuation"
-        />
-        <TextInput
-          style={[styles.input, styles.grow]}
-          value={schedTime}
-          onChangeText={setSchedTime}
-          placeholder="HH:MM"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="numbers-and-punctuation"
-        />
-      </View>
+      <TextInput
+        style={styles.input}
+        value={schedDate}
+        onChangeText={setSchedDate}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor={colors.textMuted}
+        keyboardType="numbers-and-punctuation"
+      />
+      <TimeField value={schedTime} onChange={setSchedTime} />
       <View style={styles.twoCol}>
         <Button
           label="Schedule"

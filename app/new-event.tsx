@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { TimeField } from "@/src/components/TimeField";
 import type { Night } from "@/src/api/types";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
@@ -49,7 +50,7 @@ export default function NewEventScreen() {
     }
     const time = startTime.trim();
     if (time !== "" && !/^\d{1,2}:\d{2}$/.test(time)) {
-      setError("Puck drop must be HH:MM (24-hour), or leave it blank.");
+      setError("Pick a valid puck drop time, or leave it blank.");
       return;
     }
     const cap = capacity.trim();
@@ -131,19 +132,11 @@ export default function NewEventScreen() {
           onChangeText={setDate}
         />
 
-        <Text style={styles.label}>Puck drop (optional)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={
-            night?.default_time
-              ? `blank = ${formatTime(night.default_time)}`
-              : "HH:MM — blank = night default"
-          }
-          placeholderTextColor={colors.textMuted}
-          keyboardType="numbers-and-punctuation"
-          value={startTime}
-          onChangeText={setStartTime}
-        />
+        <Text style={styles.label}>
+          Puck drop (optional
+          {night?.default_time ? ` — blank = ${formatTime(night.default_time)}` : ""})
+        </Text>
+        <TimeField value={startTime} onChange={setStartTime} />
 
         <Text style={styles.label}>Roster limit (optional)</Text>
         <TextInput
