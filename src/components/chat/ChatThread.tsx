@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 import { ApiError } from "@/src/api/client";
 import type { ChatMessage, EmojiGroup } from "@/src/api/types";
@@ -91,6 +92,7 @@ export function ChatThread({
   const [sheetFor, setSheetFor] = useState<ChatMessage | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const headerHeight = useHeaderHeight();
 
   async function pickImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -147,8 +149,8 @@ export function ChatThread({
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={90}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={headerHeight}
     >
       {loading ? (
         <Loading label="Loading messages…" />
