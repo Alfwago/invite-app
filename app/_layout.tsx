@@ -91,7 +91,8 @@ function RootNavigator() {
     >
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="event/[id]" options={{ title: "Event" }} />
+      <Stack.Screen name="event/[id]/index" options={{ title: "Event" }} />
+      <Stack.Screen name="event/[id]/manage" options={{ title: "Manage event" }} />
       <Stack.Screen
         name="new-event"
         options={{ title: "New event", presentation: "modal" }}

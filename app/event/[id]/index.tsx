@@ -1,12 +1,11 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { RosterEntry } from "@/src/api/types";
-import { DirectorPanel } from "@/src/components/DirectorPanel";
 import { RsvpControls } from "@/src/components/RsvpControls";
-import { Badge, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
+import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
 import { useEvent } from "@/src/hooks/queries";
@@ -14,6 +13,7 @@ import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const query = useEvent(id);
 
   if (query.isLoading) return <Loading label="Loading event…" />;
@@ -111,7 +111,13 @@ export default function EventDetailScreen() {
           </Card>
         )}
 
-        {event.can_manage ? <DirectorPanel event={event} /> : null}
+        {event.can_manage ? (
+          <Button
+            label="Manage event"
+            variant="secondary"
+            onPress={() => router.push(`/event/${event.id}/manage`)}
+          />
+        ) : null}
 
         <Card>
           <Text style={styles.heading}>Going ({going.length})</Text>
