@@ -32,6 +32,15 @@
       "output": "static"
     },
     "plugins": [
+      [
+        "expo-notification-service-extension-plugin",
+        {
+          "mode": "development",
+          "iosNSEFilePath": "./assets/NotificationService.m",
+          "devTeam": "8977MZW8RA",
+          "iPhoneDeploymentTarget": "15.1"
+        }
+      ],
       "expo-router",
       "expo-secure-store",
       [
