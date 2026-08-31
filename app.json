@@ -21,7 +21,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d0d0d"
+        "backgroundColor": "#000000"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO"
@@ -33,13 +33,8 @@
     },
     "plugins": [
       [
-        "expo-notification-service-extension-plugin",
-        {
-          "mode": "development",
-          "iosNSEFilePath": "./assets/NotificationService.m",
-          "devTeam": "8977MZW8RA",
-          "iPhoneDeploymentTarget": "15.1"
-        }
+        "./plugins/withIosDevTeam",
+        "8977MZW8RA"
       ],
       "expo-router",
       "expo-secure-store",
