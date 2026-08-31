@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   chipFull: { width: "100%", paddingVertical: spacing.md },
   chipHalf: { flexGrow: 1, flexBasis: "45%" },
-  boardTileWrap: { width: 44, height: 44 },
+  boardTileWrap: { width: 64, height: 64 },
   boardTile: {
     width: "100%",
     height: "100%",
