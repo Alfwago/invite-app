@@ -243,6 +243,18 @@ export type RosterAction =
   | { action: "add_day_player"; name: string; email?: string; is_goalie?: boolean }
   | { action: "remove_day_player"; day_player_id: number };
 
+export interface NightMember {
+  id: number;
+  name: string;
+  is_goalie: boolean;
+}
+
+export interface NightMembersResponse {
+  night: { id: number; name: string };
+  members: NightMember[];
+  addable: NightMember[];
+}
+
 export interface EventPreset {
   id: number;
   night_id: number;

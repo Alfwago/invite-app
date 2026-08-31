@@ -16,6 +16,7 @@ import type {
   MessagesResponse,
   NewMessage,
   Night,
+  NightMembersResponse,
   PenaltySeverity,
   ProfilePatch,
   RosterAction,
@@ -104,6 +105,34 @@ export function updateNotice(
 
 export function deleteNotice(id: number): Promise<void> {
   return apiFetch(`/api/notices/${id}/`, { method: "DELETE" });
+}
+
+// ---- Skate-group (night) membership --------------------------------
+
+export function fetchNightMembers(
+  nightId: number,
+  signal?: AbortSignal,
+): Promise<NightMembersResponse> {
+  return apiFetch(`/api/nights/${nightId}/players/`, { signal });
+}
+
+export function addNightMembers(
+  nightId: number,
+  playerIds: number[],
+): Promise<NightMembersResponse> {
+  return apiFetch(`/api/nights/${nightId}/players/`, {
+    method: "POST",
+    body: { player_ids: playerIds },
+  });
+}
+
+export function removeNightMember(
+  nightId: number,
+  playerId: number,
+): Promise<NightMembersResponse> {
+  return apiFetch(`/api/nights/${nightId}/players/?player_id=${playerId}`, {
+    method: "DELETE",
+  });
 }
 
 export function fetchBoards(signal?: AbortSignal): Promise<BoardsResponse> {

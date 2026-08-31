@@ -63,6 +63,32 @@ export function useNoticeMutations() {
   };
 }
 
+export function useNightMembers(nightId: number | null | undefined) {
+  return useQuery({
+    queryKey: ["night", nightId, "members"],
+    queryFn: ({ signal }) => api.fetchNightMembers(nightId as number, signal),
+    enabled: nightId != null,
+  });
+}
+
+export function useNightMemberMutations(nightId: number) {
+  const qc = useQueryClient();
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ["night", nightId, "members"] });
+    qc.invalidateQueries({ queryKey: keys.nights });
+  };
+  return {
+    add: useMutation({
+      mutationFn: (playerIds: number[]) => api.addNightMembers(nightId, playerIds),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (playerId: number) => api.removeNightMember(nightId, playerId),
+      onSuccess: done,
+    }),
+  };
+}
+
 export function useNights() {
   return useQuery({
     queryKey: keys.nights,

@@ -16,11 +16,12 @@ export function DirectorToolsCard() {
 
   if (!me?.is_director) return null;
 
-  const rows: { label: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [];
+  const rows: { label: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [
+    { label: "Skate-group members", icon: "people-outline", href: "/skate-groups" },
+  ];
   if (me.is_president) {
     rows.push({ label: "League notices", icon: "megaphone-outline", href: "/notices" });
   }
-  if (rows.length === 0) return null;
 
   return (
     <Card accent="director">
