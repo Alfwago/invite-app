@@ -1,6 +1,5 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
-import { useFocusEffect } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 
 import { API_BASE, ApiError } from "@/src/api/client";
@@ -8,6 +7,7 @@ import * as api from "@/src/api/endpoints";
 import type { PlayerType, ProfilePatch } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Badge, Button, Card } from "@/src/components/ui";
+import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 const CREST = require("@/assets/brand/crest.jpg");
@@ -15,27 +15,6 @@ const CREST = require("@/assets/brand/crest.jpg");
 export default function ProfileScreen() {
   const { me, refreshMe } = useAuth();
   const [editing, setEditing] = useState(false);
-
-  // Pick up a verify-in-browser or director-side change when the tab regains focus.
-  const unverified = !!me && !me.email_verified;
-  useFocusEffect(
-    useCallback(() => {
-      if (unverified) refreshMe();
-    }, [unverified, refreshMe]),
-  );
-
-  const resend = useMutation({
-    mutationFn: () => api.resendVerification(),
-    onSuccess: (r) =>
-      Alert.alert(
-        r.already_verified ? "Already verified" : "Check your email",
-        r.already_verified
-          ? "Your email is already verified."
-          : "We sent a new verification link. Open it, then come back — this screen updates automatically.",
-      ),
-    onError: (e) =>
-      Alert.alert("Couldn't send", e instanceof ApiError ? e.detail : "Try again later."),
-  });
 
   if (!me) {
     return (
@@ -49,6 +28,8 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <VerifyBanner />
+
       <Card>
         <View style={styles.idRow}>
           <Image source={CREST} style={styles.crest} />
@@ -72,17 +53,6 @@ export default function ProfileScreen() {
           <Badge text={PLAYER_TYPE_LABEL[me.player_type]} tone="neutral" />
           {me.skill_assessment ? <Badge text={`SKILL ${me.skill_assessment}`} tone="neutral" /> : null}
         </View>
-        {!me.email_verified ? (
-          <View style={styles.verifyBox}>
-            <Text style={styles.warn}>Your email isn&apos;t verified — you can&apos;t RSVP yet.</Text>
-            <Button
-              label="Resend verification email"
-              variant="secondary"
-              onPress={() => resend.mutate()}
-              loading={resend.isPending}
-            />
-          </View>
-        ) : null}
         {!me.director_approved && !me.is_director ? (
           <Text style={styles.warn}>Your account is awaiting director approval.</Text>
         ) : null}
@@ -416,7 +386,6 @@ const styles = StyleSheet.create({
   muted: { color: colors.textMuted },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs },
   warn: { color: colors.amber, fontWeight: "600" },
-  verifyBox: { gap: spacing.sm },
 
   heading: { color: colors.gold, fontSize: font.md, fontWeight: "800" },
   subLabel: {

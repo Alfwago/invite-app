@@ -17,6 +17,7 @@ import { ApiError } from "@/src/api/client";
 import type { HomeNight } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { EventCard } from "@/src/components/EventCard";
+import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Card, ErrorState, Loading } from "@/src/components/ui";
 import { useHome } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -87,6 +88,8 @@ export default function HomeScreen() {
 
       <View style={styles.body}>
         <Text style={styles.greeting}>Hi {me?.first_name || me?.username}</Text>
+
+        <VerifyBanner />
 
         {notices.length > 0 ? (
           <Card accent="public">
