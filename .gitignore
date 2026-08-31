@@ -17,6 +17,10 @@ expo-env.d.ts
 ios/
 android/
 
+# EAS local credentials (never commit — contains cert paths + passwords)
+credentials.json
+credentials/
+
 # Metro
 .metro-health-check*
 
