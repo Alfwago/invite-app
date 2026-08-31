@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 
 import { API_BASE, ApiError } from "@/src/api/client";
@@ -14,6 +15,27 @@ const CREST = require("@/assets/brand/crest.jpg");
 export default function ProfileScreen() {
   const { me, refreshMe } = useAuth();
   const [editing, setEditing] = useState(false);
+
+  // Pick up a verify-in-browser or director-side change when the tab regains focus.
+  const unverified = !!me && !me.email_verified;
+  useFocusEffect(
+    useCallback(() => {
+      if (unverified) refreshMe();
+    }, [unverified, refreshMe]),
+  );
+
+  const resend = useMutation({
+    mutationFn: () => api.resendVerification(),
+    onSuccess: (r) =>
+      Alert.alert(
+        r.already_verified ? "Already verified" : "Check your email",
+        r.already_verified
+          ? "Your email is already verified."
+          : "We sent a new verification link. Open it, then come back — this screen updates automatically.",
+      ),
+    onError: (e) =>
+      Alert.alert("Couldn't send", e instanceof ApiError ? e.detail : "Try again later."),
+  });
 
   if (!me) {
     return (
@@ -51,7 +73,15 @@ export default function ProfileScreen() {
           {me.skill_assessment ? <Badge text={`SKILL ${me.skill_assessment}`} tone="neutral" /> : null}
         </View>
         {!me.email_verified ? (
-          <Text style={styles.warn}>Your email isn&apos;t verified — you can&apos;t RSVP yet.</Text>
+          <View style={styles.verifyBox}>
+            <Text style={styles.warn}>Your email isn&apos;t verified — you can&apos;t RSVP yet.</Text>
+            <Button
+              label="Resend verification email"
+              variant="secondary"
+              onPress={() => resend.mutate()}
+              loading={resend.isPending}
+            />
+          </View>
         ) : null}
         {!me.director_approved && !me.is_director ? (
           <Text style={styles.warn}>Your account is awaiting director approval.</Text>
@@ -386,6 +416,7 @@ const styles = StyleSheet.create({
   muted: { color: colors.textMuted },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs },
   warn: { color: colors.amber, fontWeight: "600" },
+  verifyBox: { gap: spacing.sm },
 
   heading: { color: colors.gold, fontSize: font.md, fontWeight: "800" },
   subLabel: {

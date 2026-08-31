@@ -3,10 +3,13 @@ import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
 import type { EventDetail, RsvpBody } from "@/src/api/types";
 import { ApiError } from "@/src/api/client";
+import * as api from "@/src/api/endpoints";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Button, Card } from "@/src/components/ui";
 import { useRsvp } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
+import { Alert } from "react-native";
+import { useMutation } from "@tanstack/react-query";
 
 const CHOICES: RsvpBody["status"][] = ["YES", "NO", "MAYBE"];
 
@@ -19,8 +22,18 @@ const CHOICE_COLOR: Record<RsvpBody["status"], string> = {
 };
 
 export function RsvpControls({ event }: { event: EventDetail }) {
-  const { me } = useAuth();
+  const { me, refreshMe } = useAuth();
   const rsvp = useRsvp(event.id);
+
+  const blockedUnverified = !!me && !me.email_verified && !me.is_director;
+  const resend = useMutation({
+    mutationFn: () => api.resendVerification(),
+    onSuccess: () => {
+      Alert.alert("Check your email", "Open the verification link, then reopen this event.");
+      refreshMe();
+    },
+    onError: () => Alert.alert("Couldn't send", "Try again from your Profile."),
+  });
 
   const current = event.my_rsvp;
   const [choice, setChoice] = useState<RsvpBody["status"]>(
@@ -55,6 +68,23 @@ export function RsvpControls({ event }: { event: EventDetail }) {
 
   const errText =
     rsvp.error instanceof ApiError ? rsvp.error.detail : rsvp.isError ? "Couldn't save your RSVP." : null;
+
+  if (blockedUnverified) {
+    return (
+      <Card>
+        <Text style={styles.heading}>Your RSVP</Text>
+        <Text style={styles.error}>
+          Verify your email address before you can RSVP.
+        </Text>
+        <Button
+          label="Resend verification email"
+          variant="secondary"
+          onPress={() => resend.mutate()}
+          loading={resend.isPending}
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card>

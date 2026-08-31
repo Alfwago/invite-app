@@ -56,6 +56,10 @@ export function requestPasswordReset(): Promise<{ sent: boolean }> {
   return apiFetch("/api/me/password-reset/", { method: "POST", body: {} });
 }
 
+export function resendVerification(): Promise<{ sent: boolean; already_verified?: boolean }> {
+  return apiFetch("/api/me/resend-verification/", { method: "POST", body: {} });
+}
+
 // ---- Nights --------------------------------------------------------------
 
 export async function fetchNights(signal?: AbortSignal): Promise<Night[]> {
