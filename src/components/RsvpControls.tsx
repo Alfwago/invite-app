@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
-import type { EventDetail, RsvpBody } from "@/src/api/types";
+import type { EventDetail, RsvpBody, RsvpGuest } from "@/src/api/types";
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import { useAuth } from "@/src/auth/AuthContext";
@@ -12,6 +12,8 @@ import { Alert } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 
 const CHOICES: RsvpBody["status"][] = ["YES", "NO", "MAYBE"];
+const SKILLS: RsvpGuest["skill"][] = ["A", "B", "C", "D"];
+const MAX_GUESTS = 10;
 
 // Selected-choice colour for the segmented control (a decision indicator,
 // not a roster-health signal).
@@ -44,11 +46,23 @@ export function RsvpControls({ event }: { event: EventDetail }) {
   const [asGoalie, setAsGoalie] = useState(current?.is_goalie ?? me?.is_goalie ?? false);
   const [beerGuy, setBeerGuy] = useState(current?.is_beer_guy ?? false);
   const [whiskeyGuy, setWhiskeyGuy] = useState(current?.is_whiskey_guy ?? false);
+  const [guests, setGuests] = useState<RsvpGuest[]>(current?.guests ?? []);
   const [notices, setNotices] = useState<string[]>([]);
 
   const showGoalieToggle = choice === "YES" && !!me?.is_goalie_skater;
   const showBeer = choice === "YES" && event.beer_guy_enabled;
   const showWhiskey = choice === "YES" && event.whiskey_guy_enabled;
+  const showGuests = choice === "YES" && event.allow_guests;
+
+  function setGuest(i: number, patch: Partial<RsvpGuest>) {
+    setGuests((g) => g.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  }
+  function addGuest() {
+    setGuests((g) => (g.length >= MAX_GUESTS ? g : [...g, { name: "", skill: "C" }]));
+  }
+  function removeGuest(i: number) {
+    setGuests((g) => g.filter((_, idx) => idx !== i));
+  }
 
   async function submit() {
     setNotices([]);
@@ -57,6 +71,11 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       if (me?.is_goalie_skater) body.is_goalie = asGoalie;
       if (event.beer_guy_enabled) body.beer_guy = beerGuy;
       if (event.whiskey_guy_enabled) body.whiskey_guy = whiskeyGuy;
+      if (event.allow_guests) {
+        const named = guests.map((g) => ({ ...g, name: g.name.trim() })).filter((g) => g.name);
+        body.guests = named;
+        body.guest_count = named.length;
+      }
     }
     try {
       const fresh = await rsvp.mutateAsync(body);
@@ -111,6 +130,48 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       {showBeer ? <ToggleRow label="I can be Beer Guy" value={beerGuy} onChange={setBeerGuy} /> : null}
       {showWhiskey ? (
         <ToggleRow label="I can be Whiskey Guy" value={whiskeyGuy} onChange={setWhiskeyGuy} />
+      ) : null}
+
+      {showGuests ? (
+        <View style={styles.guests}>
+          <View style={styles.guestHead}>
+            <Text style={styles.guestTitle}>Guests ({guests.length})</Text>
+            <Pressable
+              onPress={addGuest}
+              disabled={guests.length >= MAX_GUESTS}
+              style={[styles.addGuest, guests.length >= MAX_GUESTS && { opacity: 0.4 }]}
+            >
+              <Text style={styles.addGuestText}>+ Add guest</Text>
+            </Pressable>
+          </View>
+          {guests.map((g, i) => (
+            <View key={i} style={styles.guestRow}>
+              <View style={styles.guestTop}>
+                <TextInput
+                  style={styles.guestInput}
+                  value={g.name}
+                  onChangeText={(t) => setGuest(i, { name: t })}
+                  placeholder={`Guest ${i + 1} name`}
+                  placeholderTextColor={colors.textMuted}
+                />
+                <Pressable onPress={() => removeGuest(i)} hitSlop={8}>
+                  <Text style={styles.removeGuest}>Remove</Text>
+                </Pressable>
+              </View>
+              <View style={styles.skillRow}>
+                {SKILLS.map((s) => (
+                  <Pressable
+                    key={s}
+                    onPress={() => setGuest(i, { skill: s })}
+                    style={[styles.skillChip, g.skill === s && styles.skillChipOn]}
+                  >
+                    <Text style={[styles.skillText, g.skill === s && styles.skillTextOn]}>{s}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
       ) : null}
 
       {errText ? <Text style={styles.error}>{errText}</Text> : null}
@@ -175,4 +236,46 @@ const styles = StyleSheet.create({
   error: { color: colors.red, fontWeight: "600" },
   notice: { color: colors.amber },
   currentLine: { color: colors.textMuted, fontSize: 13, textAlign: "center" },
+
+  guests: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  guestHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  guestTitle: { color: colors.text, fontWeight: "700", fontSize: 14 },
+  addGuest: { paddingVertical: 4, paddingHorizontal: spacing.sm },
+  addGuestText: { color: colors.gold, fontWeight: "700", fontSize: 13 },
+  guestRow: {
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  guestTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  guestInput: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.text,
+    fontSize: 15,
+  },
+  removeGuest: { color: colors.red, fontSize: 12, fontWeight: "700" },
+  skillRow: { flexDirection: "row", gap: spacing.xs },
+  skillChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+  },
+  skillChipOn: { borderColor: colors.gold, backgroundColor: colors.goldDim },
+  skillText: { color: colors.textMuted, fontWeight: "700", fontSize: 13 },
+  skillTextOn: { color: colors.gold },
 });

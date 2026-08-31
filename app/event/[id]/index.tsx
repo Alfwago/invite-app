@@ -182,24 +182,29 @@ function StatTile({
 
 function PlayerLine({ entry }: { entry: RosterEntry }) {
   return (
-    <View style={styles.playerRow}>
-      <View style={styles.playerNameWrap}>
-        <Text style={styles.playerName}>
-          {entry.name}
-          {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
-        </Text>
-        {entry.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+    <View>
+      <View style={styles.playerRow}>
+        <View style={styles.playerNameWrap}>
+          <Text style={styles.playerName}>
+            {entry.name}
+            {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
+          </Text>
+          {entry.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+        </View>
+        <View style={styles.playerTags}>
+          {entry.is_beer_guy ? (
+            <Ionicons name="beer-outline" size={16} color={colors.green} />
+          ) : null}
+          {entry.is_whiskey_guy ? (
+            <Ionicons name="wine-outline" size={16} color={colors.amber} />
+          ) : null}
+          {entry.present ? <Badge text="IN" tone="good" /> : null}
+          {entry.paid ? <Badge text="PAID" tone="good" /> : null}
+        </View>
       </View>
-      <View style={styles.playerTags}>
-        {entry.is_beer_guy ? (
-          <Ionicons name="beer-outline" size={16} color={colors.green} />
-        ) : null}
-        {entry.is_whiskey_guy ? (
-          <Ionicons name="wine-outline" size={16} color={colors.amber} />
-        ) : null}
-        {entry.present ? <Badge text="IN" tone="good" /> : null}
-        {entry.paid ? <Badge text="PAID" tone="good" /> : null}
-      </View>
+      {entry.guest_names.length > 0 ? (
+        <Text style={styles.guestLine}>with {entry.guest_names.join(", ")}</Text>
+      ) : null}
     </View>
   );
 }
@@ -257,5 +262,6 @@ const styles = StyleSheet.create({
   },
   playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
   walkOn: { color: colors.textMuted, fontSize: font.xs },
+  guestLine: { color: colors.textMuted, fontSize: font.xs, marginLeft: spacing.md, marginBottom: 4 },
   playerTags: { flexDirection: "row", gap: spacing.sm, alignItems: "center", flexShrink: 0 },
 });

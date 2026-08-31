@@ -852,7 +852,12 @@ function RosterCard({ event }: { event: EventDetail }) {
         going.map((p) => (
           <RosterAdminRow
             key={`p-${p.player_id}`}
-            name={p.name + (p.guest_count > 0 ? ` +${p.guest_count}` : "")}
+            name={
+              p.name +
+              (p.guest_count > 0
+                ? ` +${p.guest_count}${p.guest_names.length ? ` (${p.guest_names.join(", ")})` : ""}`
+                : "")
+            }
             isGoalie={p.is_goalie}
             present={p.present}
             paid={p.paid}

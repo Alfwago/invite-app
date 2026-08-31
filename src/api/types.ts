@@ -109,6 +109,7 @@ export interface MyRsvp {
   status: RsvpStatus;
   is_goalie: boolean;
   guest_count: number;
+  guests: RsvpGuest[];
   is_beer_guy: boolean;
   is_whiskey_guy: boolean;
   responded_at: string | null;
@@ -135,6 +136,7 @@ export interface RosterEntry {
   status: RsvpStatus;
   is_goalie: boolean;
   guest_count: number;
+  guest_names: string[];
   is_beer_guy: boolean;
   is_whiskey_guy: boolean;
   present: boolean;
