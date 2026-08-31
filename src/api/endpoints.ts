@@ -15,6 +15,7 @@ import type {
   NewMessage,
   Night,
   PenaltySeverity,
+  ProfilePatch,
   RosterAction,
   RsvpBody,
   SendInvitesResult,
@@ -36,6 +37,14 @@ export function logout(): Promise<void> {
 
 export function fetchMe(signal?: AbortSignal): Promise<Me> {
   return apiFetch("/api/me/", { signal });
+}
+
+export function updateMe(patch: ProfilePatch): Promise<Me> {
+  return apiFetch("/api/me/", { method: "PATCH", body: patch });
+}
+
+export function requestPasswordReset(): Promise<{ sent: boolean }> {
+  return apiFetch("/api/me/password-reset/", { method: "POST", body: {} });
 }
 
 // ---- Nights --------------------------------------------------------------

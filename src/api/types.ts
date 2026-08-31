@@ -37,10 +37,53 @@ export interface Me {
   is_goalie: boolean;
   is_goalie_skater: boolean;
   is_non_playing: boolean;
+  player_type: PlayerType;
   director_approved: boolean;
   email_verified: boolean;
   phone_number: string;
   sms_opt_in: boolean;
+  sms_provider: string;
+  skill_assessment: string;
+  join_year: number | null;
+  metrics: MeMetrics;
+  /** Only present on GET /api/me/, not on the PATCH response. */
+  profile_choices?: {
+    player_type: ProfileChoice[];
+    skill_assessment: ProfileChoice[];
+    sms_provider: ProfileChoice[];
+  };
+  /** Only present on the PATCH /api/me/ response. */
+  email_reverification_sent?: boolean;
+}
+
+export type PlayerType = "non_playing" | "skater" | "goalie" | "goalie_skater";
+
+export interface ProfileChoice {
+  value: string;
+  label: string;
+}
+
+export interface MeMetrics {
+  years_in_obh: number | null;
+  invited_count: number;
+  yes_count: number;
+  present_count: number;
+  attendance_pct: number | null;
+  beer_guy_count: number;
+  whiskey_guy_count: number;
+  invites_by_night: { name: string; count: number }[];
+}
+
+export interface ProfilePatch {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  join_year?: number | null;
+  phone_number?: string;
+  sms_opt_in?: boolean;
+  sms_provider?: string;
+  skill_assessment?: string;
+  player_type?: PlayerType;
 }
 
 export interface RosterStats {
