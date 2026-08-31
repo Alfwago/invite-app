@@ -87,6 +87,16 @@ export interface DayPlayer {
   id: number;
   name: string;
   is_goalie: boolean;
+  present: boolean;
+  paid: boolean;
+}
+
+export interface WaitlistEntry {
+  waitlist_id: number;
+  player_id: number;
+  name: string;
+  is_goalie: boolean;
+  created_at: string;
 }
 
 export interface EventDetail extends EventSummary {
@@ -94,14 +104,34 @@ export interface EventDetail extends EventSummary {
   director_message_updated_at: string | null;
   capacity: number | null;
   goalies_needed: number | null;
+  allow_guests: boolean;
   auto_waitlist_enabled: boolean;
+  rsvp_locked: boolean;
+  goalie_rsvp_locked: boolean;
   beer_guy_enabled: boolean;
   whiskey_guy_enabled: boolean;
   invites_sent_at: string | null;
   players: RosterEntry[];
   day_players: DayPlayer[];
+  waitlist: WaitlistEntry[]; // director view only; [] for players
   notices?: string[]; // present on the RSVP response
 }
+
+/** Players a director can add to an event, from GET /events/<id>/candidates/. */
+export interface EventCandidates {
+  addable: { id: number; name: string; is_goalie: boolean }[];
+  waitlist: WaitlistEntry[];
+}
+
+/** Body for POST /events/<id>/roster/ — one director roster edit. */
+export type RosterAction =
+  | { action: "add"; player_ids: number[]; to?: "roster" | "waitlist" }
+  | { action: "remove"; player_id: number }
+  | { action: "promote"; waitlist_id?: number; player_id?: number }
+  | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
+  | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
+  | { action: "add_day_player"; name: string; email?: string; is_goalie?: boolean }
+  | { action: "remove_day_player"; day_player_id: number };
 
 export interface SendInvitesResult {
   created: number;
@@ -175,12 +205,17 @@ export interface CreateNextEventBody {
 }
 
 export interface EventPatchBody {
+  title?: string;
   director_message?: string;
+  notes?: string;
   start_time?: string | null;
   location?: string;
   capacity?: number | null;
   goalies_needed?: number | null;
+  allow_guests?: boolean;
   beer_guy_enabled?: boolean;
   whiskey_guy_enabled?: boolean;
   auto_waitlist_enabled?: boolean;
+  rsvp_locked?: boolean;
+  goalie_rsvp_locked?: boolean;
 }

@@ -8,12 +8,14 @@ import {
 import * as api from "@/src/api/endpoints";
 import type {
   CreateNextEventBody,
+  EventCandidates,
   EventDetail,
   EventPatchBody,
   EventSummary,
   HomeData,
   MessagesResponse,
   NewMessage,
+  RosterAction,
   RsvpBody,
 } from "@/src/api/types";
 
@@ -123,6 +125,38 @@ export function useSendBatch(id: number | string) {
   return useMutation({
     mutationFn: () => api.sendBatch(id),
     onSuccess: () => invalidate(),
+  });
+}
+
+export function useCandidates(id: number | string, enabled = true) {
+  return useQuery<EventCandidates>({
+    queryKey: ["event", String(id), "candidates"],
+    queryFn: ({ signal }) => api.fetchCandidates(id, signal),
+    enabled: enabled && id != null && id !== "",
+  });
+}
+
+export function useRosterAction(id: number | string) {
+  const qc = useQueryClient();
+  const invalidate = useInvalidateEvent(id);
+  return useMutation({
+    mutationFn: (body: RosterAction) => api.rosterAction(id, body),
+    onSuccess: (fresh) => {
+      invalidate(fresh);
+      qc.invalidateQueries({ queryKey: ["event", String(id), "candidates"] });
+    },
+  });
+}
+
+export function useDeleteEvent(id: number | string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.deleteEvent(id),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: keys.event(id) });
+      qc.invalidateQueries({ queryKey: ["events"] });
+      qc.invalidateQueries({ queryKey: keys.home });
+    },
   });
 }
 

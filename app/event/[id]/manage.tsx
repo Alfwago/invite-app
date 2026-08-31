@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import {
   Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,13 +10,28 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
-import type { EventDetail, EventPatchBody, RosterEntry } from "@/src/api/types";
+import type {
+  DayPlayer,
+  EventDetail,
+  EventPatchBody,
+  RosterAction,
+  RosterEntry,
+  WaitlistEntry,
+} from "@/src/api/types";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
-import { useEvent, usePatchEvent, useSendBatch, useSendInvites } from "@/src/hooks/queries";
+import {
+  useCandidates,
+  useDeleteEvent,
+  useEvent,
+  usePatchEvent,
+  useRosterAction,
+  useSendBatch,
+  useSendInvites,
+} from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function ManageEventScreen() {
@@ -46,6 +62,7 @@ export default function ManageEventScreen() {
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={query.isRefetching}
@@ -63,15 +80,16 @@ export default function ManageEventScreen() {
           </Text>
           <View style={styles.badgeRow}>
             <Badge text={event.status} tone="neutral" />
-            {event.roster.rsvp_locked ? <Badge text="RSVP LOCKED" tone="bad" /> : null}
+            {event.rsvp_locked ? <Badge text="SKATERS LOCKED" tone="bad" /> : null}
+            {event.goalie_rsvp_locked ? <Badge text="GOALIES LOCKED" tone="bad" /> : null}
           </View>
         </Card>
 
         <DirectorMessageCard event={event} />
         <SettingsCard event={event} />
         <InvitesCard event={event} />
-        <RosterCard players={event.players} />
-        <LifecycleCard status={event.status} />
+        <RosterCard event={event} />
+        <LifecycleCard event={event} />
       </ScrollView>
     </>
   );
@@ -125,6 +143,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
   const [goaliesNeeded, setGoaliesNeeded] = useState(
     event.goalies_needed != null ? String(event.goalies_needed) : "",
   );
+  const [allowGuests, setAllowGuests] = useState(event.allow_guests);
   const [beer, setBeer] = useState(event.beer_guy_enabled);
   const [whiskey, setWhiskey] = useState(event.whiskey_guy_enabled);
   const [autoWaitlist, setAutoWaitlist] = useState(event.auto_waitlist_enabled);
@@ -137,6 +156,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
     location !== (event.location ?? "") ||
     numOrNull(capacity) !== event.capacity ||
     numOrNull(goaliesNeeded) !== event.goalies_needed ||
+    allowGuests !== event.allow_guests ||
     beer !== event.beer_guy_enabled ||
     whiskey !== event.whiskey_guy_enabled ||
     autoWaitlist !== event.auto_waitlist_enabled;
@@ -162,6 +182,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
       location: location.trim(),
       capacity: numOrNull(capacity),
       goalies_needed: numOrNull(goaliesNeeded),
+      allow_guests: allowGuests,
       beer_guy_enabled: beer,
       whiskey_guy_enabled: whiskey,
       auto_waitlist_enabled: autoWaitlist,
@@ -217,6 +238,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
         </Field>
       </View>
 
+      <ToggleRow label="Allow guest RSVPs" value={allowGuests} onChange={setAllowGuests} />
       <ToggleRow label="Auto-waitlist when full" value={autoWaitlist} onChange={setAutoWaitlist} />
       <ToggleRow label="Beer Guy sign-up" value={beer} onChange={setBeer} />
       <ToggleRow label="Whiskey Guy sign-up" value={whiskey} onChange={setWhiskey} />
@@ -287,32 +309,130 @@ function InvitesCard({ event }: { event: EventDetail }) {
   );
 }
 
-// ---- Roster (read-only until the server supports edits) --------------
+// ---- Roster admin --------------------------------------------------
 
-function RosterCard({ players }: { players: RosterEntry[] }) {
-  const going = players.filter((p) => p.status === "YES");
-  const waitlist = players.filter((p) => p.status === "WAITLIST");
+function RosterCard({ event }: { event: EventDetail }) {
+  const roster = useRosterAction(event.id);
+  const [showAdd, setShowAdd] = useState(false);
+  const [walkOn, setWalkOn] = useState("");
+  const [walkOnGoalie, setWalkOnGoalie] = useState(false);
+
+  const going = event.players.filter((p) => p.status === "YES");
+  const busy = roster.isPending;
+
+  function act(body: RosterAction) {
+    roster.mutate(body, { onError: (e) => Alert.alert("Roster update failed", errText(e)) });
+  }
+
+  function confirmRemove(entry: RosterEntry) {
+    Alert.alert("Remove from roster?", `${entry.name} will be set to Not going.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => act({ action: "remove", player_id: entry.player_id }),
+      },
+    ]);
+  }
+
+  function addWalkOn() {
+    const name = walkOn.trim();
+    if (!name) return;
+    act({ action: "add_day_player", name, is_goalie: walkOnGoalie });
+    setWalkOn("");
+    setWalkOnGoalie(false);
+  }
 
   return (
     <Card>
       <Text style={styles.heading}>Roster</Text>
-      <Text style={styles.hint}>
-        Add / remove players, mark present or paid, and promote from the waitlist need a server
-        update — use the website for now.
-      </Text>
 
       <Text style={styles.subhead}>Going ({going.length})</Text>
       {going.length === 0 ? (
         <Text style={styles.muted}>Nobody yet.</Text>
       ) : (
-        going.map((p) => <RosterRow key={p.player_id} entry={p} />)
+        going.map((p) => (
+          <RosterAdminRow
+            key={`p-${p.player_id}`}
+            name={p.name + (p.guest_count > 0 ? ` +${p.guest_count}` : "")}
+            isGoalie={p.is_goalie}
+            present={p.present}
+            paid={p.paid}
+            disabled={busy}
+            onPresent={(v) => act({ action: "set_present", player_id: p.player_id, present: v })}
+            onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
+            onRemove={() => confirmRemove(p)}
+          />
+        ))
       )}
 
-      {waitlist.length > 0 ? (
+      {event.day_players.map((dp: DayPlayer) => (
+        <RosterAdminRow
+          key={`dp-${dp.id}`}
+          name={dp.name}
+          isGoalie={dp.is_goalie}
+          walkOn
+          present={dp.present}
+          paid={dp.paid}
+          disabled={busy}
+          onPresent={(v) => act({ action: "set_present", day_player_id: dp.id, present: v })}
+          onPaid={(v) => act({ action: "set_paid", day_player_id: dp.id, paid: v })}
+          onRemove={() => act({ action: "remove_day_player", day_player_id: dp.id })}
+        />
+      ))}
+
+      <View style={styles.divider} />
+
+      <Button
+        label={showAdd ? "Close player list" : "Add players"}
+        variant="secondary"
+        onPress={() => setShowAdd((s) => !s)}
+      />
+      {showAdd ? (
+        <AddPlayerPanel event={event} busy={busy} onAct={act} />
+      ) : null}
+
+      <Text style={styles.subhead}>Add a walk-on</Text>
+      <View style={styles.walkOnRow}>
+        <TextInput
+          style={[styles.input, styles.grow]}
+          value={walkOn}
+          onChangeText={setWalkOn}
+          placeholder="Name"
+          placeholderTextColor={colors.textMuted}
+        />
+        <Pressable
+          onPress={() => setWalkOnGoalie((g) => !g)}
+          style={[styles.goaliePick, walkOnGoalie && styles.goaliePickOn]}
+        >
+          <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
+        </Pressable>
+      </View>
+      <Button
+        label="Add walk-on"
+        variant="secondary"
+        onPress={addWalkOn}
+        disabled={busy || !walkOn.trim()}
+      />
+
+      {event.waitlist.length > 0 ? (
         <>
-          <Text style={styles.subhead}>Waitlist ({waitlist.length})</Text>
-          {waitlist.map((p) => (
-            <RosterRow key={p.player_id} entry={p} />
+          <View style={styles.divider} />
+          <Text style={styles.subhead}>Waitlist ({event.waitlist.length})</Text>
+          {event.waitlist.map((w: WaitlistEntry) => (
+            <View key={`w-${w.waitlist_id}`} style={styles.rosterRow}>
+              <Text style={styles.playerName} numberOfLines={1}>
+                {w.name}
+                {w.is_goalie ? " (G)" : ""}
+              </Text>
+              <Button
+                label="Promote"
+                variant="secondary"
+                onPress={() => act({ action: "promote", waitlist_id: w.waitlist_id })}
+                disabled={busy}
+                style={styles.promoteBtn}
+              />
+            </View>
           ))}
         </>
       ) : null}
@@ -320,43 +440,195 @@ function RosterCard({ players }: { players: RosterEntry[] }) {
   );
 }
 
-function RosterRow({ entry }: { entry: RosterEntry }) {
+function RosterAdminRow({
+  name,
+  isGoalie,
+  walkOn,
+  present,
+  paid,
+  disabled,
+  onPresent,
+  onPaid,
+  onRemove,
+}: {
+  name: string;
+  isGoalie: boolean;
+  walkOn?: boolean;
+  present: boolean;
+  paid: boolean;
+  disabled?: boolean;
+  onPresent: (v: boolean) => void;
+  onPaid: (v: boolean) => void;
+  onRemove: () => void;
+}) {
   return (
-    <View style={styles.rosterRow}>
-      <Text style={styles.playerName} numberOfLines={1}>
-        {entry.name}
-        {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
-      </Text>
-      <View style={styles.rosterTags}>
-        {entry.is_goalie ? <Badge text="G" tone="goalie" /> : null}
-        {entry.present ? <Badge text="IN" tone="good" /> : null}
-        {entry.paid ? <Badge text="PAID" tone="good" /> : null}
+    <View style={styles.adminRow}>
+      <View style={styles.adminRowTop}>
+        <Text style={styles.playerName} numberOfLines={1}>
+          {name}
+          {isGoalie ? " " : ""}
+        </Text>
+        {isGoalie ? <Badge text="G" tone="goalie" /> : null}
+        {walkOn ? <Text style={styles.walkOnTag}>walk-on</Text> : null}
+      </View>
+      <View style={styles.adminRowActions}>
+        <TogglePill label="Present" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
+        <TogglePill label="Paid" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
+        <Pressable onPress={onRemove} disabled={disabled} hitSlop={8} style={styles.removeX}>
+          <Text style={styles.removeXText}>Remove</Text>
+        </Pressable>
       </View>
     </View>
   );
 }
 
-// ---- Lifecycle (needs server endpoints) -----------------------------
+function TogglePill({
+  label,
+  on,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  on: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.pill, on ? styles.pillOn : styles.pillOff, disabled && { opacity: 0.5 }]}
+    >
+      <Text style={[styles.pillText, on && styles.pillTextOn]}>{on ? `✓ ${label}` : label}</Text>
+    </Pressable>
+  );
+}
 
-function LifecycleCard({ status }: { status: EventDetail["status"] }) {
-  const notImpl = () =>
+function AddPlayerPanel({
+  event,
+  busy,
+  onAct,
+}: {
+  event: EventDetail;
+  busy: boolean;
+  onAct: (body: RosterAction) => void;
+}) {
+  const candidates = useCandidates(event.id);
+  const [selected, setSelected] = useState<number[]>([]);
+
+  if (candidates.isLoading) return <Loading label="Loading players…" />;
+  if (candidates.isError || !candidates.data) {
+    return <Text style={styles.error}>Couldn&apos;t load the player list.</Text>;
+  }
+
+  const { addable } = candidates.data;
+  if (addable.length === 0) {
+    return <Text style={styles.muted}>Everyone on this skate group is already on the roster or waitlist.</Text>;
+  }
+
+  function toggle(id: number) {
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  function submit(to: "roster" | "waitlist") {
+    if (selected.length === 0) return;
+    onAct({ action: "add", player_ids: selected, to });
+    setSelected([]);
+  }
+
+  return (
+    <View style={styles.addPanel}>
+      {addable.map((c) => (
+        <Pressable key={c.id} onPress={() => toggle(c.id)} style={styles.checkRow}>
+          <View style={[styles.checkbox, selected.includes(c.id) && styles.checkboxOn]}>
+            {selected.includes(c.id) ? <Text style={styles.checkboxMark}>✓</Text> : null}
+          </View>
+          <Text style={styles.checkLabel} numberOfLines={1}>
+            {c.name}
+            {c.is_goalie ? " (G)" : ""}
+          </Text>
+        </Pressable>
+      ))}
+      <View style={styles.twoCol}>
+        <Button
+          label={`Add to roster${selected.length ? ` (${selected.length})` : ""}`}
+          onPress={() => submit("roster")}
+          disabled={busy || selected.length === 0}
+          style={styles.grow}
+        />
+        <Button
+          label="To waitlist"
+          variant="secondary"
+          onPress={() => submit("waitlist")}
+          disabled={busy || selected.length === 0}
+          style={styles.grow}
+        />
+      </View>
+    </View>
+  );
+}
+
+// ---- Lifecycle: locks + delete -------------------------------------
+
+function LifecycleCard({ event }: { event: EventDetail }) {
+  const patch = usePatchEvent(event.id);
+  const del = useDeleteEvent(event.id);
+  const router = useRouter();
+
+  function setLock(field: "rsvp_locked" | "goalie_rsvp_locked", value: boolean) {
+    patch.mutate({ [field]: value } as EventPatchBody, {
+      onError: (e) => Alert.alert("Couldn't update", errText(e)),
+    });
+  }
+
+  function confirmDelete() {
     Alert.alert(
-      "Not available yet",
-      "Opening, closing, completing and cancelling events from the app needs a server update. Use the website for now.",
+      "Delete this event?",
+      "This permanently removes the event and every RSVP. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            del.mutate(undefined, {
+              onSuccess: () => router.replace("/(tabs)/events"),
+              onError: (e) => Alert.alert("Delete failed", errText(e)),
+            }),
+        },
+      ],
     );
+  }
 
   return (
     <Card>
       <Text style={styles.heading}>Event status</Text>
-      <Text style={styles.status}>Currently: {status}</Text>
-      <View style={styles.lifecycleRow}>
-        <Button label="Open RSVPs" variant="secondary" onPress={notImpl} disabled style={styles.grow} />
-        <Button label="Close RSVPs" variant="secondary" onPress={notImpl} disabled style={styles.grow} />
-      </View>
-      <View style={styles.lifecycleRow}>
-        <Button label="Mark complete" variant="secondary" onPress={notImpl} disabled style={styles.grow} />
-        <Button label="Cancel event" variant="danger" onPress={notImpl} disabled style={styles.grow} />
-      </View>
+      <Text style={styles.status}>
+        Currently: {event.status}
+        {event.status === "DRAFT" ? " — sending invites opens RSVPs." : ""}
+      </Text>
+
+      <ToggleRow
+        label="Lock skater RSVPs"
+        value={event.rsvp_locked}
+        onChange={(v) => setLock("rsvp_locked", v)}
+      />
+      <ToggleRow
+        label="Lock goalie RSVPs"
+        value={event.goalie_rsvp_locked}
+        onChange={(v) => setLock("goalie_rsvp_locked", v)}
+      />
+      <Text style={styles.hint}>
+        When locked, new Yes responses go straight to the waitlist instead of taking a spot.
+      </Text>
+
+      <View style={styles.divider} />
+      <Button
+        label="Delete event"
+        variant="danger"
+        onPress={confirmDelete}
+        loading={del.isPending}
+      />
     </Card>
   );
 }
@@ -466,6 +738,7 @@ const styles = StyleSheet.create({
   },
   twoCol: { flexDirection: "row", gap: spacing.md },
   col: { flex: 1 },
+  grow: { flex: 1 },
   toggleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -476,6 +749,7 @@ const styles = StyleSheet.create({
   status: { color: colors.textMuted, fontSize: 13 },
   error: { color: colors.red, fontWeight: "600" },
   muted: { color: colors.textMuted },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
   rosterRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -484,7 +758,62 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
-  rosterTags: { flexDirection: "row", gap: spacing.xs, alignItems: "center", flexShrink: 0 },
-  lifecycleRow: { flexDirection: "row", gap: spacing.md },
-  grow: { flex: 1 },
+  promoteBtn: { flexGrow: 0, paddingHorizontal: spacing.md, minHeight: 36 },
+
+  adminRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.xs,
+  },
+  adminRowTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  adminRowActions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  walkOnTag: { color: colors.textMuted, fontSize: font.xs },
+  pill: {
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.md,
+  },
+  pillOff: { borderColor: colors.border, backgroundColor: colors.cardRaised },
+  pillOn: { borderColor: colors.green, backgroundColor: colors.greenDim },
+  pillText: { color: colors.textMuted, fontSize: font.xs, fontWeight: "700" },
+  pillTextOn: { color: colors.green },
+  removeX: { marginLeft: "auto", paddingVertical: 5, paddingHorizontal: spacing.sm },
+  removeXText: { color: colors.red, fontSize: font.xs, fontWeight: "700" },
+
+  walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  goaliePick: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  goaliePickOn: { borderColor: colors.gold, backgroundColor: colors.goldDim },
+  goaliePickText: { color: colors.textMuted, fontWeight: "800" },
+  goaliePickTextOn: { color: colors.gold },
+
+  addPanel: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  checkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 6 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxOn: { borderColor: colors.gold, backgroundColor: colors.goldDim },
+  checkboxMark: { color: colors.gold, fontWeight: "800", fontSize: 13 },
+  checkLabel: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
 });

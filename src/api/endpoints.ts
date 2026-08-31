@@ -2,6 +2,7 @@ import { apiFetch } from "./client";
 import type {
   BoardMessage,
   CreateNextEventBody,
+  EventCandidates,
   EventDetail,
   EventPatchBody,
   EventSummary,
@@ -11,6 +12,7 @@ import type {
   MessagesResponse,
   NewMessage,
   Night,
+  RosterAction,
   RsvpBody,
   SendInvitesResult,
 } from "./types";
@@ -129,4 +131,25 @@ export function sendInvites(
 
 export function sendBatch(id: number | string): Promise<SendInvitesResult> {
   return apiFetch(`/api/events/${id}/send-batch/`, { method: "POST", body: {} });
+}
+
+// ---- Director roster admin ---------------------------------------------
+
+export function fetchCandidates(
+  id: number | string,
+  signal?: AbortSignal,
+): Promise<EventCandidates> {
+  return apiFetch(`/api/events/${id}/candidates/`, { signal });
+}
+
+/** One roster edit; the server returns the fresh event. */
+export function rosterAction(
+  id: number | string,
+  body: RosterAction,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${id}/roster/`, { method: "POST", body });
+}
+
+export function deleteEvent(id: number | string): Promise<void> {
+  return apiFetch(`/api/events/${id}/`, { method: "DELETE" });
 }
