@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { API_BASE, ApiError } from "@/src/api/client";
+import * as api from "@/src/api/endpoints";
 import { useAuth } from "@/src/auth/AuthContext";
 import { Button } from "@/src/components/ui";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -28,6 +29,24 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+
+  async function sendReset() {
+    if (!resetEmail.trim()) return;
+    setResetBusy(true);
+    try {
+      await api.requestPasswordResetAnon(resetEmail.trim());
+      setResetDone(true);
+    } catch {
+      setResetDone(true); // endpoint never reveals failure; treat the same
+    } finally {
+      setResetBusy(false);
+    }
+  }
 
   async function onSubmit() {
     setError(null);
@@ -104,6 +123,53 @@ export default function LoginScreen() {
             loading={busy}
             disabled={!username || !password}
           />
+
+          <Pressable
+            onPress={() => {
+              setResetOpen((v) => !v);
+              setResetDone(false);
+            }}
+            hitSlop={8}
+            style={styles.forgotRow}
+          >
+            <Text style={styles.forgotText}>
+              {resetOpen ? "Never mind" : "Forgot password?"}
+            </Text>
+          </Pressable>
+
+          {resetOpen ? (
+            <View style={styles.resetPanel}>
+              {resetDone ? (
+                <Text style={styles.resetDone}>
+                  If that address has an account, a reset link is on its way. Check your email.
+                </Text>
+              ) : (
+                <>
+                  <Text style={styles.resetHint}>
+                    Enter your email and we&apos;ll send a reset link.
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    value={resetEmail}
+                    onChangeText={setResetEmail}
+                    onSubmitEditing={sendReset}
+                  />
+                  <Button
+                    label="Send reset link"
+                    variant="secondary"
+                    onPress={sendReset}
+                    loading={resetBusy}
+                    disabled={!resetEmail.trim()}
+                  />
+                </>
+              )}
+            </View>
+          ) : null}
         </View>
 
         <Text style={styles.server}>{API_BASE}</Text>
@@ -138,5 +204,17 @@ const styles = StyleSheet.create({
   showRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   showText: { color: colors.textMuted, fontSize: font.sm },
   error: { color: colors.red, fontWeight: "600" },
+  forgotRow: { alignSelf: "center", paddingVertical: spacing.xs },
+  forgotText: { color: colors.gold, fontSize: font.sm, fontWeight: "700" },
+  resetPanel: {
+    gap: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+  },
+  resetHint: { color: colors.textMuted, fontSize: font.sm },
+  resetDone: { color: colors.green, fontSize: font.sm, lineHeight: 20 },
   server: { color: colors.textMuted, fontSize: font.xs, textAlign: "center", marginTop: "auto" },
 });

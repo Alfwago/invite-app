@@ -35,6 +35,15 @@ export function logout(): Promise<void> {
   return apiFetch("/api/auth/logout/", { method: "POST" });
 }
 
+/** "Forgot password" — sends a reset link to the address if it matches an account. */
+export function requestPasswordResetAnon(email: string): Promise<{ sent: boolean }> {
+  return apiFetch("/api/auth/password-reset/", {
+    method: "POST",
+    body: { email },
+    anonymous: true,
+  });
+}
+
 export function fetchMe(signal?: AbortSignal): Promise<Me> {
   return apiFetch("/api/me/", { signal });
 }
