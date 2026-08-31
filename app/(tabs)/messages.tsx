@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -41,6 +41,12 @@ export default function MessagesScreen() {
 
   const canEmail = !!data?.can_email;
 
+  // Size the night tiles so exactly 6 fit one row edge-to-edge: strip the
+  // board-bar padding and the 5 inter-tile gaps, divide by 6. Fewer than 6
+  // groups stay this size and center (boardRow wraps + centers).
+  const { width } = useWindowDimensions();
+  const tileSize = Math.floor((width - spacing.md * 2 - spacing.sm * 5) / 6);
+
   return (
     <View style={styles.screen}>
       <View style={styles.boardBar}>
@@ -59,6 +65,7 @@ export default function MessagesScreen() {
               imageUrl={b.image_url}
               active={board === b.id}
               badge={b.unread ?? 0}
+              size={tileSize}
               onPress={() => setBoard(b.id)}
             />
           ))}
@@ -124,6 +131,7 @@ function BoardChip({
   full,
   imageUrl,
   badge = 0,
+  size = 56,
 }: {
   label: string;
   active: boolean;
@@ -131,10 +139,15 @@ function BoardChip({
   full?: boolean;
   imageUrl?: string | null;
   badge?: number;
+  size?: number;
 }) {
   if (!full && imageUrl) {
     return (
-      <Pressable onPress={onPress} accessibilityLabel={label} style={styles.boardTileWrap}>
+      <Pressable
+        onPress={onPress}
+        accessibilityLabel={label}
+        style={{ width: size, height: size }}
+      >
         <View style={[styles.boardTile, active && styles.boardTileActive]}>
           <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="cover" />
         </View>
@@ -192,7 +205,6 @@ const styles = StyleSheet.create({
   },
   chipFull: { width: "100%", paddingVertical: spacing.md },
   chipHalf: { flexGrow: 1, flexBasis: "45%" },
-  boardTileWrap: { width: 64, height: 64 },
   boardTile: {
     width: "100%",
     height: "100%",
