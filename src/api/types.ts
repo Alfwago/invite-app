@@ -8,6 +8,18 @@ export interface Night {
   id: number;
   name: string;
   weekday: number; // 1=Sun … 7=Sat
+  // Present on GET /api/nights/ (the create-event picker); absent from board lists.
+  default_time?: string | null;
+  default_location?: string;
+  default_capacity?: number | null;
+  default_goalies_needed?: number | null;
+  next_default_date?: string; // YYYY-MM-DD — next occurrence of weekday, today included
+  default_preset?: {
+    id: number;
+    name: string;
+    start_time: string | null;
+    capacity: number | null;
+  } | null;
 }
 
 export interface Me {
@@ -99,6 +111,46 @@ export interface WaitlistEntry {
   created_at: string;
 }
 
+export type PenaltySeverity = "MINOR" | "MAJOR";
+
+export interface PenaltyBoxEntry {
+  id: number;
+  player_id: number;
+  name: string;
+  severity: PenaltySeverity;
+  delay_hours: number;
+  reason: string;
+  eligible_at: string | null;
+  is_active: boolean;
+}
+
+export interface InviteeEntry {
+  player_id: number;
+  name: string;
+  status: RsvpStatus;
+  sent_at: string | null;
+}
+
+/** Director-only extras on EventDetail. `null` for non-directors. */
+export interface EventManage {
+  title: string;
+  director_notes: string;
+  notes: string;
+  date: string;
+  rsvp_change_warning_hours: number | null;
+  beer_guy_pays: boolean;
+  whiskey_guy_pays: boolean;
+  invite_header_image: string | null;
+  invites_send_at: string | null;
+  batch_invites_enabled: boolean;
+  batch_invites_delay_hours: number;
+  batch_invites_send_at: string | null;
+  batch_invites_sent_at: string | null;
+  batch_invitee_ids: number[];
+  invitees: InviteeEntry[];
+  penalty_box: PenaltyBoxEntry[];
+}
+
 export interface EventDetail extends EventSummary {
   director_message: string;
   director_message_updated_at: string | null;
@@ -114,24 +166,42 @@ export interface EventDetail extends EventSummary {
   players: RosterEntry[];
   day_players: DayPlayer[];
   waitlist: WaitlistEntry[]; // director view only; [] for players
+  manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
 }
 
 /** Players a director can add to an event, from GET /events/<id>/candidates/. */
 export interface EventCandidates {
   addable: { id: number; name: string; is_goalie: boolean }[];
+  invitable: { id: number; name: string; is_goalie: boolean }[];
   waitlist: WaitlistEntry[];
 }
 
 /** Body for POST /events/<id>/roster/ — one director roster edit. */
 export type RosterAction =
   | { action: "add"; player_ids: number[]; to?: "roster" | "waitlist" }
+  | { action: "add_invites"; player_ids: number[] }
   | { action: "remove"; player_id: number }
   | { action: "promote"; waitlist_id?: number; player_id?: number }
   | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
   | { action: "add_day_player"; name: string; email?: string; is_goalie?: boolean }
   | { action: "remove_day_player"; day_player_id: number };
+
+export interface EventPreset {
+  id: number;
+  night_id: number;
+  name: string;
+  is_default: boolean;
+  start_time: string | null;
+  capacity: number | null;
+  rsvp_change_warning_hours: number | null;
+  beer_guy_enabled: boolean;
+  beer_guy_pays: boolean;
+  whiskey_guy_enabled: boolean;
+  whiskey_guy_pays: boolean;
+  roster_player_ids: number[];
+}
 
 export interface SendInvitesResult {
   created: number;
@@ -207,15 +277,22 @@ export interface CreateNextEventBody {
 export interface EventPatchBody {
   title?: string;
   director_message?: string;
+  director_notes?: string;
   notes?: string;
+  date?: string;
   start_time?: string | null;
   location?: string;
   capacity?: number | null;
   goalies_needed?: number | null;
+  rsvp_change_warning_hours?: number | null;
   allow_guests?: boolean;
   beer_guy_enabled?: boolean;
+  beer_guy_pays?: boolean;
   whiskey_guy_enabled?: boolean;
+  whiskey_guy_pays?: boolean;
   auto_waitlist_enabled?: boolean;
   rsvp_locked?: boolean;
   goalie_rsvp_locked?: boolean;
+  batch_invites_enabled?: boolean;
+  batch_invites_delay_hours?: number;
 }

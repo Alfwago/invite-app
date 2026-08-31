@@ -5,6 +5,7 @@ import type {
   EventCandidates,
   EventDetail,
   EventPatchBody,
+  EventPreset,
   EventSummary,
   HomeData,
   LeagueNotice,
@@ -12,6 +13,7 @@ import type {
   MessagesResponse,
   NewMessage,
   Night,
+  PenaltySeverity,
   RosterAction,
   RsvpBody,
   SendInvitesResult,
@@ -152,4 +154,83 @@ export function rosterAction(
 
 export function deleteEvent(id: number | string): Promise<void> {
   return apiFetch(`/api/events/${id}/`, { method: "DELETE" });
+}
+
+// ---- Penalty box / invite schedule / header image --------------------
+
+export function addPenaltyBox(
+  id: number | string,
+  body: { player_id: number; severity?: PenaltySeverity; delay_hours?: number; reason?: string },
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${id}/penalty-box/`, { method: "POST", body });
+}
+
+export function removePenaltyBox(
+  id: number | string,
+  playerId: number,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${id}/penalty-box/?player_id=${playerId}`, {
+    method: "DELETE",
+  });
+}
+
+export function scheduleInvites(
+  id: number | string,
+  sendAtIso: string,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${id}/schedule/`, {
+    method: "POST",
+    body: { send_at: sendAtIso },
+  });
+}
+
+export function clearInviteSchedule(id: number | string): Promise<EventDetail> {
+  return apiFetch(`/api/events/${id}/schedule/`, { method: "DELETE" });
+}
+
+export function clearHeaderImage(id: number | string): Promise<EventDetail> {
+  return apiFetch(`/api/events/${id}/header-image/`, { method: "DELETE" });
+}
+
+export function setHeaderImage(
+  id: number | string,
+  imageUri: string,
+): Promise<EventDetail> {
+  const form = new FormData();
+  const name = imageUri.split("/").pop() || "header.jpg";
+  const ext = name.split(".").pop()?.toLowerCase();
+  const type = ext === "png" ? "image/png" : "image/jpeg";
+  form.append("image", { uri: imageUri, name, type } as unknown as Blob);
+  return apiFetch(`/api/events/${id}/header-image/`, { method: "POST", form });
+}
+
+// ---- Night event-setup presets --------------------------------------
+
+export async function fetchPresets(
+  nightId: number,
+  signal?: AbortSignal,
+): Promise<EventPreset[]> {
+  const data = await apiFetch<{ presets: EventPreset[] }>(
+    `/api/nights/${nightId}/presets/`,
+    { signal },
+  );
+  return data.presets;
+}
+
+export function savePreset(
+  eventId: number | string,
+  body: { name: string; is_default?: boolean },
+): Promise<EventPreset> {
+  return apiFetch(`/api/events/${eventId}/presets/`, { method: "POST", body });
+}
+
+export function updatePreset(
+  presetId: number,
+  body: { name?: string; is_default?: boolean; from_event_id?: number },
+): Promise<EventPreset> {
+  return apiFetch(`/api/presets/${presetId}/`, { method: "PATCH", body });
+}
+
+export function deletePreset(presetId: number): Promise<void> {
+  return apiFetch(`/api/presets/${presetId}/`, { method: "DELETE" });
 }

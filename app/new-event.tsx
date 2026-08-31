@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { ApiError } from "@/src/api/client";
 import type { Night } from "@/src/api/types";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
+import { formatEventDate, formatTime } from "@/src/format";
 import { useCreateNextEvent, useNights } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
 
@@ -23,6 +24,9 @@ export default function NewEventScreen() {
 
   const options = useMemo(() => nightsQuery.data ?? [], [nightsQuery.data]);
   const selected = nightId != null;
+  const night = nightId != null && nightId !== CUSTOM
+    ? options.find((n) => n.id === nightId)
+    : undefined;
 
   if (nightsQuery.isLoading) return <Loading label="Loading nights…" />;
   if (nightsQuery.isError) {
@@ -39,7 +43,7 @@ export default function NewEventScreen() {
   async function submit() {
     setError(null);
     if (date !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setError("Date must be YYYY-MM-DD, or leave it blank for today.");
+      setError("Date must be YYYY-MM-DD, or leave it blank for the next scheduled day.");
       return;
     }
     const time = startTime.trim();
@@ -84,11 +88,42 @@ export default function NewEventScreen() {
         />
       </Card>
 
+      {night ? (
+        <Card accent="public">
+          <Text style={styles.label}>What you&apos;ll get</Text>
+          <DefaultRow
+            k="Date"
+            v={night.next_default_date ? formatEventDate(night.next_default_date) : "today"}
+          />
+          <DefaultRow k="Puck drop" v={night.default_time ? formatTime(night.default_time) : "—"} />
+          <DefaultRow k="Location" v={night.default_location || "—"} />
+          <DefaultRow
+            k="Roster limit"
+            v={night.default_capacity != null ? String(night.default_capacity) : "—"}
+          />
+          <DefaultRow
+            k="Goalies needed"
+            v={night.default_goalies_needed != null ? String(night.default_goalies_needed) : "—"}
+          />
+          {night.default_preset ? (
+            <DefaultRow k="Preset" v={`${night.default_preset.name} (applied)`} />
+          ) : null}
+          <Text style={styles.hint}>
+            The director message, invite list and any default-preset roster come from this skate
+            group too. Override the date/time/limit below if you need to.
+          </Text>
+        </Card>
+      ) : null}
+
       <Card>
         <Text style={styles.label}>Date (optional)</Text>
         <TextInput
           style={styles.input}
-          placeholder="YYYY-MM-DD — blank = today"
+          placeholder={
+            night?.next_default_date
+              ? `blank = ${night.next_default_date}`
+              : "YYYY-MM-DD — blank = today"
+          }
           placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           value={date}
@@ -98,7 +133,11 @@ export default function NewEventScreen() {
         <Text style={styles.label}>Puck drop (optional)</Text>
         <TextInput
           style={styles.input}
-          placeholder="HH:MM — blank = night default"
+          placeholder={
+            night?.default_time
+              ? `blank = ${formatTime(night.default_time)}`
+              : "HH:MM — blank = night default"
+          }
           placeholderTextColor={colors.textMuted}
           keyboardType="numbers-and-punctuation"
           value={startTime}
@@ -108,17 +147,16 @@ export default function NewEventScreen() {
         <Text style={styles.label}>Roster limit (optional)</Text>
         <TextInput
           style={styles.input}
-          placeholder="blank = night default"
+          placeholder={
+            night?.default_capacity != null
+              ? `blank = ${night.default_capacity}`
+              : "blank = night default"
+          }
           placeholderTextColor={colors.textMuted}
           keyboardType="number-pad"
           value={capacity}
           onChangeText={setCapacity}
         />
-
-        <Text style={styles.hint}>
-          Location, goalies needed, the director message, the invite list and any default preset
-          roster all come from the skate group's saved defaults.
-        </Text>
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -130,6 +168,17 @@ export default function NewEventScreen() {
         loading={create.isPending}
       />
     </ScrollView>
+  );
+}
+
+function DefaultRow({ k, v }: { k: string; v: string }) {
+  return (
+    <View style={styles.defaultRow}>
+      <Text style={styles.defaultKey}>{k}</Text>
+      <Text style={styles.defaultVal} numberOfLines={1}>
+        {v}
+      </Text>
+    </View>
   );
 }
 
@@ -190,4 +239,18 @@ const styles = StyleSheet.create({
   },
   hint: { color: colors.textMuted, fontSize: 13 },
   error: { color: colors.red, fontWeight: "600" },
+  defaultRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: 3,
+  },
+  defaultKey: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  defaultVal: { color: colors.text, fontSize: 14, flexShrink: 1, textAlign: "right" },
 });

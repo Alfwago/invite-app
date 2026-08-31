@@ -37,8 +37,8 @@ let registeredToken: string | null = null;
 function projectId(): string | undefined {
   return (
     Constants.expoConfig?.extra?.eas?.projectId ??
-    // @ts-expect-error easConfig isn't in the types but is populated in builds
-    Constants.easConfig?.projectId
+    // easConfig isn't in the types but is populated in builds
+    (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId
   );
 }
 

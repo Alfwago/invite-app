@@ -11,10 +11,12 @@ import type {
   EventCandidates,
   EventDetail,
   EventPatchBody,
+  EventPreset,
   EventSummary,
   HomeData,
   MessagesResponse,
   NewMessage,
+  PenaltySeverity,
   RosterAction,
   RsvpBody,
 } from "@/src/api/types";
@@ -158,6 +160,92 @@ export function useDeleteEvent(id: number | string) {
       qc.invalidateQueries({ queryKey: keys.home });
     },
   });
+}
+
+export function usePenaltyBox(id: number | string) {
+  const invalidate = useInvalidateEvent(id);
+  const qc = useQueryClient();
+  const done = (fresh: EventDetail) => {
+    invalidate(fresh);
+    qc.invalidateQueries({ queryKey: ["event", String(id), "candidates"] });
+  };
+  return {
+    add: useMutation({
+      mutationFn: (body: {
+        player_id: number;
+        severity?: PenaltySeverity;
+        delay_hours?: number;
+        reason?: string;
+      }) => api.addPenaltyBox(id, body),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (playerId: number) => api.removePenaltyBox(id, playerId),
+      onSuccess: done,
+    }),
+  };
+}
+
+export function useInviteSchedule(id: number | string) {
+  const invalidate = useInvalidateEvent(id);
+  return {
+    set: useMutation({
+      mutationFn: (sendAtIso: string) => api.scheduleInvites(id, sendAtIso),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+    clear: useMutation({
+      mutationFn: () => api.clearInviteSchedule(id),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+  };
+}
+
+export function useHeaderImage(id: number | string) {
+  const invalidate = useInvalidateEvent(id);
+  return {
+    set: useMutation({
+      mutationFn: (imageUri: string) => api.setHeaderImage(id, imageUri),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+    clear: useMutation({
+      mutationFn: () => api.clearHeaderImage(id),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+  };
+}
+
+export function usePresets(nightId: number | null | undefined) {
+  return useQuery<EventPreset[]>({
+    queryKey: ["presets", nightId],
+    queryFn: ({ signal }) => api.fetchPresets(nightId as number, signal),
+    enabled: nightId != null,
+  });
+}
+
+export function usePresetMutations(eventId: number | string, nightId: number | null | undefined) {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["presets", nightId] });
+    qc.invalidateQueries({ queryKey: keys.event(eventId) });
+  };
+  return {
+    save: useMutation({
+      mutationFn: (body: { name: string; is_default?: boolean }) =>
+        api.savePreset(eventId, body),
+      onSuccess: invalidate,
+    }),
+    update: useMutation({
+      mutationFn: (args: {
+        presetId: number;
+        body: { name?: string; is_default?: boolean; from_event_id?: number };
+      }) => api.updatePreset(args.presetId, args.body),
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: (presetId: number) => api.deletePreset(presetId),
+      onSuccess: invalidate,
+    }),
+  };
 }
 
 export function useCreateNextEvent() {
