@@ -38,8 +38,12 @@ function useNotificationRouting() {
     const Notifications = require("expo-notifications");
 
     function open(data: unknown) {
-      const eventId = (data as { eventId?: number | string } | null)?.eventId;
-      if (eventId != null) router.push(`/event/${eventId}`);
+      const d = data as { eventId?: number | string; kind?: string } | null;
+      if (d?.kind === "board") {
+        router.push("/(tabs)/messages");
+      } else if (d?.eventId != null) {
+        router.push(`/event/${d.eventId}`);
+      }
     }
 
     Notifications.getLastNotificationResponseAsync().then((response: unknown) => {

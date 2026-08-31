@@ -10,6 +10,8 @@ export interface Night {
   weekday: number; // 1=Sun … 7=Sat
   /** Night's board/header art, or null. Present on /api/boards/ and /api/nights/. */
   image_url?: string | null;
+  /** Unread messages on this board for the caller. Present on /api/boards/. */
+  unread?: number;
   // Present on GET /api/nights/ (the create-event picker); absent from board lists.
   default_time?: string | null;
   default_location?: string;
@@ -269,11 +271,18 @@ export interface EmojiGroup {
   emoji: string[];
 }
 
+export interface BoardsResponse {
+  boards: Night[];
+  unread_main: number;
+  unread_total: number;
+}
+
 export interface MessagesResponse {
   board: { id: number; name: string } | null;
   reaction_choices: string[];
   emoji_groups: EmojiGroup[];
   can_email: boolean;
+  unread_total: number;
   messages: BoardMessage[];
 }
 

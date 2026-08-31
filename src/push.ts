@@ -24,7 +24,7 @@ if (pushSupported) {
         shouldShowBanner: true,
         shouldShowList: true,
         shouldPlaySound: true,
-        shouldSetBadge: false,
+        shouldSetBadge: true,
       }),
     });
   } catch {
@@ -33,6 +33,16 @@ if (pushSupported) {
 }
 
 let registeredToken: string | null = null;
+
+/** Set the app-icon badge number. No-op on web / in Expo Go / on failure. */
+export async function setAppBadge(count: number): Promise<void> {
+  if (!pushSupported) return;
+  try {
+    await require("expo-notifications").setBadgeCountAsync(Math.max(0, count));
+  } catch {
+    // native module not present — ignore
+  }
+}
 
 function projectId(): string | undefined {
   return (

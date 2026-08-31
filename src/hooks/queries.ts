@@ -47,7 +47,7 @@ export function useBoards() {
   return useQuery({
     queryKey: keys.boards,
     queryFn: ({ signal }) => api.fetchBoards(signal),
-    staleTime: 5 * 60_000,
+    staleTime: 10_000,
   });
 }
 
@@ -62,7 +62,10 @@ export function usePostMessage(board: number | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (msg: NewMessage) => api.postMessage(msg),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.messages(board) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.messages(board) });
+      qc.invalidateQueries({ queryKey: keys.boards });
+    },
   });
 }
 

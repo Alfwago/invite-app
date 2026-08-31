@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -16,12 +16,14 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
 import type { BoardMessage } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { ErrorState, Loading } from "@/src/components/ui";
 import {
+  keys,
   useBoards,
   useDeleteMessage,
   useEditMessage,
@@ -55,6 +57,7 @@ const GAP_MS = 60 * 60 * 1000; // show a time header when the break is > 1h
 // ── screen ──────────────────────────────────────────────────────────────
 export default function MessagesScreen() {
   const { me } = useAuth();
+  const qc = useQueryClient();
   const boardsQuery = useBoards();
   const [board, setBoard] = useState<number | null>(MAIN);
 
@@ -72,8 +75,15 @@ export default function MessagesScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const listRef = useRef<FlatList<BoardMessage>>(null);
 
-  const boards = useMemo(() => boardsQuery.data ?? [], [boardsQuery.data]);
+  const boards = useMemo(() => boardsQuery.data?.boards ?? [], [boardsQuery.data]);
   const data = messagesQuery.data;
+
+  // Opening a board marks it read server-side — refresh the unread badges.
+  useEffect(() => {
+    if (messagesQuery.isSuccess) {
+      qc.invalidateQueries({ queryKey: keys.boards });
+    }
+  }, [messagesQuery.dataUpdatedAt, messagesQuery.isSuccess, qc]);
   const messages = data?.messages ?? [];
   const reactionChoices = data?.reaction_choices ?? ["👍", "😂", "🔥", "👎"];
   const emojiGroups = data?.emoji_groups ?? [];
@@ -143,22 +153,25 @@ export default function MessagesScreen() {
       keyboardVerticalOffset={90}
     >
       <View style={styles.boardBar}>
-        <BoardChip label="Main" active={board === MAIN} onPress={() => setBoard(MAIN)} full />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.boardRow}
-        >
+        <BoardChip
+          label="Main"
+          active={board === MAIN}
+          onPress={() => setBoard(MAIN)}
+          badge={boardsQuery.data?.unread_main ?? 0}
+          full
+        />
+        <View style={styles.boardRow}>
           {boards.map((b) => (
             <BoardChip
               key={b.id}
               label={b.name}
               imageUrl={b.image_url}
               active={board === b.id}
+              badge={b.unread ?? 0}
               onPress={() => setBoard(b.id)}
             />
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       {messagesQuery.isLoading ? (
@@ -443,27 +456,37 @@ function SheetButton({
   );
 }
 
+function UnreadDot({ count, style }: { count: number; style?: object }) {
+  if (count <= 0) return null;
+  return (
+    <View style={[styles.unreadDot, style]}>
+      <Text style={styles.unreadDotText}>{count > 9 ? "9+" : count}</Text>
+    </View>
+  );
+}
+
 function BoardChip({
   label,
   active,
   onPress,
   full,
   imageUrl,
+  badge = 0,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
   full?: boolean;
   imageUrl?: string | null;
+  badge?: number;
 }) {
   if (!full && imageUrl) {
     return (
-      <Pressable
-        onPress={onPress}
-        accessibilityLabel={label}
-        style={[styles.boardTile, active && styles.boardTileActive]}
-      >
-        <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="cover" />
+      <Pressable onPress={onPress} accessibilityLabel={label} style={styles.boardTileWrap}>
+        <View style={[styles.boardTile, active && styles.boardTileActive]}>
+          <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="cover" />
+        </View>
+        <UnreadDot count={badge} style={styles.unreadDotCorner} />
       </Pressable>
     );
   }
@@ -483,6 +506,7 @@ function BoardChip({
       >
         {label}
       </Text>
+      <UnreadDot count={badge} />
     </Pressable>
   );
 }
@@ -496,7 +520,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
   },
-  boardRow: { gap: spacing.sm, alignItems: "center", paddingRight: spacing.md },
+  boardRow: { flexDirection: "row", gap: spacing.sm },
   chip: {
     flexDirection: "row",
     alignItems: "center",
@@ -511,9 +535,9 @@ const styles = StyleSheet.create({
   },
   chipFull: { width: "100%", paddingVertical: spacing.md },
   chipHalf: { flexGrow: 1, flexBasis: "45%" },
+  boardTileWrap: { flex: 1, aspectRatio: 1 },
   boardTile: {
-    width: 44,
-    height: 44,
+    flex: 1,
     borderRadius: radius.sm,
     borderWidth: 2,
     borderColor: colors.border,
@@ -524,6 +548,17 @@ const styles = StyleSheet.create({
   boardTileImg: { width: "100%", height: "100%" },
   chipText: { color: colors.text, fontWeight: "600", fontSize: 13, flexShrink: 1 },
   chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
+  unreadDot: {
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unreadDotText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  unreadDotCorner: { position: "absolute", top: -6, right: -6 },
 
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { color: colors.textMuted, fontSize: font.base, fontWeight: "600" },

@@ -1,9 +1,19 @@
+import { useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+import { useBoards } from "@/src/hooks/queries";
+import { setAppBadge } from "@/src/push";
 import { colors } from "@/src/theme";
 
 export default function TabsLayout() {
+  const boards = useBoards();
+  const unread = boards.data?.unread_total ?? 0;
+
+  useEffect(() => {
+    setAppBadge(unread);
+  }, [unread]);
+
   return (
     <Tabs
       screenOptions={{
@@ -48,6 +58,8 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: "Messages",
+          tabBarBadge: unread > 0 ? (unread > 99 ? "99+" : unread) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.red, color: "#fff", fontSize: 11 },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" color={color} size={size} />
           ),

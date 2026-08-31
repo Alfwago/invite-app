@@ -1,6 +1,7 @@
 import { apiFetch } from "./client";
 import type {
   BoardMessage,
+  BoardsResponse,
   CreateNextEventBody,
   EventCandidates,
   EventDetail,
@@ -55,9 +56,8 @@ export async function fetchNotices(signal?: AbortSignal): Promise<LeagueNotice[]
   return data.notices;
 }
 
-export async function fetchBoards(signal?: AbortSignal): Promise<Night[]> {
-  const data = await apiFetch<{ boards: Night[] }>("/api/boards/", { signal });
-  return data.boards;
+export function fetchBoards(signal?: AbortSignal): Promise<BoardsResponse> {
+  return apiFetch("/api/boards/", { signal });
 }
 
 export function fetchMessages(
