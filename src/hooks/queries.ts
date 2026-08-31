@@ -7,6 +7,7 @@ import {
 
 import * as api from "@/src/api/endpoints";
 import type {
+  BoardMessage,
   CreateNextEventBody,
   EventCandidates,
   EventDetail,
@@ -63,6 +64,36 @@ export function usePostMessage(board: number | null) {
     mutationFn: (msg: NewMessage) => api.postMessage(msg),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.messages(board) }),
   });
+}
+
+export function useEditMessage(board: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: number; body?: string; imageUri?: string }) =>
+      api.editMessage(args.id, args.body, args.imageUri),
+    onSuccess: (fresh) => patchMessageInCache(qc, board, fresh),
+  });
+}
+
+export function useReactMessage(board: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: number; emoji: string }) =>
+      api.reactToMessage(args.id, args.emoji),
+    onSuccess: (fresh) => patchMessageInCache(qc, board, fresh),
+  });
+}
+
+function patchMessageInCache(
+  qc: ReturnType<typeof useQueryClient>,
+  board: number | null,
+  fresh: BoardMessage,
+) {
+  qc.setQueryData<MessagesResponse>(keys.messages(board), (prev) =>
+    prev
+      ? { ...prev, messages: prev.messages.map((m) => (m.id === fresh.id ? fresh : m)) }
+      : prev,
+  );
 }
 
 export function useDeleteMessage(board: number | null) {

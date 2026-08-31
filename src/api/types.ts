@@ -242,6 +242,12 @@ export interface HomeData {
   custom_events: EventSummary[];
 }
 
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  mine: boolean;
+}
+
 export interface BoardMessage {
   id: number;
   body: string;
@@ -252,10 +258,14 @@ export interface BoardMessage {
   created_at: string;
   mine: boolean;
   can_delete: boolean;
+  can_edit: boolean;
+  reactions: MessageReaction[];
 }
 
 export interface MessagesResponse {
   board: { id: number; name: string } | null;
+  reaction_choices: string[];
+  can_email: boolean;
   messages: BoardMessage[];
 }
 
@@ -264,6 +274,14 @@ export interface NewMessage {
   body: string;
   board: number | null;
   /** local file uri from expo-image-picker */
+  imageUri?: string;
+  /** director only — also email the board's members */
+  notify?: boolean;
+}
+
+export interface EditMessage {
+  id: number;
+  body?: string;
   imageUri?: string;
 }
 

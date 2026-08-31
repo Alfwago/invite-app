@@ -68,22 +68,40 @@ export function fetchMessages(
   return apiFetch(`/api/messages/${qs}`, { signal });
 }
 
+function imagePart(uri: string) {
+  const name = uri.split("/").pop() || "photo.jpg";
+  const ext = name.split(".").pop()?.toLowerCase();
+  const type = ext === "png" ? "image/png" : "image/jpeg";
+  return { uri, name, type } as unknown as Blob;
+}
+
 export function postMessage(msg: NewMessage): Promise<BoardMessage> {
   if (msg.imageUri) {
     const form = new FormData();
     form.append("body", msg.body);
     if (msg.board != null) form.append("board", String(msg.board));
-    const name = msg.imageUri.split("/").pop() || "photo.jpg";
-    const ext = name.split(".").pop()?.toLowerCase();
-    const type = ext === "png" ? "image/png" : "image/jpeg";
-    // React Native's FormData file shape:
-    form.append("image", { uri: msg.imageUri, name, type } as unknown as Blob);
+    if (msg.notify) form.append("notify", "true");
+    form.append("image", imagePart(msg.imageUri));
     return apiFetch("/api/messages/", { method: "POST", form });
   }
   return apiFetch("/api/messages/", {
     method: "POST",
-    body: { body: msg.body, board: msg.board },
+    body: { body: msg.body, board: msg.board, notify: msg.notify ?? false },
   });
+}
+
+export function editMessage(id: number, body?: string, imageUri?: string): Promise<BoardMessage> {
+  if (imageUri) {
+    const form = new FormData();
+    if (body != null) form.append("body", body);
+    form.append("image", imagePart(imageUri));
+    return apiFetch(`/api/messages/${id}/`, { method: "PATCH", form });
+  }
+  return apiFetch(`/api/messages/${id}/`, { method: "PATCH", body: { body } });
+}
+
+export function reactToMessage(id: number, emoji: string): Promise<BoardMessage> {
+  return apiFetch(`/api/messages/${id}/react/`, { method: "POST", body: { emoji } });
 }
 
 export function deleteMessage(id: number): Promise<void> {
