@@ -129,6 +129,7 @@ function useInvalidateEvent(id: number | string) {
     if (fresh) qc.setQueryData(keys.event(id), fresh);
     qc.invalidateQueries({ queryKey: keys.event(id) });
     qc.invalidateQueries({ queryKey: ["events"] });
+    qc.invalidateQueries({ queryKey: keys.home }); // Home cards carry roster counts
   };
 }
 
