@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   boardTile: {
     flexGrow: 1,
     flexBasis: "47%",
-    aspectRatio: 2.2,
+    aspectRatio: 1,
     borderRadius: radius.md,
     borderWidth: 2,
     borderColor: colors.border,
