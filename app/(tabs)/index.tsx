@@ -19,9 +19,9 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
-import { Card, ErrorState, Loading } from "@/src/components/ui";
+import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useHome } from "@/src/hooks/queries";
-import { colors, font, radius, spacing } from "@/src/theme";
+import { colors, font, spacing } from "@/src/theme";
 
 const WORDMARK = require("@/assets/brand/wordmark.png");
 const HERO = require("@/assets/brand/hero.jpg");
@@ -114,21 +114,27 @@ export default function HomeScreen() {
           </Card>
         )}
 
-        <Pressable
-          onPress={() => setNightsOpen((o) => !o)}
-          style={styles.collapseHeader}
-          hitSlop={8}
-        >
-          <Text style={[styles.sectionLabel, styles.noMargin]}>Night status</Text>
-          <Ionicons
-            name={nightsOpen ? "chevron-down" : "chevron-forward"}
-            size={16}
-            color={colors.textMuted}
-          />
-        </Pressable>
-        {nightsOpen
-          ? nights.map((night) => <NightRow key={night.id} night={night} />)
-          : null}
+        <View style={styles.section}>
+          <Pressable
+            onPress={() => setNightsOpen((o) => !o)}
+            style={styles.collapseHeader}
+            hitSlop={8}
+          >
+            <Text style={[styles.sectionLabel, styles.noMargin]}>Night status</Text>
+            <Ionicons
+              name={nightsOpen ? "chevron-down" : "chevron-forward"}
+              size={16}
+              color={colors.textMuted}
+            />
+          </Pressable>
+          {nightsOpen ? (
+            <Card>
+              {nights.map((night, i) => (
+                <NightRow key={night.id} night={night} last={i === nights.length - 1} />
+              ))}
+            </Card>
+          ) : null}
+        </View>
 
         {custom_events.length > 0 ? (
           <>
@@ -140,19 +146,17 @@ export default function HomeScreen() {
         ) : null}
 
         <DirectorToolsCard />
-      </View>
 
-      <Pressable onPress={confirmSignOut} style={styles.signOut} hitSlop={8}>
-        <Text style={styles.signOutText}>Sign out</Text>
-      </Pressable>
+        <Button label="Sign out" variant="secondary" onPress={confirmSignOut} style={styles.signOut} />
+      </View>
     </ScrollView>
   );
 }
 
-function NightRow({ night }: { night: HomeNight }) {
+function NightRow({ night, last }: { night: HomeNight; last?: boolean }) {
   if (night.next_event) {
     return (
-      <View style={styles.nightBlock}>
+      <View style={[styles.nightBlock, !last && styles.nightRowBorder]}>
         <Text style={styles.nightName}>{night.name}</Text>
         <EventCard event={night.next_event} compact />
       </View>
@@ -160,7 +164,7 @@ function NightRow({ night }: { night: HomeNight }) {
   }
   return (
     <Link href="/events" asChild>
-      <Pressable style={styles.nightEmpty}>
+      <Pressable style={[styles.nightBlock, !last && styles.nightRowBorder]}>
         <Text style={styles.nightName}>{night.name}</Text>
         <Text style={styles.muted}>No event scheduled</Text>
       </Pressable>
@@ -215,35 +219,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: spacing.sm,
   },
-  nightBlock: { gap: spacing.xs },
+  nightBlock: { gap: spacing.xs, paddingVertical: spacing.sm },
+  nightRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   nightName: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
-  nightEmpty: {
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: 2,
-  },
   muted: { color: colors.textMuted },
   collapseHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: spacing.sm,
   },
   noMargin: { marginTop: 0 },
-  signOut: {
-    alignSelf: "center",
-    marginTop: spacing.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-  },
-  signOutText: {
-    color: colors.textMuted,
-    fontSize: font.sm,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
+  signOut: { marginTop: spacing.lg },
 });

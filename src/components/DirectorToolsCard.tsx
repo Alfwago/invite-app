@@ -24,24 +24,31 @@ export function DirectorToolsCard() {
   }
 
   return (
-    <Card accent="director">
+    <View style={styles.wrap}>
       <Text style={styles.heading}>Director tools</Text>
-      {rows.map((r) => (
-        <Pressable key={r.href} style={styles.row} onPress={() => router.push(r.href as never)}>
-          <Ionicons name={r.icon} size={18} color={colors.gold} />
-          <Text style={styles.label}>{r.label}</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
-      ))}
-    </Card>
+      <Card>
+        {rows.map((r, i) => (
+          <Pressable
+            key={r.href}
+            style={[styles.row, i < rows.length - 1 && styles.rowBorder]}
+            onPress={() => router.push(r.href as never)}
+          >
+            <Ionicons name={r.icon} size={18} color={colors.gold} />
+            <Text style={styles.label}>{r.label}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        ))}
+      </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { gap: spacing.sm, marginTop: spacing.sm },
   heading: {
     color: colors.gold,
     fontSize: font.xs,
-    fontWeight: "800",
+    fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -49,7 +56,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   label: { color: colors.text, fontSize: font.base, fontWeight: "600", flex: 1 },
 });

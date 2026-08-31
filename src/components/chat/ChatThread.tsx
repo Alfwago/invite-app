@@ -25,7 +25,11 @@ import { colors, font, radius, spacing } from "@/src/theme";
 const GAP_MS = 60 * 60 * 1000; // show a time header when the break is > 1h
 
 function clockTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 function dayLabel(iso: string): string {
   const d = new Date(iso);

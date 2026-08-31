@@ -86,6 +86,7 @@ function RootNavigator() {
         headerShadowVisible: false,
         headerTintColor: colors.gold,
         headerTitleStyle: { color: colors.text, fontWeight: "800" },
+        headerBackTitle: "Back",
         contentStyle: { backgroundColor: colors.bg },
       }}
     >

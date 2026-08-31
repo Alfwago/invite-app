@@ -1,15 +1,33 @@
+import { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
-import type { RosterEntry } from "@/src/api/types";
+import type { DayPlayer, EventDetail, RosterEntry, RsvpStatus } from "@/src/api/types";
+import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { RsvpControls } from "@/src/components/RsvpControls";
-import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CollapsibleCard,
+  ErrorState,
+  FillBar,
+  Loading,
+} from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
 import { useEvent } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
+
+const TABS: { key: RsvpStatus; label: string }[] = [
+  { key: "YES", label: "Yes" },
+  { key: "WAITLIST", label: "Waitlist" },
+  { key: "MAYBE", label: "Maybe" },
+  { key: "NO", label: "No" },
+  { key: "NO_RESPONSE", label: "No reply" },
+];
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,8 +46,6 @@ export default function EventDetailScreen() {
 
   const event = query.data;
   const roster = event.roster;
-  const going = event.players.filter((p) => p.status === "YES");
-  const waitlisted = event.players.filter((p) => p.status === "WAITLIST");
 
   const pct = fillPct(roster);
   const health = rosterHealth(roster);
@@ -46,10 +62,13 @@ export default function EventDetailScreen() {
       ? `${roster.skater_spots_open} spot${roster.skater_spots_open === 1 ? "" : "s"} left`
       : `${roster.skaters} in`;
 
+  const goingCount =
+    event.players.filter((p) => p.status === "YES").length + event.day_players.length;
+
   return (
     <>
       <Stack.Screen options={{ title: event.display_name }} />
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
         refreshControl={
@@ -80,8 +99,11 @@ export default function EventDetailScreen() {
           </Card>
         ) : null}
 
-        <Card>
-          <Text style={styles.heading}>Roster</Text>
+        <CollapsibleCard
+          title="Roster"
+          defaultOpen
+          right={<Text style={styles.headerCount}>{goingCount} going</Text>}
+        >
           <View style={styles.tiles}>
             <StatTile
               value={`${roster.skaters}`}
@@ -101,10 +123,13 @@ export default function EventDetailScreen() {
           <Text style={styles.rosterLine}>
             {spotsText} · {roster.maybe} maybe
           </Text>
-        </Card>
+          <RosterTabs event={event} />
+        </CollapsibleCard>
 
         {event.status === "OPEN" ? (
-          <RsvpControls event={event} />
+          <CollapsibleCard title="Your RSVP" defaultOpen>
+            <RsvpControls event={event} />
+          </CollapsibleCard>
         ) : (
           <Card>
             <Text style={styles.muted}>RSVPs aren't open for this event yet.</Text>
@@ -132,35 +157,66 @@ export default function EventDetailScreen() {
             onPress={() => router.push(`/event/${event.id}/manage`)}
           />
         ) : null}
+      </KeyboardAwareScrollView>
+    </>
+  );
+}
 
-        <Card>
-          <Text style={styles.heading}>Going ({going.length})</Text>
-          {going.length === 0 ? (
-            <Text style={styles.muted}>Nobody yet.</Text>
-          ) : (
-            going.map((p) => <PlayerLine key={p.player_id} entry={p} />)
-          )}
-          {event.day_players.map((dp) => (
-            <View key={`dp-${dp.id}`} style={styles.playerRow}>
-              <View style={styles.playerNameWrap}>
-                <Text style={styles.playerName}>{dp.name}</Text>
-                {dp.is_goalie ? <Badge text="G" tone="goalie" /> : null}
-                <Text style={styles.walkOn}>walk-on</Text>
-              </View>
-            </View>
-          ))}
-        </Card>
+function RosterTabs({ event }: { event: EventDetail }) {
+  const [tab, setTab] = useState<RsvpStatus>("YES");
 
-        {waitlisted.length > 0 ? (
-          <Card>
-            <Text style={styles.heading}>Waitlist ({waitlisted.length})</Text>
-            {waitlisted.map((p) => (
+  const byStatus = useMemo(() => {
+    const m = new Map<RsvpStatus, RosterEntry[]>();
+    for (const t of TABS) m.set(t.key, []);
+    for (const p of event.players) {
+      const list = m.get(p.status);
+      if (list) list.push(p);
+    }
+    return m;
+  }, [event.players]);
+
+  const rows = byStatus.get(tab) ?? [];
+  const showDayPlayers = tab === "YES" && event.day_players.length > 0;
+
+  return (
+    <View style={styles.tabsWrap}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabBar}
+      >
+        {TABS.map((t) => {
+          const count = (byStatus.get(t.key) ?? []).length + (t.key === "YES" ? event.day_players.length : 0);
+          const active = tab === t.key;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => setTab(t.key)}
+              style={[styles.tab, active && styles.tabActive]}
+            >
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                {t.label} {count}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <View style={styles.tabBody}>
+        {rows.length === 0 && !showDayPlayers ? (
+          <Text style={styles.muted}>Nobody here.</Text>
+        ) : (
+          <>
+            {rows.map((p) => (
               <PlayerLine key={p.player_id} entry={p} />
             ))}
-          </Card>
-        ) : null}
-      </ScrollView>
-    </>
+            {showDayPlayers
+              ? event.day_players.map((dp) => <DayPlayerLine key={`dp-${dp.id}`} dp={dp} />)
+              : null}
+          </>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -190,6 +246,18 @@ function StatTile({
         {sub ? <Text style={styles.tileSub}> {sub}</Text> : null}
       </Text>
       <Text style={styles.tileLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function DayPlayerLine({ dp }: { dp: DayPlayer }) {
+  return (
+    <View style={styles.playerRow}>
+      <View style={styles.playerNameWrap}>
+        <Text style={styles.playerName}>{dp.name}</Text>
+        {dp.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+        <Text style={styles.walkOn}>walk-on</Text>
+      </View>
     </View>
   );
 }
@@ -229,6 +297,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: font.lg, fontWeight: "800" },
   meta: { color: colors.textMuted, fontSize: font.sm },
   statusRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs, flexWrap: "wrap" },
+  headerCount: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
   dirLabel: {
     color: colors.gold,
     fontSize: font.xs,
@@ -237,7 +306,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   dirMessage: { color: colors.text, fontSize: font.base, fontStyle: "italic" },
-  heading: { color: colors.text, fontSize: font.md, fontWeight: "700" },
   tiles: { flexDirection: "row", gap: spacing.sm },
   tile: {
     flex: 1,
@@ -261,6 +329,20 @@ const styles = StyleSheet.create({
   },
   rosterLine: { color: colors.textMuted, fontSize: font.sm },
   muted: { color: colors.textMuted },
+  tabsWrap: { gap: spacing.sm },
+  tabBar: { gap: spacing.xs, paddingVertical: spacing.xs },
+  tab: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+  },
+  tabActive: { backgroundColor: colors.gold, borderColor: colors.gold },
+  tabText: { color: colors.textMuted, fontSize: font.xs, fontWeight: "700" },
+  tabTextActive: { color: colors.goldText },
+  tabBody: { gap: 2 },
   playerRow: {
     flexDirection: "row",
     justifyContent: "space-between",

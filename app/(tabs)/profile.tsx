@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 
 import { API_BASE, ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { PlayerType, ProfilePatch } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
+import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { Badge, Button, Card } from "@/src/components/ui";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -27,7 +28,7 @@ export default function ProfileScreen() {
   const m = me.metrics;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <VerifyBanner />
 
       <Card>
@@ -120,7 +121,7 @@ export default function ProfileScreen() {
       <AccountCard verified={me.email_verified} approved={me.director_approved || me.is_director} username={me.username} />
 
       <Text style={styles.server}>{API_BASE}</Text>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

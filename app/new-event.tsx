@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
+import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import type { Night } from "@/src/api/types";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
@@ -70,7 +71,7 @@ export default function NewEventScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Card>
         <Text style={styles.label}>Which skate?</Text>
         {options.map((n: Night) => (
@@ -167,7 +168,7 @@ export default function NewEventScreen() {
         disabled={!selected}
         loading={create.isPending}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

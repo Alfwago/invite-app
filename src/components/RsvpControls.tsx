@@ -5,7 +5,7 @@ import type { EventDetail, RsvpBody, RsvpGuest } from "@/src/api/types";
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import { useAuth } from "@/src/auth/AuthContext";
-import { Button, Card } from "@/src/components/ui";
+import { Button } from "@/src/components/ui";
 import { useRsvp } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
 import { Alert } from "react-native";
@@ -38,6 +38,8 @@ export function RsvpControls({ event }: { event: EventDetail }) {
   });
 
   const current = event.my_rsvp;
+  const [editing, setEditing] = useState(!current);
+  const locked = !!current && !editing;
   const [choice, setChoice] = useState<RsvpBody["status"]>(
     current && CHOICES.includes(current.status as RsvpBody["status"])
       ? (current.status as RsvpBody["status"])
@@ -80,6 +82,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
     try {
       const fresh = await rsvp.mutateAsync(body);
       setNotices(fresh.notices ?? []);
+      setEditing(false);
     } catch {
       // error surfaced below via rsvp.error
     }
@@ -90,8 +93,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
 
   if (blockedUnverified) {
     return (
-      <Card>
-        <Text style={styles.heading}>Your RSVP</Text>
+      <View style={styles.wrap}>
         <Text style={styles.error}>
           Verify your email address before you can RSVP.
         </Text>
@@ -101,14 +103,24 @@ export function RsvpControls({ event }: { event: EventDetail }) {
           onPress={() => resend.mutate()}
           loading={resend.isPending}
         />
-      </Card>
+      </View>
     );
   }
 
   return (
-    <Card>
-      <Text style={styles.heading}>Your RSVP</Text>
+    <View style={styles.wrap}>
+      {locked ? (
+        <Text style={styles.currentLine}>
+          You&apos;re in as {current!.status.replace("_", " ")}
+          {current!.is_goalie ? " (goalie)" : ""}
+          {current!.guest_count > 0 ? ` +${current!.guest_count} guest${current!.guest_count === 1 ? "" : "s"}` : ""}
+        </Text>
+      ) : null}
 
+      <View
+        style={[styles.controls, locked && styles.lockedControls]}
+        pointerEvents={locked ? "none" : "auto"}
+      >
       <View style={styles.segment}>
         {CHOICES.map((c) => (
           <Pressable
@@ -174,6 +186,8 @@ export function RsvpControls({ event }: { event: EventDetail }) {
         </View>
       ) : null}
 
+      </View>
+
       {errText ? <Text style={styles.error}>{errText}</Text> : null}
       {notices.map((n) => (
         <Text key={n} style={styles.notice}>
@@ -181,14 +195,36 @@ export function RsvpControls({ event }: { event: EventDetail }) {
         </Text>
       ))}
 
-      <Button label="Save RSVP" onPress={submit} loading={rsvp.isPending} />
-      {current ? (
-        <Text style={styles.currentLine}>
-          Currently: {current.status.replace("_", " ")}
-          {current.is_goalie ? " (goalie)" : ""}
-        </Text>
-      ) : null}
-    </Card>
+      {locked ? (
+        <Button label="Change RSVP" variant="secondary" onPress={() => setEditing(true)} />
+      ) : (
+        <>
+          <Button
+            label={current ? "Save changes" : "Save RSVP"}
+            onPress={submit}
+            loading={rsvp.isPending}
+          />
+          {current ? (
+            <Button
+              label="Cancel"
+              variant="secondary"
+              onPress={() => {
+                setChoice(
+                  CHOICES.includes(current.status as RsvpBody["status"])
+                    ? (current.status as RsvpBody["status"])
+                    : "YES",
+                );
+                setAsGoalie(current.is_goalie);
+                setBeerGuy(current.is_beer_guy);
+                setWhiskeyGuy(current.is_whiskey_guy);
+                setGuests(current.guests ?? []);
+                setEditing(false);
+              }}
+            />
+          ) : null}
+        </>
+      )}
+    </View>
   );
 }
 
@@ -215,7 +251,9 @@ function ToggleRow({
 }
 
 const styles = StyleSheet.create({
-  heading: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  wrap: { gap: spacing.md },
+  controls: { gap: spacing.md },
+  lockedControls: { opacity: 0.45 },
   segment: { flexDirection: "row", gap: spacing.sm },
   segmentItem: {
     flex: 1,

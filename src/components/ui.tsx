@@ -1,14 +1,25 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  LayoutAnimation,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  UIManager,
   View,
   type ViewStyle,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { colors, radius, spacing } from "@/src/theme";
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // ---- Button -------------------------------------------------------------
 
@@ -129,6 +140,49 @@ export function Card({
   );
 }
 
+// ---- CollapsibleCard -------------------------------------------------
+// A Card with a tappable header that shows/hides its body. `right` renders
+// a small element (e.g. a count) next to the title.
+
+export function CollapsibleCard({
+  title,
+  right,
+  defaultOpen = false,
+  children,
+  accent,
+}: {
+  title: string;
+  right?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+  accent?: "public" | "director";
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card accent={accent} style={styles.collapseCard}>
+      <Pressable
+        style={styles.collapseHeader}
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setOpen((o) => !o);
+        }}
+        hitSlop={8}
+      >
+        <Text style={styles.collapseTitle}>{title}</Text>
+        <View style={styles.collapseRight}>
+          {right}
+          <Ionicons
+            name={open ? "chevron-up" : "chevron-down"}
+            size={18}
+            color={colors.textMuted}
+          />
+        </View>
+      </Pressable>
+      {open ? <View style={styles.collapseBody}>{children}</View> : null}
+    </Card>
+  );
+}
+
 // ---- Loading / error / empty placeholders -----------------------------
 
 export function Loading({ label }: { label?: string }) {
@@ -184,6 +238,15 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
+  collapseCard: { gap: 0 },
+  collapseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  collapseTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  collapseRight: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  collapseBody: { gap: spacing.md, marginTop: spacing.md },
   cardPublic: { borderLeftWidth: 4, borderLeftColor: colors.gold },
   cardDirector: { borderLeftWidth: 4, borderLeftColor: colors.red },
   fillTrack: {

@@ -172,7 +172,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
   },
-  boardRow: { flexDirection: "row", gap: spacing.sm },
+  boardRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
   chip: {
     flexDirection: "row",
     alignItems: "center",
@@ -187,9 +192,10 @@ const styles = StyleSheet.create({
   },
   chipFull: { width: "100%", paddingVertical: spacing.md },
   chipHalf: { flexGrow: 1, flexBasis: "45%" },
-  boardTileWrap: { flex: 1, aspectRatio: 1 },
+  boardTileWrap: { width: 44, height: 44 },
   boardTile: {
-    flex: 1,
+    width: "100%",
+    height: "100%",
     borderRadius: radius.sm,
     borderWidth: 2,
     borderColor: colors.border,

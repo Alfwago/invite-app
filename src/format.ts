@@ -15,7 +15,18 @@ export function formatTime(hms: string | null): string {
   const [h, min] = hms.split(":").map(Number);
   const dt = new Date();
   dt.setHours(h, min, 0, 0);
-  return dt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return dt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+/** ISO datetime -> "Sep 3, 8:00 PM" in the device's locale, always 12-hour. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 /** "4 / 12 skaters" style capacity label. */

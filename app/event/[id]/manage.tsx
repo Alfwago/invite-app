@@ -25,8 +25,9 @@ import type {
   RosterEntry,
   WaitlistEntry,
 } from "@/src/api/types";
+import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
-import { formatEventDate, formatTime } from "@/src/format";
+import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
 import {
   useCandidates,
@@ -100,10 +101,9 @@ export default function ManageEventScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={query.isRefetching}
@@ -117,7 +117,7 @@ export default function ManageEventScreen() {
         {tab === "communications" ? <CommunicationsPanel event={event} manage={manage} /> : null}
         {tab === "roster" ? <RosterCard event={event} /> : null}
         {tab === "advanced" ? <AdvancedPanel event={event} manage={manage} /> : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </>
   );
 }
@@ -193,9 +193,9 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
         <Text style={styles.heading}>Invites</Text>
         <Text style={styles.status}>
           {event.invites_sent_at
-            ? `Sent ${new Date(event.invites_sent_at).toLocaleString()}`
+            ? `Sent ${formatDateTime(event.invites_sent_at)}`
             : manage.invites_send_at
-              ? `Scheduled for ${new Date(manage.invites_send_at).toLocaleString()}`
+              ? `Scheduled for ${formatDateTime(manage.invites_send_at)}`
               : "Not sent yet."}
         </Text>
         {manage.penalty_box.length > 0 ? (
@@ -695,9 +695,9 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
       <Text style={styles.heading}>Invitations</Text>
       <Text style={styles.status}>
         {event.invites_sent_at
-          ? `Sent ${new Date(event.invites_sent_at).toLocaleString()}`
+          ? `Sent ${formatDateTime(event.invites_sent_at)}`
           : manage.invites_send_at
-            ? `Scheduled for ${new Date(manage.invites_send_at).toLocaleString()}`
+            ? `Scheduled for ${formatDateTime(manage.invites_send_at)}`
             : "Not sent yet."}
       </Text>
 

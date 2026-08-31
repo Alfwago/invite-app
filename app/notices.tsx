@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { Stack } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import type { LeagueNotice } from "@/src/api/types";
+import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useManageNotices, useNoticeMutations } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -25,7 +26,7 @@ export default function NoticesScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "League notices" }} />
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
         {query.isLoading ? (
           <Loading label="Loading…" />
         ) : query.isError ? (
@@ -65,7 +66,7 @@ export default function NoticesScreen() {
             )}
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </>
   );
 }
