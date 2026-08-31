@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "obhinvites",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.falcon83.obhinvites",
@@ -15,11 +14,15 @@
       }
     },
     "android": {
+<<<<<<< HEAD
       "package": "com.falcon83.obhinvites",
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
+=======
+      "package": "com.falcon83.obhinvites"
+>>>>>>> pi/main
     },
     "web": {
       "bundler": "metro",
