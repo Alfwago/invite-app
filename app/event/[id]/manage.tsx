@@ -246,7 +246,6 @@ function SettingsPanel({ event }: { event: EventDetail }) {
   return (
     <>
       <SettingsCard event={event} />
-      <InviteListCard event={event} />
     </>
   );
 }
@@ -415,70 +414,6 @@ function SettingsCard({ event }: { event: EventDetail }) {
   );
 }
 
-function InviteListCard({ event }: { event: EventDetail }) {
-  const candidates = useCandidates(event.id);
-  const roster = useRosterAction(event.id);
-  const [selected, setSelected] = useState<number[]>([]);
-  const [open, setOpen] = useState(false);
-
-  const m = event.manage!;
-  const invited = m.invitees;
-
-  function submit() {
-    if (selected.length === 0) return;
-    roster.mutate(
-      { action: "add_invites", player_ids: selected },
-      {
-        onSuccess: () => setSelected([]),
-        onError: (e) => Alert.alert("Couldn't add invites", errText(e)),
-      },
-    );
-  }
-
-  return (
-    <Card>
-      <Text style={styles.heading}>Invite list ({invited.length})</Text>
-      <Text style={styles.hint}>
-        Everyone who gets the invite email. Adding here doesn&apos;t RSVP them.
-      </Text>
-
-      <Button
-        label={open ? "Close list" : "Add players to invite list"}
-        variant="secondary"
-        onPress={() => setOpen((o) => !o)}
-      />
-
-      {open ? (
-        candidates.isLoading ? (
-          <Loading label="Loading…" />
-        ) : candidates.data && candidates.data.invitable.length > 0 ? (
-          <View style={styles.addPanel}>
-            {candidates.data.invitable.map((c) => (
-              <CheckRow
-                key={c.id}
-                label={c.name + (c.is_goalie ? " (G)" : "")}
-                checked={selected.includes(c.id)}
-                onToggle={() =>
-                  setSelected((s) =>
-                    s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id],
-                  )
-                }
-              />
-            ))}
-            <Button
-              label={`Add ${selected.length || ""} to invite list`.replace("  ", " ")}
-              onPress={submit}
-              disabled={selected.length === 0 || roster.isPending}
-            />
-          </View>
-        ) : (
-          <Text style={styles.muted}>Everyone on this skate group is already invited.</Text>
-        )
-      ) : null}
-    </Card>
-  );
-}
-
 // ====================================================================
 // COMMUNICATIONS
 // ====================================================================
@@ -489,6 +424,7 @@ function CommunicationsPanel({ event, manage }: { event: EventDetail; manage: Ev
       <DirectorMessageCard event={event} />
       <HeaderImageCard event={event} manage={manage} />
       <SendInvitesCard event={event} manage={manage} />
+      <InviteListCard event={event} manage={manage} />
       <PenaltyBoxCard event={event} manage={manage} />
     </>
   );
@@ -571,6 +507,135 @@ function HeaderImageCard({ event, manage }: { event: EventDetail; manage: EventM
           />
         ) : null}
       </View>
+    </Card>
+  );
+}
+
+const INVITEE_TONE: Record<string, "good" | "caution" | "bad" | "neutral"> = {
+  YES: "good",
+  MAYBE: "caution",
+  WAITLIST: "caution",
+  NO: "bad",
+  NO_RESPONSE: "neutral",
+};
+const INVITEE_LABEL: Record<string, string> = {
+  YES: "Going",
+  MAYBE: "Maybe",
+  WAITLIST: "Waitlist",
+  NO: "No",
+  NO_RESPONSE: "No response",
+};
+
+function InviteListCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
+  const roster = useRosterAction(event.id);
+  const candidates = useCandidates(event.id);
+  const [showAdd, setShowAdd] = useState(false);
+  const [picked, setPicked] = useState<number[]>([]);
+
+  const busy = roster.isPending;
+  const batchIds = new Set(manage.batch_invitee_ids);
+  const invitees = [...manage.invitees].sort((a, b) => a.name.localeCompare(b.name));
+
+  function act(body: RosterAction, onErr = "Couldn't update the invite list") {
+    roster.mutate(body, { onError: (e) => Alert.alert(onErr, errText(e)) });
+  }
+
+  function addInvites() {
+    if (picked.length === 0) return;
+    roster.mutate(
+      { action: "add_invites", player_ids: picked },
+      {
+        onSuccess: () => {
+          setPicked([]);
+          setShowAdd(false);
+        },
+        onError: (e) => Alert.alert("Couldn't add", errText(e)),
+      },
+    );
+  }
+
+  return (
+    <Card>
+      <Text style={styles.heading}>Invite list ({invitees.length})</Text>
+      <Text style={styles.hint}>Everyone who gets the invite email. Tap a name for batch 2.</Text>
+
+      {invitees.map((i) => {
+        const inBatch = batchIds.has(i.player_id);
+        return (
+          <View key={i.player_id} style={styles.adminRow}>
+            <View style={styles.adminRowTop}>
+              <Text style={styles.playerName} numberOfLines={1}>
+                {i.name}
+              </Text>
+              <Badge text={INVITEE_LABEL[i.status] ?? i.status} tone={INVITEE_TONE[i.status] ?? "neutral"} />
+              {inBatch ? <Badge text="BATCH 2" tone="gold" /> : null}
+            </View>
+            <View style={styles.adminRowActions}>
+              <Pressable
+                onPress={() => act({ action: "send_invite", player_id: i.player_id })}
+                disabled={busy}
+                hitSlop={6}
+              >
+                <Text style={styles.linkText}>{i.sent_at ? "Resend" : "Send"}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  act(
+                    inBatch
+                      ? { action: "remove_batch", player_id: i.player_id }
+                      : { action: "add_batch", player_ids: [i.player_id] },
+                  )
+                }
+                disabled={busy}
+                hitSlop={6}
+              >
+                <Text style={styles.linkText}>{inBatch ? "− Batch 2" : "+ Batch 2"}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => act({ action: "remove_invite", player_id: i.player_id })}
+                disabled={busy}
+                hitSlop={6}
+              >
+                <Text style={styles.removeXText}>Remove</Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
+
+      <View style={styles.divider} />
+      <Button
+        label={showAdd ? "Close player list" : "Add to invite list"}
+        variant="secondary"
+        onPress={() => setShowAdd((s) => !s)}
+      />
+      {showAdd ? (
+        candidates.isLoading ? (
+          <Loading label="Loading…" />
+        ) : candidates.data && candidates.data.invitable.length > 0 ? (
+          <View style={styles.addPanel}>
+            {candidates.data.invitable.map((c) => (
+              <CheckRow
+                key={c.id}
+                label={c.name + (c.is_goalie ? " (G)" : "")}
+                checked={picked.includes(c.id)}
+                onToggle={() =>
+                  setPicked((s) =>
+                    s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id],
+                  )
+                }
+              />
+            ))}
+            <Button
+              label={`Add ${picked.length || ""}`.trim()}
+              onPress={addInvites}
+              disabled={busy || picked.length === 0}
+            />
+          </View>
+        ) : (
+          <Text style={styles.muted}>Everyone on this skate group is already invited.</Text>
+        )
+      ) : null}
     </Card>
   );
 }

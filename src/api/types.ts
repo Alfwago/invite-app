@@ -231,6 +231,10 @@ export interface EventCandidates {
 export type RosterAction =
   | { action: "add"; player_ids: number[]; to?: "roster" | "waitlist" }
   | { action: "add_invites"; player_ids: number[] }
+  | { action: "remove_invite"; player_id: number }
+  | { action: "add_batch"; player_ids: number[] }
+  | { action: "remove_batch"; player_id: number }
+  | { action: "send_invite"; player_id: number }
   | { action: "remove"; player_id: number }
   | { action: "promote"; waitlist_id?: number; player_id?: number }
   | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
