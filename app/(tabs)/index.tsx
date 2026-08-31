@@ -91,7 +91,6 @@ export default function HomeScreen() {
         <Text style={styles.greeting}>Hi {me?.first_name || me?.username}</Text>
 
         <VerifyBanner />
-        <DirectorToolsCard />
 
         {notices.length > 0 ? (
           <Card accent="public">
@@ -139,6 +138,8 @@ export default function HomeScreen() {
             ))}
           </>
         ) : null}
+
+        <DirectorToolsCard />
       </View>
 
       <Pressable onPress={confirmSignOut} style={styles.signOut} hitSlop={8}>
