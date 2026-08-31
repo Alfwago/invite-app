@@ -142,17 +142,23 @@ export default function MessagesScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
-      <View style={styles.boardGrid}>
+      <View style={styles.boardBar}>
         <BoardChip label="Main" active={board === MAIN} onPress={() => setBoard(MAIN)} full />
-        {boards.map((b) => (
-          <BoardChip
-            key={b.id}
-            label={b.name}
-            imageUrl={b.image_url}
-            active={board === b.id}
-            onPress={() => setBoard(b.id)}
-          />
-        ))}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.boardRow}
+        >
+          {boards.map((b) => (
+            <BoardChip
+              key={b.id}
+              label={b.name}
+              imageUrl={b.image_url}
+              active={board === b.id}
+              onPress={() => setBoard(b.id)}
+            />
+          ))}
+        </ScrollView>
       </View>
 
       {messagesQuery.isLoading ? (
@@ -484,14 +490,13 @@ function BoardChip({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
-  boardGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
+  boardBar: {
     padding: spacing.md,
+    gap: spacing.sm,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
   },
+  boardRow: { gap: spacing.sm, alignItems: "center", paddingRight: spacing.md },
   chip: {
     flexDirection: "row",
     alignItems: "center",
@@ -507,10 +512,9 @@ const styles = StyleSheet.create({
   chipFull: { width: "100%", paddingVertical: spacing.md },
   chipHalf: { flexGrow: 1, flexBasis: "45%" },
   boardTile: {
-    flexGrow: 1,
-    flexBasis: "47%",
-    aspectRatio: 1,
-    borderRadius: radius.md,
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
     borderWidth: 2,
     borderColor: colors.border,
     overflow: "hidden",
