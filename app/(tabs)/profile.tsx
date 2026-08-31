@@ -2,13 +2,13 @@ import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { API_BASE } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
-import { Badge, Button, Card } from "@/src/components/ui";
+import { Badge, Card } from "@/src/components/ui";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 const CREST = require("@/assets/brand/crest.jpg");
 
 export default function ProfileScreen() {
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -33,8 +33,6 @@ export default function ProfileScreen() {
           <Text style={styles.warn}>Your account is awaiting director approval.</Text>
         ) : null}
       </Card>
-
-      <Button label="Sign out" variant="danger" onPress={signOut} />
 
       <Card>
         <Text style={styles.rowLabel}>Phone</Text>

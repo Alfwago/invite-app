@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
-import { LogoutButton } from "@/src/components/LogoutButton";
 import { colors } from "@/src/theme";
 
 export default function TabsLayout() {
@@ -58,7 +57,6 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Profile",
-          headerRight: () => <LogoutButton />,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" color={color} size={size} />
           ),

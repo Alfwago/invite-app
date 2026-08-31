@@ -1,4 +1,5 @@
 import {
+  Alert,
   Image,
   Pressable,
   RefreshControl,
@@ -23,8 +24,15 @@ const HERO = require("@/assets/brand/hero.jpg");
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { me } = useAuth();
+  const { me, signOut } = useAuth();
   const query = useHome();
+
+  function confirmSignOut() {
+    Alert.alert("Log out?", "You'll need to sign in again.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log out", style: "destructive", onPress: () => signOut() },
+    ]);
+  }
 
   const brand = (
     <View>
@@ -113,6 +121,10 @@ export default function HomeScreen() {
           </>
         ) : null}
       </View>
+
+      <Pressable onPress={confirmSignOut} style={styles.signOut} hitSlop={8}>
+        <Text style={styles.signOutText}>Sign out</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -194,4 +206,17 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   muted: { color: colors.textMuted },
+  signOut: {
+    alignSelf: "center",
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  signOutText: {
+    color: colors.textMuted,
+    fontSize: font.sm,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
 });
