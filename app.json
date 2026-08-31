@@ -13,7 +13,7 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
-       "android": {
+    "android": {
       "package": "com.falcon83.obhinvites",
       "permissions": [
         "android.permission.RECORD_AUDIO"
@@ -38,7 +38,8 @@
           "color": "#e6b422"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
