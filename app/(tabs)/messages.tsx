@@ -450,26 +450,19 @@ function BoardChip({
   full?: boolean;
   imageUrl?: string | null;
 }) {
-  if (!full && imageUrl) {
-    return (
-      <Pressable
-        onPress={onPress}
-        accessibilityLabel={label}
-        style={[styles.boardTile, active && styles.boardTileActive]}
-      >
-        <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="cover" />
-      </Pressable>
-    );
-  }
   return (
     <Pressable
       onPress={onPress}
+      accessibilityLabel={label}
       style={[
         styles.chip,
         full ? styles.chipFull : styles.chipHalf,
         active && { backgroundColor: colors.gold, borderColor: colors.gold },
       ]}
     >
+      {!full && imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.chipIcon} resizeMode="cover" />
+      ) : null}
       <Text
         style={[styles.chipText, full && styles.chipTextFull, active && { color: colors.goldText }]}
         numberOfLines={1}
@@ -492,31 +485,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
   },
   chipFull: { width: "100%", paddingVertical: spacing.md },
   chipHalf: { flexGrow: 1, flexBasis: "45%" },
-  chipText: { color: colors.text, fontWeight: "600", fontSize: 13 },
-  chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
-  boardTile: {
-    flexGrow: 1,
-    flexBasis: "45%",
-    height: 56,
-    borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-    overflow: "hidden",
+  chipIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.sm,
     backgroundColor: colors.cardRaised,
   },
-  boardTileActive: { borderColor: colors.gold },
-  boardTileImg: { width: "100%", height: "100%" },
+  chipText: { color: colors.text, fontWeight: "600", fontSize: 13, flexShrink: 1 },
+  chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
 
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { color: colors.textMuted, fontSize: font.base, fontWeight: "600" },
