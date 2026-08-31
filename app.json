@@ -9,12 +9,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.falcon83.obhinvites",
+      "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.falcon83.obhinvites",
+      "versionCode": 1,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]

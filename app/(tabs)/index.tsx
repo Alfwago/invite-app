@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError } from "@/src/api/client";
 import type { HomeNight } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
+import { AppFooter } from "@/src/components/AppFooter";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
@@ -148,6 +149,8 @@ export default function HomeScreen() {
         <DirectorToolsCard />
 
         <Button label="Sign out" variant="secondary" onPress={confirmSignOut} style={styles.signOut} />
+
+        <AppFooter />
       </View>
     </ScrollView>
   );

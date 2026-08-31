@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 
-import { API_BASE, ApiError } from "@/src/api/client";
+import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { PlayerType, ProfilePatch } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
+import { AppFooter } from "@/src/components/AppFooter";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { Badge, Button, Card } from "@/src/components/ui";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
@@ -120,7 +121,7 @@ export default function ProfileScreen() {
 
       <AccountCard verified={me.email_verified} approved={me.director_approved || me.is_director} username={me.username} />
 
-      <Text style={styles.server}>{API_BASE}</Text>
+      <AppFooter />
     </KeyboardAwareScrollView>
   );
 }
@@ -475,5 +476,4 @@ const styles = StyleSheet.create({
   chipTextOn: { color: colors.gold },
 
   error: { color: colors.red, fontWeight: "600" },
-  server: { color: colors.textMuted, fontSize: font.xs, textAlign: "center", opacity: 0.7 },
 });
