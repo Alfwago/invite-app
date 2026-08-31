@@ -215,6 +215,7 @@ export interface EventDetail extends EventSummary {
   players: RosterEntry[];
   day_players: DayPlayer[];
   waitlist: WaitlistEntry[]; // director view only; [] for players
+  messages_unread: number; // unseen director posts on the event thread
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
 }
@@ -297,7 +298,8 @@ export interface MessageReaction {
   mine: boolean;
 }
 
-export interface BoardMessage {
+/** Shape shared by the message boards and per-event threads. */
+export interface ChatMessage {
   id: number;
   body: string;
   image_url: string | null;
@@ -309,6 +311,16 @@ export interface BoardMessage {
   can_delete: boolean;
   can_edit: boolean;
   reactions: MessageReaction[];
+}
+
+export type BoardMessage = ChatMessage;
+export type EventMessage = ChatMessage;
+
+export interface EventMessagesResponse {
+  reaction_choices: string[];
+  emoji_groups: EmojiGroup[];
+  unread: number;
+  messages: EventMessage[];
 }
 
 export interface EmojiGroup {

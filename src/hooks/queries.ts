@@ -9,6 +9,7 @@ import * as api from "@/src/api/endpoints";
 import type {
   BoardMessage,
   CreateNextEventBody,
+  EventMessagesResponse,
   EventCandidates,
   EventDetail,
   EventPatchBody,
@@ -105,6 +106,61 @@ export function useDeleteMessage(board: number | null) {
     mutationFn: (id: number) => api.deleteMessage(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.messages(board) }),
   });
+}
+
+// ---- Per-event message thread --------------------------------------
+
+const eventMessagesKey = (id: number | string) => ["event", String(id), "messages"] as const;
+
+export function useEventMessages(id: number | string) {
+  return useQuery({
+    queryKey: eventMessagesKey(id),
+    queryFn: ({ signal }) => api.fetchEventMessages(id, signal),
+    enabled: id != null && id !== "",
+  });
+}
+
+function patchEventMessageInCache(
+  qc: ReturnType<typeof useQueryClient>,
+  id: number | string,
+  fresh: BoardMessage,
+) {
+  qc.setQueryData<EventMessagesResponse>(
+    eventMessagesKey(id),
+    (prev) =>
+      prev
+        ? { ...prev, messages: prev.messages.map((m) => (m.id === fresh.id ? fresh : m)) }
+        : prev,
+  );
+}
+
+export function useEventThreadActions(id: number | string) {
+  const qc = useQueryClient();
+  const refreshThread = () => {
+    qc.invalidateQueries({ queryKey: eventMessagesKey(id) });
+    qc.invalidateQueries({ queryKey: keys.event(id) }); // messages_unread
+  };
+  return {
+    post: useMutation({
+      mutationFn: (args: { body: string; imageUri?: string }) =>
+        api.postEventMessage(id, args.body, args.imageUri),
+      onSuccess: refreshThread,
+    }),
+    edit: useMutation({
+      mutationFn: (args: { mid: number; body?: string; imageUri?: string }) =>
+        api.editEventMessage(id, args.mid, args.body, args.imageUri),
+      onSuccess: (fresh) => patchEventMessageInCache(qc, id, fresh),
+    }),
+    react: useMutation({
+      mutationFn: (args: { mid: number; emoji: string }) =>
+        api.reactEventMessage(id, args.mid, args.emoji),
+      onSuccess: (fresh) => patchEventMessageInCache(qc, id, fresh),
+    }),
+    remove: useMutation({
+      mutationFn: (mid: number) => api.deleteEventMessage(id, mid),
+      onSuccess: refreshThread,
+    }),
+  };
 }
 
 export function useEvents(past = false): UseQueryResult<EventSummary[]> {

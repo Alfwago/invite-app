@@ -5,6 +5,8 @@ import type {
   CreateNextEventBody,
   EventCandidates,
   EventDetail,
+  EventMessage,
+  EventMessagesResponse,
   EventPatchBody,
   EventPreset,
   EventSummary,
@@ -128,6 +130,61 @@ export function reactToMessage(id: number, emoji: string): Promise<BoardMessage>
 
 export function deleteMessage(id: number): Promise<void> {
   return apiFetch(`/api/messages/${id}/`, { method: "DELETE" });
+}
+
+// ---- Per-event message thread ---------------------------------------
+
+export function fetchEventMessages(
+  eventId: number | string,
+  signal?: AbortSignal,
+): Promise<EventMessagesResponse> {
+  return apiFetch(`/api/events/${eventId}/messages/`, { signal });
+}
+
+export function postEventMessage(
+  eventId: number | string,
+  body: string,
+  imageUri?: string,
+): Promise<EventMessage> {
+  const path = `/api/events/${eventId}/messages/`;
+  if (imageUri) {
+    const form = new FormData();
+    form.append("body", body);
+    form.append("image", imagePart(imageUri));
+    return apiFetch(path, { method: "POST", form });
+  }
+  return apiFetch(path, { method: "POST", body: { body } });
+}
+
+export function editEventMessage(
+  eventId: number | string,
+  mid: number,
+  body?: string,
+  imageUri?: string,
+): Promise<EventMessage> {
+  const path = `/api/events/${eventId}/messages/${mid}/`;
+  if (imageUri) {
+    const form = new FormData();
+    if (body != null) form.append("body", body);
+    form.append("image", imagePart(imageUri));
+    return apiFetch(path, { method: "PATCH", form });
+  }
+  return apiFetch(path, { method: "PATCH", body: { body } });
+}
+
+export function reactEventMessage(
+  eventId: number | string,
+  mid: number,
+  emoji: string,
+): Promise<EventMessage> {
+  return apiFetch(`/api/events/${eventId}/messages/${mid}/react/`, {
+    method: "POST",
+    body: { emoji },
+  });
+}
+
+export function deleteEventMessage(eventId: number | string, mid: number): Promise<void> {
+  return apiFetch(`/api/events/${eventId}/messages/${mid}/`, { method: "DELETE" });
 }
 
 // ---- Events (read) --------------------------------------------------------

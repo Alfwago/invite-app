@@ -1,4 +1,4 @@
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -110,6 +110,20 @@ export default function EventDetailScreen() {
             <Text style={styles.muted}>RSVPs aren't open for this event yet.</Text>
           </Card>
         )}
+
+        <Pressable
+          style={styles.threadBtn}
+          onPress={() => router.push(`/event/${event.id}/messages`)}
+        >
+          <Ionicons name="chatbubbles-outline" size={20} color={colors.text} />
+          <Text style={styles.threadBtnText}>Messages</Text>
+          {event.messages_unread > 0 ? (
+            <View style={styles.threadBadge}>
+              <Text style={styles.threadBadgeText}>{event.messages_unread}</Text>
+            </View>
+          ) : null}
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
 
         {event.can_manage ? (
           <Button
@@ -263,5 +277,27 @@ const styles = StyleSheet.create({
   playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
   walkOn: { color: colors.textMuted, fontSize: font.xs },
   guestLine: { color: colors.textMuted, fontSize: font.xs, marginLeft: spacing.md, marginBottom: 4 },
+  threadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  threadBtnText: { color: colors.text, fontSize: font.base, fontWeight: "700", flex: 1 },
+  threadBadge: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    backgroundColor: colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  threadBadgeText: { color: "#fff", fontSize: 12, fontWeight: "800" },
   playerTags: { flexDirection: "row", gap: spacing.sm, alignItems: "center", flexShrink: 0 },
 });
