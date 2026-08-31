@@ -32,6 +32,42 @@ if (pushSupported) {
   }
 }
 
+/**
+ * Android notification channels. Invites go to a MAX-importance channel so
+ * they arrive as a heads-up banner, make a sound, and sit in the shade until
+ * the user acts on them — the way a text message does. Other pushes use a
+ * HIGH-importance "default" channel. Channels must exist before the first
+ * notification arrives and their importance can't be lowered later, so we
+ * (re)create them every launch on Android.
+ */
+export async function configureAndroidChannels(): Promise<void> {
+  if (!pushSupported || Platform.OS !== "android") return;
+  try {
+    const Notifications = require("expo-notifications");
+    const { AndroidImportance, AndroidNotificationVisibility } = Notifications;
+
+    await Notifications.setNotificationChannelAsync("skate-invites", {
+      name: "Skate invites",
+      description: "When you're invited to a skate",
+      importance: AndroidImportance.MAX,
+      sound: "default",
+      vibrationPattern: [0, 250, 250, 250],
+      enableVibrate: true,
+      lockscreenVisibility: AndroidNotificationVisibility.PUBLIC,
+      showBadge: true,
+    });
+
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "General",
+      importance: AndroidImportance.HIGH,
+      sound: "default",
+      showBadge: true,
+    });
+  } catch {
+    // native module not present — ignore
+  }
+}
+
 let registeredToken: string | null = null;
 
 /** Set the app-icon badge number. No-op on web / in Expo Go / on failure. */
@@ -70,12 +106,7 @@ export async function registerForPush(): Promise<void> {
     }
     if (status !== "granted") return;
 
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "Default",
-        importance: Notifications.AndroidImportance.DEFAULT,
-      });
-    }
+    await configureAndroidChannels();
 
     const id = projectId();
     if (!id) {

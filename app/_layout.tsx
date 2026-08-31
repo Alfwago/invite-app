@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { Loading } from "@/src/components/ui";
-import { pushSupported } from "@/src/push";
+import { configureAndroidChannels, pushSupported } from "@/src/push";
 import { colors } from "@/src/theme";
 
 const queryClient = new QueryClient({
@@ -36,6 +36,9 @@ function useNotificationRouting() {
     // expo-notifications isn't available on web or in Expo Go (SDK 53+).
     if (!pushSupported) return;
     const Notifications = require("expo-notifications");
+
+    // Make sure the Android channels exist before any notification lands.
+    configureAndroidChannels();
 
     function open(data: unknown) {
       const d = data as { eventId?: number | string; kind?: string } | null;
