@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import { View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
+import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
 import { Loading } from "@/src/components/ui";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
@@ -90,6 +92,7 @@ function RootNavigator() {
   if (!ready) return <Loading label="Starting up…" />;
 
   return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
     <Stack
       screenOptions={{
         header: (props) => <NavHeader {...props} />,
@@ -121,5 +124,7 @@ function RootNavigator() {
         options={{ title: "New event", presentation: "modal" }}
       />
     </Stack>
+      <BottomBar />
+    </View>
   );
 }

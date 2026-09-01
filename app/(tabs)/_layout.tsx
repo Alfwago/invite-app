@@ -7,13 +7,17 @@ import { useBoards, useInbox } from "@/src/hooks/queries";
 import { setAppBadge } from "@/src/push";
 import { colors } from "@/src/theme";
 
+/**
+ * The four tab screens. The native tab bar is hidden — a persistent
+ * <BottomBar> rendered at the root drives navigation so it stays visible on
+ * every screen, not just these four.
+ */
 export default function TabsLayout() {
   const router = useRouter();
   const boards = useBoards();
   const inbox = useInbox();
-  const boardUnread = boards.data?.unread_total ?? 0;
   const dmUnread = inbox.data?.unread_total ?? 0;
-  const unread = boardUnread + dmUnread;
+  const unread = (boards.data?.unread_total ?? 0) + dmUnread;
 
   useEffect(() => {
     setAppBadge(unread);
@@ -40,6 +44,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={() => null}
       screenOptions={{
         headerStyle: {
           backgroundColor: colors.bg,
@@ -49,56 +54,13 @@ export default function TabsLayout() {
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.text, fontWeight: "800", fontSize: 20 },
         headerTintColor: colors.text,
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-        },
-        tabBarActiveTintColor: colors.gold,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarLabelStyle: { fontWeight: "600" },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="events"
-        options={{
-          title: "Events",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: "Messages",
-          headerRight: inboxButton,
-          tabBarBadge: unread > 0 ? (unread > 99 ? "99+" : unread) : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.red, color: "#fff", fontSize: 11 },
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Home", headerShown: false }} />
+      <Tabs.Screen name="events" options={{ title: "Events" }} />
+      <Tabs.Screen name="messages" options={{ title: "Messages", headerRight: inboxButton }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );
 }
