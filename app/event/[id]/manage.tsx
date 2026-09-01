@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type {
@@ -1093,9 +1094,9 @@ function RosterAdminRow({
         </Text>
         {tag ? <Text style={styles.roleTag}>{tag}</Text> : null}
         <View style={styles.tinyBtns}>
-          <TinyBtn text="In" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
+          <TinyBtn icon="checkmark" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
           {pays ? (
-            <TinyBtn text="Paid" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
+            <TinyBtn text="$" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
           ) : null}
           {hasGuys ? <View style={styles.grpGap} /> : null}
           {showBeer && onBeer ? (
@@ -1105,7 +1106,7 @@ function RosterAdminRow({
             <TinyBtn text="🥃" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
           ) : null}
           <View style={styles.grpGap} />
-          <TinyBtn text="✕" danger disabled={disabled} onPress={onRemove} />
+          <TinyBtn icon="close" danger disabled={disabled} onPress={onRemove} />
         </View>
       </View>
 
@@ -1116,10 +1117,10 @@ function RosterAdminRow({
             {g.skill ? ` (${g.skill})` : ""}
           </Text>
           <View style={styles.tinyBtns}>
-            <TinyBtn text="In" on={g.present} disabled={disabled} onPress={() => onGuestPresent?.(i, !g.present)} />
-            <TinyBtn text="Paid" on={g.paid} disabled={disabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
+            <TinyBtn icon="checkmark" on={g.present} disabled={disabled} onPress={() => onGuestPresent?.(i, !g.present)} />
+            <TinyBtn text="$" on={g.paid} disabled={disabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
             <View style={styles.grpGap} />
-            <TinyBtn text="✕" danger disabled={disabled} onPress={() => onGuestRemove?.(i)} />
+            <TinyBtn icon="close" danger disabled={disabled} onPress={() => onGuestRemove?.(i)} />
           </View>
         </View>
       ))}
@@ -1129,17 +1130,20 @@ function RosterAdminRow({
 
 function TinyBtn({
   text,
+  icon,
   on,
   danger,
   disabled,
   onPress,
 }: {
-  text: string;
+  text?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
   on?: boolean;
   danger?: boolean;
   disabled?: boolean;
   onPress: () => void;
 }) {
+  const color = danger ? colors.red : on ? colors.goldText : colors.textMuted;
   return (
     <Pressable
       onPress={onPress}
@@ -1152,9 +1156,11 @@ function TinyBtn({
         disabled && { opacity: 0.4 },
       ]}
     >
-      <Text style={[styles.tinyText, on && styles.tinyTextOn, danger && styles.tinyTextDanger]}>
-        {text}
-      </Text>
+      {icon ? (
+        <Ionicons name={icon} size={15} color={color} />
+      ) : (
+        <Text style={[styles.tinyText, { color }]}>{text}</Text>
+      )}
     </Pressable>
   );
 }
