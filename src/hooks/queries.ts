@@ -33,7 +33,6 @@ export const keys = {
   players: (params: { night?: number | null; goalies?: boolean; q?: string }) =>
     ["players", params] as const,
   player: (id: number) => ["player", id] as const,
-  ratingRequests: ["rating-requests"] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
@@ -442,27 +441,8 @@ export function useSaveRatings(playerId: number) {
         qc.invalidateQueries({ queryKey: keys.player(playerId) });
       }
       qc.invalidateQueries({ queryKey: ["players"] });
-      qc.invalidateQueries({ queryKey: keys.ratingRequests });
     },
   });
 }
 
-export function useRatingRequests() {
-  return useQuery({
-    queryKey: keys.ratingRequests,
-    queryFn: ({ signal }) => api.fetchRatingRequests(signal),
-  });
-}
 
-export function useDecideRatingRequest() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (args: { id: number; decision: "APPROVED" | "DECLINED" }) =>
-      api.decideRatingRequest(args.id, args.decision),
-    onSuccess: (fresh) => {
-      qc.setQueryData(keys.ratingRequests, fresh);
-      qc.invalidateQueries({ queryKey: ["players"] });
-      qc.invalidateQueries({ queryKey: ["player"] });
-    },
-  });
-}

@@ -437,28 +437,12 @@ export interface PlayersResponse {
   players: PlayerRow[];
 }
 
-export interface RatingRequest {
-  id: number;
-  status: "PENDING" | "APPROVED" | "DECLINED" | "EXPIRED";
-  player_id: number;
-  player_name: string;
-  night: { id: number; name: string };
-  proposed_by: string;
-  proposed_by_id: number;
-  reason: string;
-  created_at: string;
-  current: Omit<SkillRatings, "ppv">;
-  proposed: Omit<SkillRatings, "ppv">;
-}
-
 export interface PlayerNightRow {
   id: number;
   name: string;
   ratings: SkillRatings;
   rating_source: "night" | "global";
-  can_manage: boolean;
   can_edit: boolean;
-  pending_request: RatingRequest | null;
 }
 
 export interface PlayerDetail {
@@ -484,10 +468,4 @@ export interface RatingPatch {
   defense?: number;
   offense?: number;
   goalie?: number;
-  reason?: string;
-}
-
-export interface RatingRequestsResponse {
-  inbox: RatingRequest[];
-  mine: RatingRequest[];
 }

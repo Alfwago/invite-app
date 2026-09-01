@@ -55,7 +55,6 @@ export default function PlayerDetailScreen() {
     offense: "0",
     goalie: "0",
   });
-  const [reason, setReason] = useState("");
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -76,7 +75,6 @@ export default function PlayerDetailScreen() {
         goalie: next.goalie.toFixed(2),
       });
       setEditing(false);
-      setReason("");
     }
   }, [baseRatings, nightId]);
 
@@ -91,9 +89,7 @@ export default function PlayerDetailScreen() {
   }
 
   const m = player.metrics;
-  const canManage = !!selectedNight?.can_manage;
-  const canEditDirect = !!selectedNight?.can_edit;
-  const pending = selectedNight?.pending_request ?? null;
+  const canEdit = !!selectedNight?.can_edit;
   const dirty = KEYS.some(({ key }) => draft[key] !== (baseRatings?.[key] ?? 0));
   const ppv = round2(0.4 * draft.hockey_sense + 0.25 * draft.skating + 0.2 * draft.defense + 0.15 * draft.offense);
 
@@ -118,18 +114,9 @@ export default function PlayerDetailScreen() {
   async function onSave() {
     if (!selectedNight) return;
     try {
-      await save.mutateAsync({
-        night_id: selectedNight.id,
-        ...draft,
-        reason: reason.trim() || undefined,
-      });
+      await save.mutateAsync({ night_id: selectedNight.id, ...draft });
       setEditing(false);
-      Alert.alert(
-        canEditDirect ? "Ratings saved" : "Change proposed",
-        canEditDirect
-          ? `${selectedNight.name} ratings updated.`
-          : "Another director for this night can now approve it.",
-      );
+      Alert.alert("Ratings saved", `${selectedNight.name} ratings updated.`);
     } catch (e) {
       Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : "Try again.");
     }
@@ -186,18 +173,6 @@ export default function PlayerDetailScreen() {
             {nightId === null ? "  ·  global (per-night editing only)" : ""}
           </Text>
 
-          {pending ? (
-            <View style={styles.pendingBanner}>
-              <Text style={styles.pendingTitle}>Change pending approval</Text>
-              <Text style={styles.pendingBody}>
-                {KEYS.filter((k) => pending.current[k.key] !== pending.proposed[k.key])
-                  .map((k) => `${k.label} ${pending.current[k.key]}→${pending.proposed[k.key]}`)
-                  .join(", ")}
-              </Text>
-              <Text style={styles.pendingMeta}>by {pending.proposed_by} — “{pending.reason}”</Text>
-            </View>
-          ) : null}
-
           {KEYS.map(({ key, label, max }) =>
             editing ? (
               <View key={key} style={styles.editRow}>
@@ -236,48 +211,35 @@ export default function PlayerDetailScreen() {
             ),
           )}
 
-          {nightId !== null && canManage ? (
+          {nightId !== null && canEdit ? (
             editing ? (
-              <>
-                {!canEditDirect ? (
-                  <TextInput
-                    style={styles.reason}
-                    placeholder="Reason for the change (required)"
-                    placeholderTextColor={colors.textMuted}
-                    value={reason}
-                    onChangeText={setReason}
-                    multiline
-                  />
-                ) : null}
-                <View style={styles.actionRow}>
-                  <Button
-                    label={canEditDirect ? "Save ratings" : "Propose change"}
-                    onPress={onSave}
-                    loading={save.isPending}
-                    disabled={!dirty || (!canEditDirect && !reason.trim())}
-                  />
-                  <Button
-                    label="Cancel"
-                    variant="secondary"
-                    onPress={() => {
-                      setEditing(false);
-                      setReason("");
-                      if (baseRatings) {
-                        setDraft({
-                          hockey_sense: baseRatings.hockey_sense,
-                          skating: baseRatings.skating,
-                          defense: baseRatings.defense,
-                          offense: baseRatings.offense,
-                          goalie: baseRatings.goalie,
-                        });
-                      }
-                    }}
-                  />
-                </View>
-              </>
+              <View style={styles.actionRow}>
+                <Button
+                  label="Save ratings"
+                  onPress={onSave}
+                  loading={save.isPending}
+                  disabled={!dirty}
+                />
+                <Button
+                  label="Cancel"
+                  variant="secondary"
+                  onPress={() => {
+                    setEditing(false);
+                    if (baseRatings) {
+                      setDraft({
+                        hockey_sense: baseRatings.hockey_sense,
+                        skating: baseRatings.skating,
+                        defense: baseRatings.defense,
+                        offense: baseRatings.offense,
+                        goalie: baseRatings.goalie,
+                      });
+                    }
+                  }}
+                />
+              </View>
             ) : (
               <Button
-                label={canEditDirect ? "Edit ratings" : "Propose a change"}
+                label="Edit ratings"
                 variant="secondary"
                 onPress={() => setEditing(true)}
               />
@@ -367,17 +329,6 @@ const styles = StyleSheet.create({
   nightChipTextOn: { color: colors.goldText },
   ppvLine: { color: colors.textMuted, fontSize: font.sm, textAlign: "center" },
   ppvValue: { color: colors.gold, fontWeight: "800" },
-  pendingBanner: {
-    borderWidth: 1,
-    borderColor: colors.amber,
-    backgroundColor: colors.amberDim,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: 2,
-  },
-  pendingTitle: { color: colors.amber, fontSize: font.xs, fontWeight: "800", textTransform: "uppercase" },
-  pendingBody: { color: colors.text, fontSize: font.sm },
-  pendingMeta: { color: colors.textMuted, fontSize: font.xs },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   ratingLabel: { color: colors.text, fontSize: font.sm, width: 96 },
   barWrap: {
@@ -414,15 +365,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   slider: { width: "100%", height: 36 },
-  reason: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.bg,
-    color: colors.text,
-    padding: spacing.md,
-    fontSize: 15,
-    minHeight: 60,
-  },
   actionRow: { gap: spacing.sm },
 });

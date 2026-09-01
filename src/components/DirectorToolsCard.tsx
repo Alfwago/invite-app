@@ -18,7 +18,6 @@ export function DirectorToolsCard() {
 
   const rows: { label: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [
     { label: "Player profiles", icon: "person-circle-outline", href: "/players" },
-    { label: "Rating requests", icon: "star-outline", href: "/rating-requests" },
     { label: "Skate-group members", icon: "people-outline", href: "/skate-groups" },
   ];
   if (me.is_president) {

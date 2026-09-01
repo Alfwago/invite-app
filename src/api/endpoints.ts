@@ -22,7 +22,6 @@ import type {
   PlayersResponse,
   ProfilePatch,
   RatingPatch,
-  RatingRequestsResponse,
   RosterAction,
   RsvpBody,
   SendInvitesResult,
@@ -416,13 +415,4 @@ export function savePlayerRatings(
   return apiFetch(`/api/players/${id}/ratings/`, { method: "PATCH", body });
 }
 
-export function fetchRatingRequests(signal?: AbortSignal): Promise<RatingRequestsResponse> {
-  return apiFetch("/api/rating-requests/", { signal });
-}
 
-export function decideRatingRequest(
-  id: number,
-  decision: "APPROVED" | "DECLINED",
-): Promise<RatingRequestsResponse> {
-  return apiFetch(`/api/rating-requests/${id}/`, { method: "POST", body: { decision } });
-}
