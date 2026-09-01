@@ -329,8 +329,6 @@ export interface TeamAssignment {
   event_id: number;
   team: "Gold" | "Black";
   jersey: string; // "Wear your gold jersey." / "Wear a dark shirt."
-  teammates: string[]; // names; excludes you and goalies
-  goalie: string; // "" when no goalie is set
   published_at: string;
   moved_from: "Gold" | "Black" | null; // set when a re-push changed your team
 }
