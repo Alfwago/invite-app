@@ -7,6 +7,7 @@ import { ApiError } from "@/src/api/client";
 import type { DayPlayer, EventDetail, RosterEntry, RsvpStatus } from "@/src/api/types";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { RsvpControls } from "@/src/components/RsvpControls";
+import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
 import {
   Badge,
   Button,
@@ -97,6 +98,13 @@ export default function EventDetailScreen() {
             <Text style={styles.dirLabel}>From the director</Text>
             <Text style={styles.dirMessage}>{event.director_message}</Text>
           </Card>
+        ) : null}
+
+        {event.team_assignment ? (
+          <View style={styles.teamSection}>
+            <Text style={styles.sectionLabel}>Your team</Text>
+            <TeamAssignmentCard assignment={event.team_assignment} />
+          </View>
         ) : null}
 
         <CollapsibleCard
@@ -306,6 +314,14 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   dirMessage: { color: colors.text, fontSize: font.base, fontStyle: "italic" },
+  teamSection: { gap: spacing.sm },
+  sectionLabel: {
+    color: colors.textMuted,
+    fontSize: font.xs,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
   tiles: { flexDirection: "row", gap: spacing.sm },
   tile: {
     flex: 1,

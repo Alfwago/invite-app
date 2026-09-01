@@ -27,6 +27,8 @@ import type {
   Poll,
   PlayerDetail,
   PlayersResponse,
+  PublishTeamsBody,
+  PublishTeamsResult,
   SaveTeamsBody,
   TeamEvent,
   TeamHistoryEntry,
@@ -475,6 +477,14 @@ export function saveTeamHistory(
 
 export function deleteTeamHistory(historyId: number): Promise<void> {
   return apiFetch(`/api/teams/history/${historyId}/`, { method: "DELETE" });
+}
+
+/** Publish a split to the players — they get a push + a home-screen card. */
+export function publishTeams(
+  eventId: number,
+  body: PublishTeamsBody,
+): Promise<PublishTeamsResult> {
+  return apiFetch(`/api/teams/events/${eventId}/publish/`, { method: "POST", body });
 }
 
 // ---- Player approval queue (director) -----------------------------

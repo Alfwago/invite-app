@@ -47,12 +47,15 @@ function useNotificationRouting() {
       const d = data as {
         eventId?: number | string;
         kind?: string;
+        type?: string;
         from?: number | string;
       } | null;
       if (d?.kind === "board") {
         router.push("/(tabs)/messages");
       } else if (d?.kind === "dm") {
         router.push(d.from != null ? `/inbox/${d.from}` : "/inbox");
+      } else if (d?.type === "team_assignment" && d.eventId != null) {
+        router.push(`/event/${d.eventId}`);
       } else if (d?.eventId != null) {
         router.push(`/event/${d.eventId}`);
       }

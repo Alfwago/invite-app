@@ -19,6 +19,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
+import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useHome, useInbox, usePolls } from "@/src/hooks/queries";
@@ -72,7 +73,7 @@ export default function HomeScreen() {
     );
   }
 
-  const { notices, next_skate, nights, custom_events } = query.data;
+  const { notices, next_skate, nights, custom_events, team_assignment } = query.data;
 
   return (
     <ScrollView
@@ -118,6 +119,8 @@ export default function HomeScreen() {
             <Text style={styles.muted}>You have no upcoming skates.</Text>
           </Card>
         )}
+
+        {team_assignment ? <TeamAssignmentCard assignment={team_assignment} /> : null}
 
         <View style={styles.section}>
           <Pressable

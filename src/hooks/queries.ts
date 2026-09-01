@@ -21,6 +21,7 @@ import type {
   NewPoll,
   PenaltySeverity,
   PlayerDetail,
+  PublishTeamsBody,
   RatingPatch,
   SaveTeamsBody,
   RosterAction,
@@ -497,6 +498,18 @@ export function useDeleteTeamHistory(eventId: number) {
   return useMutation({
     mutationFn: (historyId: number) => api.deleteTeamHistory(historyId),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) }),
+  });
+}
+
+export function usePublishTeams(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: PublishTeamsBody) => api.publishTeams(eventId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) });
+      qc.invalidateQueries({ queryKey: keys.event(eventId) }); // team_assignment
+      qc.invalidateQueries({ queryKey: keys.home });
+    },
   });
 }
 

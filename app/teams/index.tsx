@@ -14,10 +14,15 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 import { API_BASE, ApiError } from "@/src/api/client";
-import type { TeamEvent, TeamRosterPlayer } from "@/src/api/types";
+import type { SaveTeamsBody, TeamEvent, TeamRosterPlayer } from "@/src/api/types";
 import { Dropdown } from "@/src/components/Dropdown";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { useSaveTeamHistory, useTeamEvents, useTeamRoster } from "@/src/hooks/queries";
+import {
+  usePublishTeams,
+  useSaveTeamHistory,
+  useTeamEvents,
+  useTeamRoster,
+} from "@/src/hooks/queries";
 import {
   autoBalance,
   normalizeGoalie,
@@ -51,6 +56,7 @@ export default function TeamGeneratorScreen() {
   );
   const roster = useTeamRoster(eventId);
   const save = useSaveTeamHistory(eventId ?? 0);
+  const publish = usePublishTeams(eventId ?? 0);
 
   const [presentOnly, setPresentOnly] = useState(false);
   const [locks, setLocks] = useState<Record<string, Team>>({});
@@ -196,25 +202,53 @@ export default function TeamGeneratorScreen() {
 
   const nameOf = (k: string) => players.find((p) => K(p.id) === k)?.name ?? "(removed)";
 
+  const splitBody = (): SaveTeamsBody => ({
+    goldPlayers: gold.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
+    blackPlayers: black.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
+    goldGoalie: goldGoalie
+      ? { id: goldGoalie.playerId, name: goldGoalie.name, weight: goldGoalie.weight }
+      : {},
+    blackGoalie: blackGoalie
+      ? { id: blackGoalie.playerId, name: blackGoalie.name, weight: blackGoalie.weight }
+      : {},
+    note: note.trim() || undefined,
+  });
+
   async function onSave() {
     if (!eventId) return;
     try {
-      await save.mutateAsync({
-        goldPlayers: gold.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
-        blackPlayers: black.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
-        goldGoalie: goldGoalie
-          ? { id: goldGoalie.playerId, name: goldGoalie.name, weight: goldGoalie.weight }
-          : {},
-        blackGoalie: blackGoalie
-          ? { id: blackGoalie.playerId, name: blackGoalie.name, weight: blackGoalie.weight }
-          : {},
-        note: note.trim() || undefined,
-      });
+      await save.mutateAsync(splitBody());
       setNote("");
       Alert.alert("Saved to History.");
     } catch (e) {
       Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : "Try again.");
     }
+  }
+
+  function onPush() {
+    if (!eventId) return;
+    const n = gold.length + black.length;
+    Alert.alert(
+      "Push to players",
+      `Push these teams to ${n} player${n === 1 ? "" : "s"}? They'll get a notification and see it on their home screen.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Push",
+          onPress: async () => {
+            try {
+              const res = await publish.mutateAsync(splitBody());
+              Alert.alert(
+                "Teams pushed",
+                `Notified ${res.notified} of ${res.recipients} players.`,
+              );
+            } catch (e) {
+              Alert.alert("Couldn't push", e instanceof ApiError ? e.detail : "Try again.");
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function onExportPdf() {
@@ -402,7 +436,14 @@ export default function TeamGeneratorScreen() {
                     />
                     <View style={styles.saveActions}>
                       <Button
+                        label="Push to players"
+                        onPress={onPush}
+                        loading={publish.isPending}
+                        style={styles.wideBtn}
+                      />
+                      <Button
                         label="Save to history"
+                        variant="secondary"
                         onPress={onSave}
                         loading={save.isPending}
                         style={styles.wideBtn}

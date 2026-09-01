@@ -228,6 +228,7 @@ export interface EventDetail extends EventSummary {
   day_players: DayPlayer[];
   waitlist: WaitlistEntry[]; // director view only; [] for players
   messages_unread: number; // unseen director posts on the event thread
+  team_assignment: TeamAssignment | null; // set once a director publishes teams
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
 }
@@ -321,11 +322,25 @@ export interface HomeNight {
   next_event: EventSummary | null;
 }
 
+/** Published Team Generator result for the viewer, on /api/home/ and
+ *  /api/events/<id>/. `null` unless a director has published teams for that
+ *  event AND the viewer is on one of the sides. */
+export interface TeamAssignment {
+  event_id: number;
+  team: "Gold" | "Black";
+  jersey: string; // "Wear your gold jersey." / "Wear a dark shirt."
+  teammates: string[]; // names; excludes you and goalies
+  goalie: string; // "" when no goalie is set
+  published_at: string;
+  moved_from: "Gold" | "Black" | null; // set when a re-push changed your team
+}
+
 export interface HomeData {
   notices: LeagueNotice[];
   next_skate: EventSummary | null;
   nights: HomeNight[];
   custom_events: EventSummary[];
+  team_assignment: TeamAssignment | null; // for the viewer's NEXT skate only
 }
 
 export interface MessageReaction {
@@ -535,6 +550,21 @@ export interface TeamHistoryEntry {
   gold_goalie: TeamHistoryGoalie;
   black_goalie: TeamHistoryGoalie;
   balanced: boolean;
+  published_at: string | null; // set on the split that's currently live to players
+}
+
+/** POST /api/teams/events/<id>/publish/ — publish a split to the players.
+ *  Send an existing saved split by id, a fresh split (same shape as a history
+ *  save), or {} to publish the newest saved split. */
+export type PublishTeamsBody =
+  | { history_id: number }
+  | SaveTeamsBody
+  | Record<string, never>;
+
+export interface PublishTeamsResult extends TeamHistoryEntry {
+  published_at: string;
+  recipients: number; // players in the split
+  notified: number; // players actually notified (first push: all; re-push: only movers)
 }
 
 export interface SaveTeamsBody {
