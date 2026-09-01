@@ -4,33 +4,23 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/src/auth/AuthContext";
 import { Card } from "@/src/components/ui";
-import { useApprovals } from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
 
 /**
- * Quick links to the director-only management screens. Renders nothing for a
- * non-director; individual rows are gated by role (notices → president).
+ * Quick links to the most-used director screens. The full set lives on the
+ * Director dashboard; this is the shortlist for Home. Renders nothing for a
+ * non-director; the notices row is president-only.
  */
 export function DirectorToolsCard() {
   const { me } = useAuth();
   const router = useRouter();
-  const approvals = useApprovals();
-  const pendingCount = me?.is_director ? (approvals.data?.length ?? 0) : 0;
 
   if (!me?.is_director) return null;
 
-  const rows: {
-    label: string;
-    icon: keyof typeof Ionicons.glyphMap;
-    href: string;
-    badge?: number;
-  }[] = [
+  const rows: { label: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [
     { label: "Director dashboard", icon: "grid-outline", href: "/director" },
     { label: "Team generator", icon: "shuffle-outline", href: "/teams" },
-    { label: "Player profiles", icon: "person-circle-outline", href: "/players" },
-    { label: "Player approvals", icon: "person-add-outline", href: "/approvals", badge: pendingCount },
     { label: "Polls", icon: "bar-chart-outline", href: "/polls/manage" },
-    { label: "Skate-group members", icon: "people-outline", href: "/skate-groups" },
   ];
   if (me.is_president) {
     rows.push({ label: "League notices", icon: "megaphone-outline", href: "/notices" });
@@ -48,11 +38,6 @@ export function DirectorToolsCard() {
           >
             <Ionicons name={r.icon} size={18} color={colors.gold} />
             <Text style={styles.label}>{r.label}</Text>
-            {r.badge ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{r.badge > 9 ? "9+" : r.badge}</Text>
-              </View>
-            ) : null}
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
         ))}
@@ -78,14 +63,4 @@ const styles = StyleSheet.create({
   },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   label: { color: colors.text, fontSize: font.base, fontWeight: "600", flex: 1 },
-  badge: {
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 5,
-    borderRadius: 10,
-    backgroundColor: colors.red,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 });

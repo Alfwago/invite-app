@@ -105,6 +105,11 @@ export default function DirectorDashboard() {
               <ToolRow icon="add-circle-outline" label="Create next event" onPress={() => router.push("/new-event" as never)} />
               <ToolRow icon="shuffle-outline" label="Team generator" onPress={() => router.push("/teams" as never)} />
               <ToolRow icon="person-circle-outline" label="Player profiles" onPress={() => router.push("/players" as never)} />
+              <ToolRow
+                icon="person-add-outline"
+                label={pending > 0 ? `Player approvals (${pending})` : "Player approvals"}
+                onPress={() => router.push("/approvals" as never)}
+              />
               <ToolRow icon="people-outline" label="Skate-group members" onPress={() => router.push("/skate-groups" as never)} />
               <ToolRow
                 icon="bar-chart-outline"
