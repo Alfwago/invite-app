@@ -22,7 +22,7 @@ interface AuthState {
   ready: boolean;
   token: string | null;
   me: Me | null;
-  signIn: (username: string, password: string) => Promise<void>;
+  signIn: (username: string, password: string, remember?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
 }
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadMe]);
 
   const signIn = useCallback(
-    async (username: string, password: string) => {
+    async (username: string, password: string, remember = true) => {
       const { token: newToken } = await api.login(username.trim(), password);
       // Make the token available for the /api/me/ call, but don't commit it to
       // state/storage (which triggers navigation into the app) until we know it works.
@@ -88,7 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenRef.current = null;
         throw e;
       }
-      await SecureStore.setItemAsync(TOKEN_KEY, newToken);
+      // "Keep me signed in": persist the token so a cold start restores it.
+      // Otherwise keep it in memory only and clear any previously saved token,
+      // so quitting the app signs the user out.
+      if (remember) {
+        await SecureStore.setItemAsync(TOKEN_KEY, newToken);
+      } else {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+      }
       setToken(newToken);
       registerForPush();
     },

@@ -27,6 +27,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -52,7 +53,7 @@ export default function LoginScreen() {
     setError(null);
     setBusy(true);
     try {
-      await signIn(username, password);
+      await signIn(username, password, remember);
       // RootNavigator redirects on token change.
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
@@ -113,6 +114,19 @@ export default function LoginScreen() {
               color={showPassword ? colors.gold : colors.textMuted}
             />
             <Text style={styles.showText}>Show password</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.showRow}
+            onPress={() => setRemember((v) => !v)}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={remember ? "checkbox" : "square-outline"}
+              size={20}
+              color={remember ? colors.gold : colors.textMuted}
+            />
+            <Text style={styles.showText}>Keep me signed in</Text>
           </Pressable>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
