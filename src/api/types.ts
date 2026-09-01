@@ -552,3 +552,29 @@ export interface PendingApproval {
   sponsor: string;
   account_ready: boolean;
 }
+
+// ---- Polls (player) ------------------------------------------------
+
+export interface PollChoice {
+  id: number;
+  text: string;
+}
+
+export interface PollQuestion {
+  id: number;
+  text: string;
+  my_choice_id: number | null;
+  choices: PollChoice[];
+}
+
+export interface Poll {
+  id: number;
+  title: string;
+  description: string;
+  closes_at: string | null;
+  total_q: number;
+  answered_q: number;
+  all_answered: boolean;
+  dismissed: boolean;
+  questions: PollQuestion[];
+}

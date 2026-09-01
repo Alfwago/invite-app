@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,7 +21,7 @@ import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { useHome } from "@/src/hooks/queries";
+import { useHome, usePolls } from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
 
 const WORDMARK = require("@/assets/brand/wordmark.png");
@@ -93,6 +93,8 @@ export default function HomeScreen() {
 
         <VerifyBanner />
 
+        <PollsCard />
+
         {notices.length > 0 ? (
           <Card accent="public">
             <Text style={styles.noticeLabel}>League notices</Text>
@@ -156,6 +158,31 @@ export default function HomeScreen() {
   );
 }
 
+function PollsCard() {
+  const router = useRouter();
+  const polls = usePolls();
+  const open = (polls.data ?? []).filter((p) => !p.all_answered);
+  if (open.length === 0) return null;
+  return (
+    <Card accent="public">
+      <Text style={styles.noticeLabel}>
+        {open.length === 1 ? "Poll" : "Polls"} to answer
+      </Text>
+      {open.map((p) => (
+        <Pressable
+          key={p.id}
+          style={styles.pollRow}
+          onPress={() => router.push(`/polls/${p.id}` as never)}
+        >
+          <Text style={styles.pollTitle}>{p.title}</Text>
+          <Text style={styles.pollMeta}>{p.answered_q}/{p.total_q}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
+      ))}
+    </Card>
+  );
+}
+
 function NightRow({ night, last }: { night: HomeNight; last?: boolean }) {
   if (night.next_event) {
     return (
@@ -214,6 +241,9 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   noticeText: { color: colors.text, fontSize: font.sm, lineHeight: 20 },
+  pollRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 4 },
+  pollTitle: { color: colors.text, fontSize: font.sm, fontWeight: "600", flex: 1 },
+  pollMeta: { color: colors.textMuted, fontSize: font.xs, fontVariant: ["tabular-nums"] },
   sectionLabel: {
     color: colors.textMuted,
     fontSize: font.xs,

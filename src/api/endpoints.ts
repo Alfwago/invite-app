@@ -19,6 +19,7 @@ import type {
   NightMembersResponse,
   PenaltySeverity,
   PendingApproval,
+  Poll,
   PlayerDetail,
   PlayersResponse,
   SaveTeamsBody,
@@ -484,4 +485,19 @@ export async function approvePlayer(profileId: number): Promise<PendingApproval[
     body: { action: "approve" },
   });
   return data.pending;
+}
+
+// ---- Polls (player) ----------------------------------------------
+
+export async function fetchPolls(signal?: AbortSignal): Promise<Poll[]> {
+  const data = await apiFetch<{ polls: Poll[] }>("/api/polls/", { signal });
+  return data.polls;
+}
+
+export function votePoll(pollId: number, answers: Record<number, number>): Promise<Poll> {
+  return apiFetch(`/api/polls/${pollId}/vote/`, { method: "POST", body: { answers } });
+}
+
+export function dismissPoll(pollId: number): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/polls/${pollId}/dismiss/`, { method: "POST", body: {} });
 }

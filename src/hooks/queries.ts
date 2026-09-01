@@ -38,6 +38,7 @@ export const keys = {
   teamRoster: (id: number) => ["team-roster", id] as const,
   teamHistory: (id: number) => ["team-history", id] as const,
   approvals: ["approvals"] as const,
+  polls: ["polls"] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
@@ -509,4 +510,26 @@ export function useApprovePlayer() {
     mutationFn: (profileId: number) => api.approvePlayer(profileId),
     onSuccess: (pending) => qc.setQueryData(keys.approvals, pending),
   });
+}
+
+// ---- Polls (player) ---------------------------------------------
+
+export function usePolls() {
+  return useQuery({ queryKey: keys.polls, queryFn: ({ signal }) => api.fetchPolls(signal) });
+}
+
+export function usePollActions() {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: keys.polls });
+  return {
+    vote: useMutation({
+      mutationFn: (a: { pollId: number; answers: Record<number, number> }) =>
+        api.votePoll(a.pollId, a.answers),
+      onSuccess: refresh,
+    }),
+    dismiss: useMutation({
+      mutationFn: (pollId: number) => api.dismissPoll(pollId),
+      onSuccess: refresh,
+    }),
+  };
 }
