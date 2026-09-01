@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
@@ -31,8 +32,9 @@ export default function InboxScreen() {
         options={{
           title: "Inbox",
           headerRight: () => (
-            <Pressable onPress={() => setCompose(true)} hitSlop={8}>
-              <Ionicons name="create-outline" size={22} color={colors.gold} />
+            <Pressable onPress={() => setCompose(true)} hitSlop={10} style={styles.newBtn}>
+              <Ionicons name="add" size={18} color={colors.goldText} />
+              <Text style={styles.newBtnText}>New</Text>
             </Pressable>
           ),
         }}
@@ -111,39 +113,59 @@ function ComposeModal({
 }) {
   const [q, setQ] = useState("");
   const recipients = useQuery({
-    queryKey: ["dm-recipients", q],
+    queryKey: ["dm-recipients", q.trim()],
     queryFn: ({ signal }) => api.fetchDmRecipients(q, signal),
     enabled: visible,
+    placeholderData: (prev) => prev,
   });
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={styles.modalRoot}>
+        <View style={styles.modalHead}>
           <Text style={styles.sheetTitle}>New message</Text>
+          <Pressable onPress={onClose} hitSlop={10}>
+            <Ionicons name="close" size={24} color={colors.textMuted} />
+          </Pressable>
+        </View>
+        <View style={styles.searchRow}>
+          <Ionicons name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.search}
-            placeholder="Search players"
+            placeholder="Search players by name"
             placeholderTextColor={colors.textMuted}
             value={q}
             onChangeText={setQ}
             autoFocus
+            autoCorrect={false}
+            autoCapitalize="none"
           />
-          <FlatList
-            data={recipients.data?.players ?? []}
-            keyExtractor={(p) => String(p.id)}
-            style={styles.recipientList}
-            renderItem={({ item }) => (
-              <Pressable style={styles.recipientRow} onPress={() => onPick(item.id)}>
-                <Text style={styles.recipientName}>{item.name}</Text>
-              </Pressable>
-            )}
-            ListEmptyComponent={
-              recipients.isLoading ? null : <Text style={styles.empty}>No matches.</Text>
-            }
-          />
-        </Pressable>
-      </Pressable>
+        </View>
+        <FlatList
+          data={recipients.data?.players ?? []}
+          keyExtractor={(p) => String(p.id)}
+          style={styles.recipientList}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <Pressable style={styles.recipientRow} onPress={() => onPick(item.id)}>
+              <Text style={styles.recipientName}>{item.name}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+          )}
+          ListEmptyComponent={
+            recipients.isLoading ? (
+              <Text style={styles.empty}>Loading…</Text>
+            ) : (
+              <Text style={styles.empty}>No players match “{q.trim()}”.</Text>
+            )
+          }
+        />
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -186,31 +208,48 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  sheet: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderColor: colors.border,
-    borderWidth: 1,
-    padding: spacing.lg,
-    maxHeight: "80%",
-    gap: spacing.md,
+  newBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    backgroundColor: colors.gold,
+    borderRadius: radius.pill,
+    paddingVertical: 4,
+    paddingLeft: 6,
+    paddingRight: 10,
+  },
+  newBtnText: { color: colors.goldText, fontSize: font.sm, fontWeight: "800" },
+
+  modalRoot: { flex: 1, backgroundColor: colors.bg },
+  modalHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   sheetTitle: { color: colors.text, fontSize: font.md, fontWeight: "800" },
-  search: {
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    margin: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: colors.cardRaised,
-    color: colors.text,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 15,
   },
-  recipientList: { flexGrow: 0 },
+  search: { flex: 1, color: colors.text, paddingVertical: spacing.md, fontSize: 15 },
+  recipientList: { flex: 1 },
   recipientRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
