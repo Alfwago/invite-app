@@ -407,3 +407,87 @@ export interface EventPatchBody {
   batch_invites_enabled?: boolean;
   batch_invites_delay_hours?: number;
 }
+
+// ---- Player directory + skill ratings (director) ---------------------
+
+export interface SkillRatings {
+  hockey_sense: number;
+  skating: number;
+  defense: number;
+  offense: number;
+  goalie: number;
+  ppv: number;
+}
+
+export type PlayerTypeTag = "skater" | "goalie" | "goalie_skater" | "non_playing";
+
+export interface PlayerRow {
+  id: number;
+  name: string;
+  profile_id: string;
+  is_goalie: boolean;
+  player_type: PlayerTypeTag;
+  ratings: SkillRatings;
+  rating_source: "night" | "global";
+}
+
+export interface PlayersResponse {
+  night: { id: number; name: string } | null;
+  nights: { id: number; name: string }[];
+  players: PlayerRow[];
+}
+
+export interface RatingRequest {
+  id: number;
+  status: "PENDING" | "APPROVED" | "DECLINED" | "EXPIRED";
+  player_id: number;
+  player_name: string;
+  night: { id: number; name: string };
+  proposed_by: string;
+  proposed_by_id: number;
+  reason: string;
+  created_at: string;
+  current: Omit<SkillRatings, "ppv">;
+  proposed: Omit<SkillRatings, "ppv">;
+}
+
+export interface PlayerNightRow {
+  id: number;
+  name: string;
+  ratings: SkillRatings;
+  rating_source: "night" | "global";
+  can_manage: boolean;
+  can_edit: boolean;
+  pending_request: RatingRequest | null;
+}
+
+export interface PlayerDetail {
+  id: number;
+  name: string;
+  profile_id: string;
+  is_goalie: boolean;
+  is_goalie_skater: boolean;
+  player_type: PlayerTypeTag;
+  join_year: number | null;
+  years_in_obh: number | null;
+  skill_assessment: string;
+  phone_number: string;
+  global_ratings: SkillRatings;
+  metrics: MeMetrics;
+  nights: PlayerNightRow[];
+}
+
+export interface RatingPatch {
+  night_id: number;
+  hockey_sense?: number;
+  skating?: number;
+  defense?: number;
+  offense?: number;
+  goalie?: number;
+  reason?: string;
+}
+
+export interface RatingRequestsResponse {
+  inbox: RatingRequest[];
+  mine: RatingRequest[];
+}

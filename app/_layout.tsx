@@ -101,6 +101,9 @@ function RootNavigator() {
       <Stack.Screen name="notices" options={{ title: "League notices" }} />
       <Stack.Screen name="skate-groups" options={{ title: "Skate-group members" }} />
       <Stack.Screen name="night/[id]/members" options={{ title: "Members" }} />
+      <Stack.Screen name="players/index" options={{ title: "Player profiles" }} />
+      <Stack.Screen name="players/[id]" options={{ title: "Player" }} />
+      <Stack.Screen name="rating-requests" options={{ title: "Rating requests" }} />
       <Stack.Screen
         name="new-event"
         options={{ title: "New event", presentation: "modal" }}

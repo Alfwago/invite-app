@@ -18,7 +18,11 @@ import type {
   Night,
   NightMembersResponse,
   PenaltySeverity,
+  PlayerDetail,
+  PlayersResponse,
   ProfilePatch,
+  RatingPatch,
+  RatingRequestsResponse,
   RosterAction,
   RsvpBody,
   SendInvitesResult,
@@ -385,4 +389,40 @@ export function updatePreset(
 
 export function deletePreset(presetId: number): Promise<void> {
   return apiFetch(`/api/presets/${presetId}/`, { method: "DELETE" });
+}
+
+// ---- Player directory + skill ratings (director) ---------------------
+
+export function fetchPlayers(
+  params: { night?: number | null; goalies?: boolean; q?: string } = {},
+  signal?: AbortSignal,
+): Promise<PlayersResponse> {
+  const qs = new URLSearchParams();
+  if (params.night != null) qs.set("night", String(params.night));
+  if (params.goalies) qs.set("goalies", "1");
+  if (params.q?.trim()) qs.set("q", params.q.trim());
+  const suffix = qs.toString() ? `?${qs}` : "";
+  return apiFetch(`/api/players/${suffix}`, { signal });
+}
+
+export function fetchPlayer(id: number, signal?: AbortSignal): Promise<PlayerDetail> {
+  return apiFetch(`/api/players/${id}/`, { signal });
+}
+
+export function savePlayerRatings(
+  id: number,
+  body: RatingPatch,
+): Promise<PlayerDetail | { proposed: unknown }> {
+  return apiFetch(`/api/players/${id}/ratings/`, { method: "PATCH", body });
+}
+
+export function fetchRatingRequests(signal?: AbortSignal): Promise<RatingRequestsResponse> {
+  return apiFetch("/api/rating-requests/", { signal });
+}
+
+export function decideRatingRequest(
+  id: number,
+  decision: "APPROVED" | "DECLINED",
+): Promise<RatingRequestsResponse> {
+  return apiFetch(`/api/rating-requests/${id}/`, { method: "POST", body: { decision } });
 }

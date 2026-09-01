@@ -19,6 +19,8 @@ import type {
   MessagesResponse,
   NewMessage,
   PenaltySeverity,
+  PlayerDetail,
+  RatingPatch,
   RosterAction,
   RsvpBody,
 } from "@/src/api/types";
@@ -28,6 +30,10 @@ export const keys = {
   boards: ["boards"] as const,
   home: ["home"] as const,
   manageNotices: ["notices", "manage"] as const,
+  players: (params: { night?: number | null; goalies?: boolean; q?: string }) =>
+    ["players", params] as const,
+  player: (id: number) => ["player", id] as const,
+  ratingRequests: ["rating-requests"] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
@@ -403,6 +409,60 @@ export function useCreateNextEvent() {
     onSuccess: (fresh) => {
       qc.setQueryData(keys.event(fresh.id), fresh);
       qc.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}
+
+// ---- Player directory + skill ratings (director) ---------------------
+
+export function usePlayers(params: { night?: number | null; goalies?: boolean; q?: string }) {
+  return useQuery({
+    queryKey: keys.players(params),
+    queryFn: ({ signal }) => api.fetchPlayers(params, signal),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function usePlayer(id: number | undefined) {
+  return useQuery({
+    queryKey: keys.player(id ?? 0),
+    queryFn: ({ signal }) => api.fetchPlayer(id as number, signal),
+    enabled: id != null,
+  });
+}
+
+export function useSaveRatings(playerId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RatingPatch) => api.savePlayerRatings(playerId, body),
+    onSuccess: (result) => {
+      if (result && "nights" in (result as object)) {
+        qc.setQueryData(keys.player(playerId), result as PlayerDetail);
+      } else {
+        qc.invalidateQueries({ queryKey: keys.player(playerId) });
+      }
+      qc.invalidateQueries({ queryKey: ["players"] });
+      qc.invalidateQueries({ queryKey: keys.ratingRequests });
+    },
+  });
+}
+
+export function useRatingRequests() {
+  return useQuery({
+    queryKey: keys.ratingRequests,
+    queryFn: ({ signal }) => api.fetchRatingRequests(signal),
+  });
+}
+
+export function useDecideRatingRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: number; decision: "APPROVED" | "DECLINED" }) =>
+      api.decideRatingRequest(args.id, args.decision),
+    onSuccess: (fresh) => {
+      qc.setQueryData(keys.ratingRequests, fresh);
+      qc.invalidateQueries({ queryKey: ["players"] });
+      qc.invalidateQueries({ queryKey: ["player"] });
     },
   });
 }
