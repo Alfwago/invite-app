@@ -19,7 +19,7 @@ const apiHost = host === "invites.falcon83.com" ? null : host;
 export function AppFooter() {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.line}>OBH Skate Invites</Text>
+      <Text style={styles.line}>OBH Invites</Text>
       <Text style={styles.line}>
         v{version} · build {build}
         {sdk ? ` · ${sdk}` : ""}
