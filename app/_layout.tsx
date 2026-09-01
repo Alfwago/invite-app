@@ -106,6 +106,7 @@ function RootNavigator() {
       <Stack.Screen name="teams/index" options={{ title: "Team generator" }} />
       <Stack.Screen name="teams/history" options={{ title: "Saved splits" }} />
       <Stack.Screen name="approvals" options={{ title: "Player approvals" }} />
+      <Stack.Screen name="director" options={{ title: "Director dashboard" }} />
       <Stack.Screen name="polls/index" options={{ title: "Polls" }} />
       <Stack.Screen name="polls/[id]" options={{ title: "Poll" }} />
       <Stack.Screen

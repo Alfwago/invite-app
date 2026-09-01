@@ -25,6 +25,7 @@ export function DirectorToolsCard() {
     href: string;
     badge?: number;
   }[] = [
+    { label: "Director dashboard", icon: "grid-outline", href: "/director" },
     { label: "Team generator", icon: "shuffle-outline", href: "/teams" },
     { label: "Player profiles", icon: "person-circle-outline", href: "/players" },
     { label: "Player approvals", icon: "person-add-outline", href: "/approvals", badge: pendingCount },
