@@ -18,7 +18,13 @@ import type { TeamEvent, TeamRosterPlayer } from "@/src/api/types";
 import { Dropdown } from "@/src/components/Dropdown";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useSaveTeamHistory, useTeamEvents, useTeamRoster } from "@/src/hooks/queries";
-import { autoBalance, ppv, type BalanceResult, type TGPlayer } from "@/src/teams/balance";
+import {
+  autoBalance,
+  normalizeGoalie,
+  ppv,
+  type BalanceResult,
+  type TGPlayer,
+} from "@/src/teams/balance";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 type Team = "Gold" | "Black";
@@ -26,7 +32,7 @@ const K = (id: TeamRosterPlayer["id"]) => String(id);
 
 function ratingOf(p: TeamRosterPlayer) {
   return p.is_goalie
-    ? p.rating_goalie
+    ? normalizeGoalie(p.rating_goalie)
     : ppv({
         hockey_sense: p.rating_hockey_sense,
         skating: p.rating_skating,
@@ -498,9 +504,7 @@ function TeamCol({
                 {split ? " ✂️" : ""}
               </Text>
             </Pressable>
-            <Text style={styles.pRate}>
-              {(p.is_goalie ? p.rating_goalie : ratingOf(p)).toFixed(2)}
-            </Text>
+            <Text style={styles.pRate}>{ratingOf(p).toFixed(2)}</Text>
             <Pressable onPress={() => onLock(p.id)} hitSlop={6}>
               <Ionicons
                 name={locked ? "lock-closed" : "lock-open-outline"}

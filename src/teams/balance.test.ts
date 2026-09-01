@@ -28,6 +28,22 @@ test("ppv weighting matches the server", () => {
   assert.equal(ppv({ hockey_sense: 4, skating: 2, defense: 3, offense: 1, goalie: 0 }), 2.85);
 });
 
+test("an unrated skill counts as 3 — no 0s (matches the web)", () => {
+  // all-zero ratings -> treated as all 3 -> PPV 3
+  assert.equal(ppv({ hockey_sense: 0, skating: 0, defense: 0, offense: 0, goalie: 0 }), 3);
+  // a single 0 among real ratings is bumped to 3
+  assert.equal(ppv({ hockey_sense: 4, skating: 0, defense: 4, offense: 4, goalie: 0 }), 3.75);
+});
+
+test("unrated players still balance as mid-tier, not zero", () => {
+  const rated = [1, 2, 3, 4].map((i) => mk(i, 4));
+  const unrated = [5, 6, 7, 8].map((i) => mk(i, 0));
+  const r = run({ players: [...rated, ...unrated], pairs: [], splits: [] });
+  const total = (arr: TGPlayer[]) => arr.reduce((a, p) => a + ppv(p.ratings), 0);
+  // unrated contribute 3 each, so totals stay within a point
+  assert.ok(Math.abs(total(r.gold) - total(r.black)) <= 1);
+});
+
 test("splits an even roster in half; odd gives one team the extra", () => {
   const six = [1, 2, 3, 4, 5, 6].map((i) => mk(i, i));
   let r = run({ players: six, pairs: [], splits: [] });

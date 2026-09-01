@@ -56,16 +56,35 @@ export interface BalanceResult {
   blackGoalie: GoalieSlot | null;
 }
 
+/**
+ * Match the website's normalizeRating: an unrated skill (0, negative, or
+ * non-numeric) counts as 3; anything else is clamped to 1–5. So a player
+ * with no ratings still balances as a mid-tier skater, never a 0.
+ */
+export function normalizeSkill(value: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 3;
+  return Math.min(5, Math.max(1, n));
+}
+
+/** Website's normalizeGoalieRating: clamp 0–3, no default. */
+export function normalizeGoalie(value: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Math.min(3, Math.max(0, n)) * 100) / 100;
+}
+
 /** Weighted skill value — 40% hockey sense, 25% skating, 20% defense, 15% offense. */
 export function ppv(r: TGRatings): number {
-  return (
-    Math.round((0.4 * r.hockey_sense + 0.25 * r.skating + 0.2 * r.defense + 0.15 * r.offense) * 100) /
-    100
-  );
+  const hs = normalizeSkill(r.hockey_sense);
+  const sk = normalizeSkill(r.skating);
+  const de = normalizeSkill(r.defense);
+  const off = normalizeSkill(r.offense);
+  return Math.round((0.4 * hs + 0.25 * sk + 0.2 * de + 0.15 * off) * 100) / 100;
 }
 
 function ratingFor(p: TGPlayer): number {
-  return p.is_goalie ? Number(p.ratings.goalie || 0) : ppv(p.ratings);
+  return p.is_goalie ? normalizeGoalie(p.ratings.goalie) : ppv(p.ratings);
 }
 
 export function autoBalance(input: BalanceInput): BalanceResult {
@@ -89,7 +108,7 @@ export function autoBalance(input: BalanceInput): BalanceResult {
     playerId: p.id,
     name: p.name,
     team: goaliePrefs[String(p.id)] || "Auto",
-    weight: Number(p.ratings.goalie || 0),
+    weight: normalizeGoalie(p.ratings.goalie),
   }));
 
   let goldGoalie = selected.find((g) => g.team === "Gold") || null;
