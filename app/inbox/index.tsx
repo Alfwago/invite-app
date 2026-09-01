@@ -28,16 +28,7 @@ export default function InboxScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: "Inbox",
-          headerRight: () => (
-            <Pressable onPress={() => setCompose(true)} hitSlop={10}>
-              <Text style={styles.newBtnText}>New</Text>
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: "Inbox" }} />
       <View style={styles.screen}>
         {query.isLoading ? (
           <Loading label="Loading…" />
@@ -47,7 +38,7 @@ export default function InboxScreen() {
             onRetry={() => query.refetch()}
           />
         ) : convos.length === 0 ? (
-          <Text style={styles.empty}>No messages yet. Tap ✎ to start one.</Text>
+          <Text style={styles.empty}>No messages yet. Tap “+ New” to start one.</Text>
         ) : (
           <FlatList
             data={convos}
@@ -87,6 +78,10 @@ export default function InboxScreen() {
             )}
           />
         )}
+        <Pressable style={styles.fab} onPress={() => setCompose(true)}>
+          <Ionicons name="add" size={20} color={colors.goldText} />
+          <Text style={styles.fabText}>New</Text>
+        </Pressable>
       </View>
 
       <ComposeModal
@@ -207,7 +202,25 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
-  newBtnText: { color: colors.gold, fontSize: font.base, fontWeight: "700" },
+  fab: {
+    position: "absolute",
+    right: spacing.lg,
+    bottom: spacing.xl,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.gold,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.lg,
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  fabText: { color: colors.goldText, fontSize: font.base, fontWeight: "800" },
 
   modalRoot: { flex: 1, backgroundColor: colors.bg },
   modalHead: {
