@@ -106,9 +106,12 @@ export default function DirectorDashboard() {
               <ToolRow icon="shuffle-outline" label="Team generator" onPress={() => router.push("/teams" as never)} />
               <ToolRow icon="person-circle-outline" label="Player profiles" onPress={() => router.push("/players" as never)} />
               <ToolRow icon="people-outline" label="Skate-group members" onPress={() => router.push("/skate-groups" as never)} />
-              {openPolls > 0 ? (
-                <ToolRow icon="bar-chart-outline" label={`Polls (${openPolls} open)`} onPress={() => router.push("/polls" as never)} last />
-              ) : null}
+              <ToolRow
+                icon="bar-chart-outline"
+                label={openPolls > 0 ? `Polls (${openPolls} open)` : "Polls"}
+                onPress={() => router.push("/polls/manage" as never)}
+                last
+              />
             </Card>
           </>
         )}

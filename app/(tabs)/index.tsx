@@ -21,7 +21,7 @@ import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { useHome, usePolls } from "@/src/hooks/queries";
+import { useHome, useInbox, usePolls } from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
 
 const WORDMARK = require("@/assets/brand/wordmark.png");
@@ -93,6 +93,8 @@ export default function HomeScreen() {
 
         <VerifyBanner />
 
+        <InboxRow />
+
         <PollsCard />
 
         {notices.length > 0 ? (
@@ -155,6 +157,26 @@ export default function HomeScreen() {
         <AppFooter />
       </View>
     </ScrollView>
+  );
+}
+
+function InboxRow() {
+  const router = useRouter();
+  const inbox = useInbox();
+  const unread = inbox.data?.unread_total ?? 0;
+  return (
+    <Card>
+      <Pressable style={styles.inboxRow} onPress={() => router.push("/inbox" as never)}>
+        <Ionicons name="mail-outline" size={20} color={colors.gold} />
+        <Text style={styles.inboxLabel}>Inbox</Text>
+        {unread > 0 ? (
+          <View style={styles.inboxBadge}>
+            <Text style={styles.inboxBadgeText}>{unread > 9 ? "9+" : unread}</Text>
+          </View>
+        ) : null}
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
+    </Card>
   );
 }
 
@@ -244,6 +266,18 @@ const styles = StyleSheet.create({
   pollRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 4 },
   pollTitle: { color: colors.text, fontSize: font.sm, fontWeight: "600", flex: 1 },
   pollMeta: { color: colors.textMuted, fontSize: font.xs, fontVariant: ["tabular-nums"] },
+  inboxRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  inboxLabel: { color: colors.text, fontSize: font.base, fontWeight: "700", flex: 1 },
+  inboxBadge: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    backgroundColor: colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inboxBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   sectionLabel: {
     color: colors.textMuted,
     fontSize: font.xs,

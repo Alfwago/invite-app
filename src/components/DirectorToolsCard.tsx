@@ -29,6 +29,7 @@ export function DirectorToolsCard() {
     { label: "Team generator", icon: "shuffle-outline", href: "/teams" },
     { label: "Player profiles", icon: "person-circle-outline", href: "/players" },
     { label: "Player approvals", icon: "person-add-outline", href: "/approvals", badge: pendingCount },
+    { label: "Polls", icon: "bar-chart-outline", href: "/polls/manage" },
     { label: "Skate-group members", icon: "people-outline", href: "/skate-groups" },
   ];
   if (me.is_president) {

@@ -18,6 +18,7 @@ import type {
   HomeData,
   MessagesResponse,
   NewMessage,
+  NewPoll,
   PenaltySeverity,
   PlayerDetail,
   RatingPatch,
@@ -40,6 +41,8 @@ export const keys = {
   approvals: ["approvals"] as const,
   polls: ["polls"] as const,
   inbox: ["inbox"] as const,
+  managePolls: ["polls", "manage"] as const,
+  pollResults: (id: number) => ["poll-results", id] as const,
   dmThread: (who: number | "system") => ["dm", who] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
@@ -570,4 +573,38 @@ export function useDeleteDmThread() {
     mutationFn: (who: number | "system") => api.deleteDmThread(who),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.inbox }),
   });
+}
+
+// ---- Poll authoring (director) --------------------------------
+
+export function useManagePolls() {
+  return useQuery({ queryKey: keys.managePolls, queryFn: ({ signal }) => api.fetchManagePolls(signal) });
+}
+
+export function usePollResults(id: number | undefined) {
+  return useQuery({
+    queryKey: keys.pollResults(id ?? 0),
+    queryFn: ({ signal }) => api.fetchPollResults(id as number, signal),
+    enabled: id != null,
+  });
+}
+
+export function usePollAdminMutations() {
+  const qc = useQueryClient();
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: keys.managePolls });
+    qc.invalidateQueries({ queryKey: keys.polls });
+  };
+  return {
+    create: useMutation({ mutationFn: (b: NewPoll) => api.createPoll(b), onSuccess: refresh }),
+    update: useMutation({
+      mutationFn: (a: { id: number; body: Partial<NewPoll> & { status?: "ACTIVE" | "CLOSED" } }) =>
+        api.updatePoll(a.id, a.body),
+      onSuccess: (r) => {
+        qc.setQueryData(keys.pollResults(r.id), r);
+        refresh();
+      },
+    }),
+    remove: useMutation({ mutationFn: (id: number) => api.deletePoll(id), onSuccess: refresh }),
+  };
 }

@@ -115,6 +115,8 @@ function RootNavigator() {
       <Stack.Screen name="director" options={{ title: "Director dashboard" }} />
       <Stack.Screen name="polls/index" options={{ title: "Polls" }} />
       <Stack.Screen name="polls/[id]" options={{ title: "Poll" }} />
+      <Stack.Screen name="polls/manage" options={{ title: "Polls" }} />
+      <Stack.Screen name="polls/new" options={{ title: "New poll", presentation: "modal" }} />
       <Stack.Screen name="inbox/index" options={{ title: "Inbox" }} />
       <Stack.Screen name="inbox/[id]" options={{ title: "Message" }} />
       <Stack.Screen

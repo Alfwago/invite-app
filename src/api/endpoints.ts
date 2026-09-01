@@ -20,6 +20,9 @@ import type {
   PenaltySeverity,
   DMConversation,
   DMThread,
+  NewPoll,
+  PollResults,
+  PollSummary,
   PendingApproval,
   Poll,
   PlayerDetail,
@@ -530,4 +533,30 @@ export function sendDm(userId: number, body: string): Promise<DMThread> {
 
 export function deleteDmThread(who: number | "system"): Promise<void> {
   return apiFetch(who === "system" ? "/api/dm/system/" : `/api/dm/${who}/`, { method: "DELETE" });
+}
+
+// ---- Poll authoring (director) ---------------------------------
+
+export async function fetchManagePolls(signal?: AbortSignal): Promise<PollSummary[]> {
+  const data = await apiFetch<{ polls: PollSummary[] }>("/api/director/polls/", { signal });
+  return data.polls;
+}
+
+export function createPoll(body: NewPoll): Promise<PollResults> {
+  return apiFetch("/api/director/polls/", { method: "POST", body });
+}
+
+export function fetchPollResults(id: number, signal?: AbortSignal): Promise<PollResults> {
+  return apiFetch(`/api/director/polls/${id}/`, { signal });
+}
+
+export function updatePoll(
+  id: number,
+  body: Partial<NewPoll> & { status?: "ACTIVE" | "CLOSED" },
+): Promise<PollResults> {
+  return apiFetch(`/api/director/polls/${id}/`, { method: "PATCH", body });
+}
+
+export function deletePoll(id: number): Promise<void> {
+  return apiFetch(`/api/director/polls/${id}/`, { method: "DELETE" });
 }

@@ -610,3 +610,47 @@ export interface DMThread {
   can_reply?: boolean;
   messages: DMMessage[];
 }
+
+// ---- Poll authoring (director) -----------------------------------
+
+export interface PollSummary {
+  id: number;
+  title: string;
+  status: "ACTIVE" | "CLOSED";
+  is_open: boolean;
+  question_count: number;
+  total_votes: number;
+  created_at: string;
+  closes_at: string | null;
+}
+
+export interface PollResultChoice {
+  id: number;
+  text: string;
+  count: number;
+  pct: number;
+}
+
+export interface PollResultQuestion {
+  id: number;
+  text: string;
+  total: number;
+  choices: PollResultChoice[];
+}
+
+export interface PollResults {
+  id: number;
+  title: string;
+  description: string;
+  status: "ACTIVE" | "CLOSED";
+  is_open: boolean;
+  closes_at: string | null;
+  questions: PollResultQuestion[];
+}
+
+export interface NewPoll {
+  title: string;
+  description?: string;
+  closes_at?: string | null;
+  questions: { text: string; choices: string[] }[];
+}
