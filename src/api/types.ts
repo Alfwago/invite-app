@@ -469,3 +469,61 @@ export interface RatingPatch {
   offense?: number;
   goalie?: number;
 }
+
+// ---- Team Generator (director) --------------------------------------
+
+export interface TeamEvent {
+  id: number;
+  display_name: string;
+  date: string;
+  start_time: string | null;
+  status: string;
+}
+
+export interface TeamRosterPlayer {
+  id: number | string;
+  name: string;
+  is_goalie: boolean;
+  present: boolean;
+  rating_hockey_sense: number;
+  rating_skating: number;
+  rating_defense: number;
+  rating_offense: number;
+  rating_goalie: number;
+}
+
+export interface TeamHistoryPlayer {
+  id: number | string | null;
+  name: string;
+  ppv: number | null;
+  is_goalie: boolean;
+}
+
+export interface TeamHistoryGoalie {
+  id: number | string | null;
+  name: string;
+  weight: number | null;
+}
+
+export interface TeamHistoryEntry {
+  id: number;
+  event_id: number;
+  event_name: string;
+  night: string | null;
+  created_at: string;
+  created_by: string;
+  note: string;
+  gold_players: TeamHistoryPlayer[];
+  black_players: TeamHistoryPlayer[];
+  gold_goalie: TeamHistoryGoalie;
+  black_goalie: TeamHistoryGoalie;
+  balanced: boolean;
+}
+
+export interface SaveTeamsBody {
+  goldPlayers: TeamHistoryPlayer[];
+  blackPlayers: TeamHistoryPlayer[];
+  goldGoalie: TeamHistoryGoalie | Record<string, never>;
+  blackGoalie: TeamHistoryGoalie | Record<string, never>;
+  note?: string;
+}

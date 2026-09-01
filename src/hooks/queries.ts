@@ -21,6 +21,7 @@ import type {
   PenaltySeverity,
   PlayerDetail,
   RatingPatch,
+  SaveTeamsBody,
   RosterAction,
   RsvpBody,
 } from "@/src/api/types";
@@ -33,6 +34,9 @@ export const keys = {
   players: (params: { night?: number | null; goalies?: boolean; q?: string }) =>
     ["players", params] as const,
   player: (id: number) => ["player", id] as const,
+  teamEvents: ["team-events"] as const,
+  teamRoster: (id: number) => ["team-roster", id] as const,
+  teamHistory: (id: number) => ["team-history", id] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
@@ -446,3 +450,45 @@ export function useSaveRatings(playerId: number) {
 }
 
 
+
+// ---- Team Generator (director) --------------------------------------
+
+export function useTeamEvents() {
+  return useQuery({
+    queryKey: keys.teamEvents,
+    queryFn: ({ signal }) => api.fetchTeamEvents(signal),
+    staleTime: 60_000,
+  });
+}
+
+export function useTeamRoster(eventId: number | null) {
+  return useQuery({
+    queryKey: keys.teamRoster(eventId ?? 0),
+    queryFn: ({ signal }) => api.fetchTeamRoster(eventId as number, signal),
+    enabled: eventId != null,
+  });
+}
+
+export function useTeamHistory(eventId: number | null) {
+  return useQuery({
+    queryKey: keys.teamHistory(eventId ?? 0),
+    queryFn: ({ signal }) => api.fetchTeamHistory(eventId as number, signal),
+    enabled: eventId != null,
+  });
+}
+
+export function useSaveTeamHistory(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SaveTeamsBody) => api.saveTeamHistory(eventId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) }),
+  });
+}
+
+export function useDeleteTeamHistory(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (historyId: number) => api.deleteTeamHistory(historyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) }),
+  });
+}

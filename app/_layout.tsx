@@ -103,6 +103,8 @@ function RootNavigator() {
       <Stack.Screen name="night/[id]/members" options={{ title: "Members" }} />
       <Stack.Screen name="players/index" options={{ title: "Player profiles" }} />
       <Stack.Screen name="players/[id]" options={{ title: "Player" }} />
+      <Stack.Screen name="teams/index" options={{ title: "Team generator" }} />
+      <Stack.Screen name="teams/history" options={{ title: "Saved splits" }} />
       <Stack.Screen
         name="new-event"
         options={{ title: "New event", presentation: "modal" }}

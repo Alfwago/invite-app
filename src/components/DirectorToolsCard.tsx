@@ -17,6 +17,7 @@ export function DirectorToolsCard() {
   if (!me?.is_director) return null;
 
   const rows: { label: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [
+    { label: "Team generator", icon: "shuffle-outline", href: "/teams" },
     { label: "Player profiles", icon: "person-circle-outline", href: "/players" },
     { label: "Skate-group members", icon: "people-outline", href: "/skate-groups" },
   ];

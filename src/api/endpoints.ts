@@ -20,6 +20,10 @@ import type {
   PenaltySeverity,
   PlayerDetail,
   PlayersResponse,
+  SaveTeamsBody,
+  TeamEvent,
+  TeamHistoryEntry,
+  TeamRosterPlayer,
   ProfilePatch,
   RatingPatch,
   RosterAction,
@@ -416,3 +420,52 @@ export function savePlayerRatings(
 }
 
 
+
+// ---- Team Generator (director) --------------------------------------
+
+export async function fetchTeamEvents(signal?: AbortSignal): Promise<TeamEvent[]> {
+  const data = await apiFetch<{ events: TeamEvent[] }>("/api/teams/events/", { signal });
+  return data.events;
+}
+
+export async function fetchTeamRoster(
+  eventId: number,
+  signal?: AbortSignal,
+): Promise<TeamRosterPlayer[]> {
+  const data = await apiFetch<{ players: TeamRosterPlayer[] }>(
+    `/api/teams/events/${eventId}/players/`,
+    { signal },
+  );
+  return data.players;
+}
+
+export async function fetchTeamAllPlayers(
+  night?: number | null,
+  signal?: AbortSignal,
+): Promise<TeamRosterPlayer[]> {
+  const qs = night != null ? `?night=${night}` : "";
+  const data = await apiFetch<{ players: TeamRosterPlayer[] }>(`/api/teams/players/${qs}`, { signal });
+  return data.players;
+}
+
+export async function fetchTeamHistory(
+  eventId: number,
+  signal?: AbortSignal,
+): Promise<TeamHistoryEntry[]> {
+  const data = await apiFetch<{ history: TeamHistoryEntry[] }>(
+    `/api/teams/events/${eventId}/history/`,
+    { signal },
+  );
+  return data.history;
+}
+
+export function saveTeamHistory(
+  eventId: number,
+  body: SaveTeamsBody,
+): Promise<TeamHistoryEntry> {
+  return apiFetch(`/api/teams/events/${eventId}/history/`, { method: "POST", body });
+}
+
+export function deleteTeamHistory(historyId: number): Promise<void> {
+  return apiFetch(`/api/teams/history/${historyId}/`, { method: "DELETE" });
+}
