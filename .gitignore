@@ -40,3 +40,6 @@ yarn-error.*
 # IDE
 .vscode/
 .idea/
+
+# Design canvas working files (not part of the build)
+design/obh-design/

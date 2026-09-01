@@ -9,9 +9,10 @@ import {
   View,
 } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
+import Slider from "@react-native-community/slider";
 
 import { ApiError } from "@/src/api/client";
-import type { PlayerNightRow, SkillRatings } from "@/src/api/types";
+import type { PlayerNightRow } from "@/src/api/types";
 import { RatingRadar } from "@/src/components/RatingRadar";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayer, useSaveRatings } from "@/src/hooks/queries";
@@ -47,17 +48,32 @@ export default function PlayerDetailScreen() {
     offense: 0,
     goalie: 0,
   });
+  const [texts, setTexts] = useState<Record<RatingKey, string>>({
+    hockey_sense: "0",
+    skating: "0",
+    defense: "0",
+    offense: "0",
+    goalie: "0",
+  });
   const [reason, setReason] = useState("");
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (baseRatings) {
-      setDraft({
+      const next = {
         hockey_sense: baseRatings.hockey_sense,
         skating: baseRatings.skating,
         defense: baseRatings.defense,
         offense: baseRatings.offense,
         goalie: baseRatings.goalie,
+      };
+      setDraft(next);
+      setTexts({
+        hockey_sense: next.hockey_sense.toFixed(2),
+        skating: next.skating.toFixed(2),
+        defense: next.defense.toFixed(2),
+        offense: next.offense.toFixed(2),
+        goalie: next.goalie.toFixed(2),
       });
       setEditing(false);
       setReason("");
@@ -81,8 +97,22 @@ export default function PlayerDetailScreen() {
   const dirty = KEYS.some(({ key }) => draft[key] !== (baseRatings?.[key] ?? 0));
   const ppv = round2(0.4 * draft.hockey_sense + 0.25 * draft.skating + 0.2 * draft.defense + 0.15 * draft.offense);
 
-  function step(key: RatingKey, delta: number, max: number) {
-    setDraft((d) => ({ ...d, [key]: clamp(round2(d[key] + delta), 0, max) }));
+  function setRating(key: RatingKey, value: number, max: number) {
+    const v = clamp(round2(value), 0, max);
+    setDraft((d) => ({ ...d, [key]: v }));
+    setTexts((t) => ({ ...t, [key]: v.toFixed(2) }));
+  }
+
+  function onTypeRating(key: RatingKey, raw: string, max: number) {
+    setTexts((t) => ({ ...t, [key]: raw }));
+    const n = parseFloat(raw);
+    if (Number.isFinite(n)) {
+      setDraft((d) => ({ ...d, [key]: clamp(n, 0, max) }));
+    }
+  }
+
+  function onBlurRating(key: RatingKey) {
+    setTexts((t) => ({ ...t, [key]: draft[key].toFixed(2) }));
   }
 
   async function onSave() {
@@ -168,27 +198,43 @@ export default function PlayerDetailScreen() {
             </View>
           ) : null}
 
-          {KEYS.map(({ key, label, max }) => (
-            <View key={key} style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>{label}</Text>
-              {editing ? (
-                <View style={styles.stepper}>
-                  <Pressable style={styles.stepBtn} onPress={() => step(key, -0.25, max)} hitSlop={6}>
-                    <Text style={styles.stepText}>−</Text>
-                  </Pressable>
-                  <Text style={styles.ratingValue}>{draft[key].toFixed(2)}</Text>
-                  <Pressable style={styles.stepBtn} onPress={() => step(key, 0.25, max)} hitSlop={6}>
-                    <Text style={styles.stepText}>+</Text>
-                  </Pressable>
+          {KEYS.map(({ key, label, max }) =>
+            editing ? (
+              <View key={key} style={styles.editRow}>
+                <View style={styles.editHead}>
+                  <Text style={styles.ratingLabel}>{label}</Text>
+                  <TextInput
+                    style={styles.valueInput}
+                    value={texts[key]}
+                    onChangeText={(t) => onTypeRating(key, t, max)}
+                    onBlur={() => onBlurRating(key)}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    maxLength={4}
+                  />
                 </View>
-              ) : (
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={max}
+                  step={0.05}
+                  value={draft[key]}
+                  onValueChange={(v) => setRating(key, v, max)}
+                  minimumTrackTintColor={colors.gold}
+                  maximumTrackTintColor={colors.border}
+                  thumbTintColor={colors.gold}
+                />
+              </View>
+            ) : (
+              <View key={key} style={styles.ratingRow}>
+                <Text style={styles.ratingLabel}>{label}</Text>
                 <View style={styles.barWrap}>
                   <View style={[styles.bar, { width: `${(draft[key] / max) * 100}%` }]} />
                   <Text style={styles.barValue}>{draft[key].toFixed(2)}</Text>
                 </View>
-              )}
-            </View>
-          ))}
+              </View>
+            ),
+          )}
 
           {nightId !== null && canManage ? (
             editing ? (
@@ -351,26 +397,23 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
     fontVariant: ["tabular-nums"],
   },
-  stepper: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: spacing.md },
-  stepBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardRaised,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepText: { color: colors.text, fontSize: 18, fontWeight: "800" },
-  ratingValue: {
-    color: colors.text,
+  editRow: { gap: 2, paddingVertical: spacing.xs },
+  editHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  valueInput: {
+    color: colors.gold,
     fontSize: font.base,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
-    minWidth: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.cardRaised,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    minWidth: 60,
     textAlign: "center",
   },
+  slider: { width: "100%", height: 36 },
   reason: {
     borderWidth: 1,
     borderColor: colors.border,
