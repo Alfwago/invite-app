@@ -23,6 +23,7 @@ import type {
   EventPreset,
   RosterAction,
   RosterEntry,
+  RosterGuest,
   WaitlistEntry,
 } from "@/src/api/types";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
@@ -908,16 +909,31 @@ function RosterCard({ event }: { event: EventDetail }) {
         going.map((p) => (
           <RosterAdminRow
             key={`p-${p.player_id}`}
-            name={
-              p.name +
-              (p.guest_count > 0
-                ? ` +${p.guest_count}${p.guest_names.length ? ` (${p.guest_names.join(", ")})` : ""}`
-                : "")
-            }
+            name={p.name}
             isGoalie={p.is_goalie}
             present={p.present}
             paid={p.paid}
             disabled={busy}
+            beerOn={p.is_beer_guy}
+            whiskeyOn={p.is_whiskey_guy}
+            showBeer={event.beer_guy_enabled}
+            showWhiskey={event.whiskey_guy_enabled}
+            guests={p.guests}
+            onBeer={() =>
+              act({ action: "set_beer_guy", player_id: p.is_beer_guy ? null : p.player_id })
+            }
+            onWhiskey={() =>
+              act({ action: "set_whiskey_guy", player_id: p.is_whiskey_guy ? null : p.player_id })
+            }
+            onGuestPresent={(i, v) =>
+              act({ action: "guest_present", player_id: p.player_id, guest_index: i, present: v })
+            }
+            onGuestPaid={(i, v) =>
+              act({ action: "guest_paid", player_id: p.player_id, guest_index: i, paid: v })
+            }
+            onGuestRemove={(i) =>
+              act({ action: "remove_guest", player_id: p.player_id, guest_index: i })
+            }
             onPresent={(v) => act({ action: "set_present", player_id: p.player_id, present: v })}
             onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
             onRemove={() => confirmRemove(p)}
@@ -976,12 +992,34 @@ function RosterCard({ event }: { event: EventDetail }) {
         <>
           <View style={styles.divider} />
           <Text style={styles.subhead}>Waitlist ({event.waitlist.length})</Text>
-          {event.waitlist.map((w: WaitlistEntry) => (
+          <Text style={styles.muted}>In promotion order — use ▲▼ to reorder.</Text>
+          {event.waitlist.map((w: WaitlistEntry, i) => (
             <View key={`w-${w.waitlist_id}`} style={styles.rosterRow}>
-              <Text style={styles.playerName} numberOfLines={1}>
+              <Text style={styles.wlNum}>{i + 1}</Text>
+              <Text style={[styles.playerName, styles.grow]} numberOfLines={1}>
                 {w.name}
                 {w.is_goalie ? " (G)" : ""}
               </Text>
+              <Pressable
+                onPress={() =>
+                  act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "up" })
+                }
+                disabled={busy || i === 0}
+                hitSlop={6}
+                style={[styles.arrowBtn, i === 0 && styles.arrowDisabled]}
+              >
+                <Text style={styles.arrowText}>▲</Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "down" })
+                }
+                disabled={busy || i === event.waitlist.length - 1}
+                hitSlop={6}
+                style={[styles.arrowBtn, i === event.waitlist.length - 1 && styles.arrowDisabled]}
+              >
+                <Text style={styles.arrowText}>▼</Text>
+              </Pressable>
               <Button
                 label="Promote"
                 variant="secondary"
@@ -1004,6 +1042,16 @@ function RosterAdminRow({
   present,
   paid,
   disabled,
+  beerOn,
+  whiskeyOn,
+  showBeer,
+  showWhiskey,
+  guests = [],
+  onBeer,
+  onWhiskey,
+  onGuestPresent,
+  onGuestPaid,
+  onGuestRemove,
   onPresent,
   onPaid,
   onRemove,
@@ -1014,6 +1062,16 @@ function RosterAdminRow({
   present: boolean;
   paid: boolean;
   disabled?: boolean;
+  beerOn?: boolean;
+  whiskeyOn?: boolean;
+  showBeer?: boolean;
+  showWhiskey?: boolean;
+  guests?: RosterGuest[];
+  onBeer?: () => void;
+  onWhiskey?: () => void;
+  onGuestPresent?: (i: number, v: boolean) => void;
+  onGuestPaid?: (i: number, v: boolean) => void;
+  onGuestRemove?: (i: number) => void;
   onPresent: (v: boolean) => void;
   onPaid: (v: boolean) => void;
   onRemove: () => void;
@@ -1026,14 +1084,46 @@ function RosterAdminRow({
         </Text>
         {isGoalie ? <Badge text="G" tone="goalie" /> : null}
         {walkOn ? <Text style={styles.walkOnTag}>walk-on</Text> : null}
+        {beerOn ? <Badge text="🍺" tone="good" /> : null}
+        {whiskeyOn ? <Badge text="🥃" tone="caution" /> : null}
       </View>
       <View style={styles.adminRowActions}>
         <TogglePill label="Present" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
         <TogglePill label="Paid" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
+        {showBeer && onBeer ? (
+          <TogglePill label="Beer Guy" on={!!beerOn} disabled={disabled} onPress={onBeer} />
+        ) : null}
+        {showWhiskey && onWhiskey ? (
+          <TogglePill label="Whiskey Guy" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
+        ) : null}
         <Pressable onPress={onRemove} disabled={disabled} hitSlop={8} style={styles.removeX}>
           <Text style={styles.removeXText}>Remove</Text>
         </Pressable>
       </View>
+
+      {guests.map((g, i) => (
+        <View key={i} style={styles.guestAdminRow}>
+          <Text style={styles.guestAdminName} numberOfLines={1}>
+            + {g.name}
+            {g.skill ? ` (${g.skill})` : ""}
+          </Text>
+          <TogglePill
+            label="Present"
+            on={g.present}
+            disabled={disabled}
+            onPress={() => onGuestPresent?.(i, !g.present)}
+          />
+          <TogglePill
+            label="Paid"
+            on={g.paid}
+            disabled={disabled}
+            onPress={() => onGuestPaid?.(i, !g.paid)}
+          />
+          <Pressable onPress={() => onGuestRemove?.(i)} disabled={disabled} hitSlop={8}>
+            <Text style={styles.removeXText}>✕</Text>
+          </Pressable>
+        </View>
+      ))}
     </View>
   );
 }
@@ -1507,6 +1597,28 @@ const styles = StyleSheet.create({
   },
   playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
   promoteBtn: { flexGrow: 0, paddingHorizontal: spacing.md, minHeight: 36 },
+  wlNum: { color: colors.textMuted, fontSize: font.xs, fontWeight: "800", width: 16 },
+  arrowBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  arrowDisabled: { opacity: 0.3 },
+  arrowText: { color: colors.text, fontSize: 12 },
+  guestAdminRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexWrap: "wrap",
+    paddingLeft: spacing.md,
+    paddingTop: 4,
+  },
+  guestAdminName: { color: colors.textMuted, fontSize: font.xs, flexShrink: 1 },
 
   adminRow: {
     paddingVertical: spacing.sm,

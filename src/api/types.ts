@@ -131,6 +131,13 @@ export interface EventSummary {
   can_manage: boolean;
 }
 
+export interface RosterGuest {
+  name: string;
+  skill: string;
+  present: boolean;
+  paid: boolean;
+}
+
 export interface RosterEntry {
   player_id: number;
   name: string;
@@ -138,6 +145,7 @@ export interface RosterEntry {
   is_goalie: boolean;
   guest_count: number;
   guest_names: string[];
+  guests: RosterGuest[]; // director view only; [] otherwise
   is_beer_guy: boolean;
   is_whiskey_guy: boolean;
   present: boolean;
@@ -238,10 +246,16 @@ export type RosterAction =
   | { action: "send_invite"; player_id: number }
   | { action: "remove"; player_id: number }
   | { action: "promote"; waitlist_id?: number; player_id?: number }
+  | { action: "reorder_waitlist"; waitlist_id: number; direction: "up" | "down" }
   | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
   | { action: "add_day_player"; name: string; email?: string; is_goalie?: boolean }
-  | { action: "remove_day_player"; day_player_id: number };
+  | { action: "remove_day_player"; day_player_id: number }
+  | { action: "set_beer_guy"; player_id: number | null }
+  | { action: "set_whiskey_guy"; player_id: number | null }
+  | { action: "guest_present"; player_id: number; guest_index: number; present: boolean }
+  | { action: "guest_paid"; player_id: number; guest_index: number; paid: boolean }
+  | { action: "remove_guest"; player_id: number; guest_index: number };
 
 export interface NightMember {
   id: number;
