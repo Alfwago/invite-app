@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 import { ApiError } from "@/src/api/client";
 import type { DMMessage } from "@/src/api/types";
@@ -27,6 +28,7 @@ export default function DmThreadScreen() {
   const send = useSendDm(who === "system" ? 0 : who);
   const [draft, setDraft] = useState("");
   const listRef = useRef<FlatList<DMMessage>>(null);
+  const headerHeight = useHeaderHeight();
 
   const thread = query.data;
 
@@ -61,6 +63,7 @@ export default function DmThreadScreen() {
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={headerHeight}
       >
         <FlatList
           ref={listRef}

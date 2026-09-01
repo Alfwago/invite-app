@@ -32,8 +32,7 @@ export default function InboxScreen() {
         options={{
           title: "Inbox",
           headerRight: () => (
-            <Pressable onPress={() => setCompose(true)} hitSlop={10} style={styles.newBtn}>
-              <Ionicons name="add" size={18} color={colors.goldText} />
+            <Pressable onPress={() => setCompose(true)} hitSlop={10}>
               <Text style={styles.newBtnText}>New</Text>
             </Pressable>
           ),
@@ -208,17 +207,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
-  newBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: colors.gold,
-    borderRadius: radius.pill,
-    paddingVertical: 4,
-    paddingLeft: 6,
-    paddingRight: 10,
-  },
-  newBtnText: { color: colors.goldText, fontSize: font.sm, fontWeight: "800" },
+  newBtnText: { color: colors.gold, fontSize: font.base, fontWeight: "700" },
 
   modalRoot: { flex: 1, backgroundColor: colors.bg },
   modalHead: {
