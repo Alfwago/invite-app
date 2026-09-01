@@ -18,6 +18,8 @@ import type {
   Night,
   NightMembersResponse,
   PenaltySeverity,
+  DMConversation,
+  DMThread,
   PendingApproval,
   Poll,
   PlayerDetail,
@@ -500,4 +502,32 @@ export function votePoll(pollId: number, answers: Record<number, number>): Promi
 
 export function dismissPoll(pollId: number): Promise<{ ok: boolean }> {
   return apiFetch(`/api/polls/${pollId}/dismiss/`, { method: "POST", body: {} });
+}
+
+// ---- Direct messages / inbox (player) ---------------------------
+
+export async function fetchInbox(
+  signal?: AbortSignal,
+): Promise<{ conversations: DMConversation[]; unread_total: number }> {
+  return apiFetch("/api/dm/", { signal });
+}
+
+export function fetchDmRecipients(
+  q: string,
+  signal?: AbortSignal,
+): Promise<{ players: { id: number; name: string }[] }> {
+  const qs = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
+  return apiFetch(`/api/dm/recipients/${qs}`, { signal });
+}
+
+export function fetchDmThread(who: number | "system", signal?: AbortSignal): Promise<DMThread> {
+  return apiFetch(who === "system" ? "/api/dm/system/" : `/api/dm/${who}/`, { signal });
+}
+
+export function sendDm(userId: number, body: string): Promise<DMThread> {
+  return apiFetch(`/api/dm/${userId}/`, { method: "POST", body: { body } });
+}
+
+export function deleteDmThread(who: number | "system"): Promise<void> {
+  return apiFetch(who === "system" ? "/api/dm/system/" : `/api/dm/${who}/`, { method: "DELETE" });
 }

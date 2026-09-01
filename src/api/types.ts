@@ -578,3 +578,32 @@ export interface Poll {
   dismissed: boolean;
   questions: PollQuestion[];
 }
+
+// ---- Direct messages / inbox (player) ----------------------------
+
+export interface DMConversation {
+  user_id: number | null; // null = OBH system notifications
+  name: string;
+  is_system: boolean;
+  last_body: string;
+  last_at: string;
+  unread: number;
+}
+
+export interface DMMessage {
+  id: number;
+  body: string;
+  mine: boolean;
+  is_system: boolean;
+  author: string;
+  created_at: string;
+  event_id: number | null;
+}
+
+export interface DMThread {
+  other_id?: number;
+  other_name: string;
+  is_system: boolean;
+  can_reply?: boolean;
+  messages: DMMessage[];
+}

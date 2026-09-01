@@ -1,18 +1,42 @@
 import { useEffect } from "react";
+import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 
-import { useBoards } from "@/src/hooks/queries";
+import { useBoards, useInbox } from "@/src/hooks/queries";
 import { setAppBadge } from "@/src/push";
 import { colors } from "@/src/theme";
 
 export default function TabsLayout() {
+  const router = useRouter();
   const boards = useBoards();
-  const unread = boards.data?.unread_total ?? 0;
+  const inbox = useInbox();
+  const boardUnread = boards.data?.unread_total ?? 0;
+  const dmUnread = inbox.data?.unread_total ?? 0;
+  const unread = boardUnread + dmUnread;
 
   useEffect(() => {
     setAppBadge(unread);
   }, [unread]);
+
+  const inboxButton = () => (
+    <Pressable onPress={() => router.push("/inbox")} hitSlop={8} style={{ marginRight: 12 }}>
+      <Ionicons name="mail-outline" size={22} color={colors.text} />
+      {dmUnread > 0 ? (
+        <View
+          style={{
+            position: "absolute",
+            top: -3,
+            right: -4,
+            minWidth: 14,
+            height: 14,
+            borderRadius: 7,
+            backgroundColor: colors.red,
+          }}
+        />
+      ) : null}
+    </Pressable>
+  );
 
   return (
     <Tabs
@@ -58,6 +82,7 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: "Messages",
+          headerRight: inboxButton,
           tabBarBadge: unread > 0 ? (unread > 99 ? "99+" : unread) : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.red, color: "#fff", fontSize: 11 },
           tabBarIcon: ({ color, size }) => (

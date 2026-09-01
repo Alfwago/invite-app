@@ -41,9 +41,15 @@ function useNotificationRouting() {
     configureAndroidChannels();
 
     function open(data: unknown) {
-      const d = data as { eventId?: number | string; kind?: string } | null;
+      const d = data as {
+        eventId?: number | string;
+        kind?: string;
+        from?: number | string;
+      } | null;
       if (d?.kind === "board") {
         router.push("/(tabs)/messages");
+      } else if (d?.kind === "dm") {
+        router.push(d.from != null ? `/inbox/${d.from}` : "/inbox");
       } else if (d?.eventId != null) {
         router.push(`/event/${d.eventId}`);
       }
@@ -109,6 +115,8 @@ function RootNavigator() {
       <Stack.Screen name="director" options={{ title: "Director dashboard" }} />
       <Stack.Screen name="polls/index" options={{ title: "Polls" }} />
       <Stack.Screen name="polls/[id]" options={{ title: "Poll" }} />
+      <Stack.Screen name="inbox/index" options={{ title: "Inbox" }} />
+      <Stack.Screen name="inbox/[id]" options={{ title: "Message" }} />
       <Stack.Screen
         name="new-event"
         options={{ title: "New event", presentation: "modal" }}

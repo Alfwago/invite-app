@@ -39,6 +39,8 @@ export const keys = {
   teamHistory: (id: number) => ["team-history", id] as const,
   approvals: ["approvals"] as const,
   polls: ["polls"] as const,
+  inbox: ["inbox"] as const,
+  dmThread: (who: number | "system") => ["dm", who] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
@@ -532,4 +534,40 @@ export function usePollActions() {
       onSuccess: refresh,
     }),
   };
+}
+
+// ---- Direct messages / inbox (player) --------------------------
+
+export function useInbox() {
+  return useQuery({
+    queryKey: keys.inbox,
+    queryFn: ({ signal }) => api.fetchInbox(signal),
+    staleTime: 10_000,
+  });
+}
+
+export function useDmThread(who: number | "system") {
+  return useQuery({
+    queryKey: keys.dmThread(who),
+    queryFn: ({ signal }) => api.fetchDmThread(who, signal),
+  });
+}
+
+export function useSendDm(userId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => api.sendDm(userId, body),
+    onSuccess: (thread) => {
+      qc.setQueryData(keys.dmThread(userId), thread);
+      qc.invalidateQueries({ queryKey: keys.inbox });
+    },
+  });
+}
+
+export function useDeleteDmThread() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (who: number | "system") => api.deleteDmThread(who),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.inbox }),
+  });
 }
