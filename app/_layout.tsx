@@ -1,14 +1,20 @@
 import { useEffect } from "react";
-import { View } from "react-native";
+import { AppState, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
 import { Loading } from "@/src/components/ui";
+import { keys } from "@/src/hooks/queries";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
 import { colors } from "@/src/theme";
 
@@ -16,6 +22,17 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 15_000, refetchOnWindowFocus: true },
   },
+});
+
+// React Query's built-in focus tracking only understands the web's
+// visibility/focus events, so `refetchOnWindowFocus` never fires in a native
+// app on its own. Wire it to React Native's AppState so stale queries refetch
+// whenever the app comes back to the foreground.
+focusManager.setEventListener((handleFocus) => {
+  const sub = AppState.addEventListener("change", (state) => {
+    handleFocus(state === "active");
+  });
+  return () => sub.remove();
 });
 
 export default function RootLayout() {
@@ -31,9 +48,20 @@ export default function RootLayout() {
   );
 }
 
-/** Tapping a push notification opens the event it's about. */
-function useNotificationRouting() {
+type PushData = {
+  eventId?: number | string;
+  kind?: string;
+  type?: string;
+  from?: number | string;
+} | null;
+
+/**
+ * Tapping a push opens what it's about; a push that lands while the app is
+ * open refreshes the caches it touches so the UI updates without a manual pull.
+ */
+function useNotificationHandling() {
   const router = useRouter();
+  const qc = useQueryClient();
 
   useEffect(() => {
     // expo-notifications isn't available on web or in Expo Go (SDK 53+).
@@ -44,12 +72,7 @@ function useNotificationRouting() {
     configureAndroidChannels();
 
     function open(data: unknown) {
-      const d = data as {
-        eventId?: number | string;
-        kind?: string;
-        type?: string;
-        from?: number | string;
-      } | null;
+      const d = data as PushData;
       if (d?.kind === "board") {
         router.push("/(tabs)/messages");
       } else if (d?.kind === "dm") {
@@ -61,18 +84,38 @@ function useNotificationRouting() {
       }
     }
 
+    /** Refresh the queries a foreground push affects. */
+    function refresh(data: unknown) {
+      const d = data as PushData;
+      qc.invalidateQueries({ queryKey: keys.home });
+      if (d?.kind === "dm") qc.invalidateQueries({ queryKey: keys.inbox });
+      if (d?.kind === "board") qc.invalidateQueries({ queryKey: keys.boards });
+      if (d?.eventId != null) {
+        qc.invalidateQueries({ queryKey: keys.event(d.eventId) });
+        qc.invalidateQueries({ queryKey: ["events"] });
+      }
+    }
+
     Notifications.getLastNotificationResponseAsync().then((response: unknown) => {
       const r = response as { notification: { request: { content: { data: unknown } } } } | null;
       if (r) open(r.notification.request.content.data);
     });
 
-    const sub = Notifications.addNotificationResponseReceivedListener(
+    const tapSub = Notifications.addNotificationResponseReceivedListener(
       (response: { notification: { request: { content: { data: unknown } } } }) => {
         open(response.notification.request.content.data);
       },
     );
-    return () => sub.remove();
-  }, [router]);
+    const recvSub = Notifications.addNotificationReceivedListener(
+      (notification: { request: { content: { data: unknown } } }) => {
+        refresh(notification.request.content.data);
+      },
+    );
+    return () => {
+      tapSub.remove();
+      recvSub.remove();
+    };
+  }, [router, qc]);
 }
 
 function RootNavigator() {
@@ -80,7 +123,7 @@ function RootNavigator() {
   const segments = useSegments();
   const router = useRouter();
 
-  useNotificationRouting();
+  useNotificationHandling();
 
   useEffect(() => {
     if (!ready) return;
