@@ -1084,6 +1084,7 @@ function RosterAdminRow({
   onRemove: () => void;
 }) {
   const tag = isGoalie ? "G" : isDirector ? "Dir" : walkOn ? "walk-on" : "";
+  const hasGuys = (showBeer && onBeer) || (showWhiskey && onWhiskey);
   return (
     <View style={styles.adminRow}>
       <View style={styles.adminLine}>
@@ -1092,17 +1093,19 @@ function RosterAdminRow({
         </Text>
         {tag ? <Text style={styles.roleTag}>{tag}</Text> : null}
         <View style={styles.tinyBtns}>
-          <TinyBtn label="P" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
+          <TinyBtn text="In" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
           {pays ? (
-            <TinyBtn label="$" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
+            <TinyBtn text="Paid" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
           ) : null}
+          {hasGuys ? <View style={styles.grpGap} /> : null}
           {showBeer && onBeer ? (
-            <TinyBtn label="B" on={!!beerOn} disabled={disabled} onPress={onBeer} />
+            <TinyBtn text="🍺" on={!!beerOn} disabled={disabled} onPress={onBeer} />
           ) : null}
           {showWhiskey && onWhiskey ? (
-            <TinyBtn label="W" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
+            <TinyBtn text="🥃" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
           ) : null}
-          <TinyBtn label="✕" danger disabled={disabled} onPress={onRemove} />
+          <View style={styles.grpGap} />
+          <TinyBtn text="✕" danger disabled={disabled} onPress={onRemove} />
         </View>
       </View>
 
@@ -1113,9 +1116,10 @@ function RosterAdminRow({
             {g.skill ? ` (${g.skill})` : ""}
           </Text>
           <View style={styles.tinyBtns}>
-            <TinyBtn label="P" on={g.present} disabled={disabled} onPress={() => onGuestPresent?.(i, !g.present)} />
-            <TinyBtn label="$" on={g.paid} disabled={disabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
-            <TinyBtn label="✕" danger disabled={disabled} onPress={() => onGuestRemove?.(i)} />
+            <TinyBtn text="In" on={g.present} disabled={disabled} onPress={() => onGuestPresent?.(i, !g.present)} />
+            <TinyBtn text="Paid" on={g.paid} disabled={disabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
+            <View style={styles.grpGap} />
+            <TinyBtn text="✕" danger disabled={disabled} onPress={() => onGuestRemove?.(i)} />
           </View>
         </View>
       ))}
@@ -1124,13 +1128,13 @@ function RosterAdminRow({
 }
 
 function TinyBtn({
-  label,
+  text,
   on,
   danger,
   disabled,
   onPress,
 }: {
-  label: string;
+  text: string;
   on?: boolean;
   danger?: boolean;
   disabled?: boolean;
@@ -1149,7 +1153,7 @@ function TinyBtn({
       ]}
     >
       <Text style={[styles.tinyText, on && styles.tinyTextOn, danger && styles.tinyTextDanger]}>
-        {label}
+        {text}
       </Text>
     </Pressable>
   );
@@ -1640,19 +1644,20 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
+  grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
   tiny: {
-    minWidth: 26,
-    height: 26,
+    minWidth: 30,
+    height: 28,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.cardRaised,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 2,
+    paddingHorizontal: 6,
   },
   tinyOn: { borderColor: colors.gold, backgroundColor: colors.gold },
-  tinyDanger: { borderColor: colors.redDim },
+  tinyDanger: { borderColor: colors.redDim, paddingHorizontal: 4 },
   tinyText: { color: colors.textMuted, fontSize: 12, fontWeight: "800" },
   tinyTextOn: { color: colors.goldText },
   tinyTextDanger: { color: colors.red },
