@@ -400,9 +400,19 @@ export default function TeamGeneratorScreen() {
                       value={note}
                       onChangeText={setNote}
                     />
-                    <View style={styles.bar}>
-                      <Button label="Save to history" onPress={onSave} loading={save.isPending} />
-                      <Button label="Export PDF" variant="secondary" onPress={onExportPdf} />
+                    <View style={styles.saveActions}>
+                      <Button
+                        label="Save to history"
+                        onPress={onSave}
+                        loading={save.isPending}
+                        style={styles.wideBtn}
+                      />
+                      <Button
+                        label="Export PDF"
+                        variant="secondary"
+                        onPress={onExportPdf}
+                        style={styles.wideBtn}
+                      />
                     </View>
                   </Card>
                 ) : null}
@@ -620,6 +630,8 @@ const styles = StyleSheet.create({
   hint: { color: colors.textMuted, fontSize: font.sm, padding: spacing.md, textAlign: "center" },
   count: { color: colors.textMuted, fontSize: font.xs, textAlign: "center" },
   bar: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  saveActions: { gap: spacing.sm, marginTop: spacing.xs },
+  wideBtn: { alignSelf: "stretch", minHeight: 52, paddingVertical: spacing.md + 2 },
   toolGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   barBtn: {
     paddingVertical: 8,
