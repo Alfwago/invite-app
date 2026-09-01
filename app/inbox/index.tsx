@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
@@ -22,32 +22,27 @@ import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function InboxScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const query = useInbox();
   const [compose, setCompose] = useState(false);
   const convos = query.data?.conversations ?? [];
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false }} />
-
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <Pressable onPress={() => router.back()} style={styles.hBack} hitSlop={8}>
-          <Ionicons name="chevron-back" size={26} color={colors.gold} />
-          <Text style={styles.hBackText}>Back</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setCompose(true)}
-          hitSlop={8}
-          style={({ pressed }) => [styles.newBtn, pressed && { opacity: 0.85 }]}
-        >
-          <Ionicons name="add" size={16} color={colors.goldText} />
-          <Text style={styles.newBtnText}>New</Text>
-        </Pressable>
-        <Text style={styles.hTitle} pointerEvents="none">
-          Inbox
-        </Text>
-      </View>
+      <Stack.Screen
+        options={{
+          title: "Inbox",
+          headerRight: () => (
+            <Pressable
+              onPress={() => setCompose(true)}
+              hitSlop={8}
+              style={({ pressed }) => [styles.newBtn, pressed && { opacity: 0.85 }]}
+            >
+              <Ionicons name="add" size={16} color={colors.goldText} />
+              <Text style={styles.newBtnText}>New</Text>
+            </Pressable>
+          ),
+        }}
+      />
 
       <View style={styles.screen}>
         {query.isLoading ? (
@@ -218,28 +213,6 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  hBack: { flexDirection: "row", alignItems: "center", minWidth: 76 },
-  hBackText: { color: colors.gold, fontSize: 17, fontWeight: "500", marginLeft: -4 },
-  hTitle: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: spacing.sm + 4,
-    textAlign: "center",
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: "800",
-  },
   newBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
+import { NavHeader } from "@/src/components/NavHeader";
 import { Loading } from "@/src/components/ui";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
 import { colors } from "@/src/theme";
@@ -91,11 +92,7 @@ function RootNavigator() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerShadowVisible: false,
-        headerTintColor: colors.gold,
-        headerTitleStyle: { color: colors.text, fontWeight: "800" },
-        headerBackTitle: "Back",
+        header: (props) => <NavHeader {...props} />,
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
