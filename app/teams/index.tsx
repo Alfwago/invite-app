@@ -13,20 +13,27 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
-import { ApiError } from "@/src/api/client";
-import type { TeamRosterPlayer } from "@/src/api/types";
+import { API_BASE, ApiError } from "@/src/api/client";
+import type { TeamEvent, TeamRosterPlayer } from "@/src/api/types";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { formatEventDate } from "@/src/format";
-import {
-  useSaveTeamHistory,
-  useTeamEvents,
-  useTeamRoster,
-} from "@/src/hooks/queries";
+import { useSaveTeamHistory, useTeamEvents, useTeamRoster } from "@/src/hooks/queries";
 import { autoBalance, ppv, type BalanceResult, type TGPlayer } from "@/src/teams/balance";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 type Team = "Gold" | "Black";
-const KEY = (id: TeamRosterPlayer["id"]) => String(id);
+const K = (id: TeamRosterPlayer["id"]) => String(id);
+
+function ratingOf(p: TeamRosterPlayer) {
+  return p.is_goalie
+    ? p.rating_goalie
+    : ppv({
+        hockey_sense: p.rating_hockey_sense,
+        skating: p.rating_skating,
+        defense: p.rating_defense,
+        offense: p.rating_offense,
+        goalie: p.rating_goalie,
+      });
+}
 
 export default function TeamGeneratorScreen() {
   const router = useRouter();
@@ -37,18 +44,16 @@ export default function TeamGeneratorScreen() {
 
   const [presentOnly, setPresentOnly] = useState(false);
   const [locks, setLocks] = useState<Record<string, Team>>({});
-  const [goaliePrefs, setGoaliePrefs] = useState<Record<string, "Auto" | Team>>({});
-  const [inactiveGoalies, setInactiveGoalies] = useState<Set<string>>(new Set());
   const [pairs, setPairs] = useState<[string, string][]>([]);
   const [splits, setSplits] = useState<[string, string][]>([]);
   const [assignment, setAssignment] = useState<Record<string, Team>>({});
   const [goldGoalie, setGoldGoalie] = useState<BalanceResult["goldGoalie"]>(null);
   const [blackGoalie, setBlackGoalie] = useState<BalanceResult["blackGoalie"]>(null);
   const [note, setNote] = useState("");
-  const [picker, setPicker] = useState<null | { mode: "pair" | "split"; first: string | null }>(null);
+  const [pick, setPick] = useState<null | { mode: "pair" | "split"; first: string | null }>(null);
 
   const players = roster.data ?? [];
-  const goalies = useMemo(() => players.filter((p) => p.is_goalie), [players]);
+  const balanced = Object.keys(assignment).length > 0;
 
   const tgPlayers = useCallback(
     (): TGPlayer[] =>
@@ -64,105 +69,125 @@ export default function TeamGeneratorScreen() {
           offense: r.rating_offense,
           goalie: r.rating_goalie,
         },
-        locked: locks[KEY(r.id)] ?? null,
+        locked: locks[K(r.id)] ?? null,
       })),
     [players, locks],
   );
 
-  function balance() {
-    const result = autoBalance({
-      players: tgPlayers(),
-      pairs,
-      splits,
-      goaliePrefs,
-      inactiveGoalieIds: new Set([...inactiveGoalies]),
-      presentOnly,
-      shuffle: true,
-    });
-    const next: Record<string, Team> = {};
-    result.gold.forEach((p) => (next[KEY(p.id)] = "Gold"));
-    result.black.forEach((p) => (next[KEY(p.id)] = "Black"));
-    setAssignment(next);
-    setGoldGoalie(result.goldGoalie);
-    setBlackGoalie(result.blackGoalie);
-  }
-
-  const pool = useMemo(
-    () => (presentOnly ? players.filter((p) => p.present) : players).filter((p) => !isSkatingGoalie(p, assignment)),
-    [players, presentOnly, assignment],
+  const runBalance = useCallback(
+    (present = presentOnly) => {
+      const result = autoBalance({
+        players: tgPlayers(),
+        pairs,
+        splits,
+        presentOnly: present,
+        shuffle: true,
+      });
+      const next: Record<string, Team> = {};
+      result.gold.forEach((p) => (next[K(p.id)] = "Gold"));
+      result.black.forEach((p) => (next[K(p.id)] = "Black"));
+      setAssignment(next);
+      setGoldGoalie(result.goldGoalie);
+      setBlackGoalie(result.blackGoalie);
+    },
+    [tgPlayers, pairs, splits, presentOnly],
   );
-  const gold = pool.filter((p) => assignment[KEY(p.id)] === "Gold");
-  const black = pool.filter((p) => assignment[KEY(p.id)] === "Black");
-  const balanced = assignment && Object.keys(assignment).length > 0;
 
-  function isSkatingGoalie(p: TeamRosterPlayer, a: Record<string, Team>) {
-    // A goalie who's the chosen keeper for a team isn't shown in the skater list.
-    return (
-      (goldGoalie?.playerId != null && KEY(goldGoalie.playerId) === KEY(p.id)) ||
-      (blackGoalie?.playerId != null && KEY(blackGoalie.playerId) === KEY(p.id))
-    );
-  }
+  const keeperIds = useMemo(
+    () =>
+      new Set(
+        [goldGoalie?.playerId, blackGoalie?.playerId]
+          .filter((x) => x != null)
+          .map((x) => K(x as TeamRosterPlayer["id"])),
+      ),
+    [goldGoalie, blackGoalie],
+  );
+
+  const pool = (presentOnly ? players.filter((p) => p.present) : players).filter(
+    (p) => !keeperIds.has(K(p.id)),
+  );
+  const gold = pool.filter((p) => assignment[K(p.id)] === "Gold");
+  const black = pool.filter((p) => assignment[K(p.id)] === "Black");
+
+  const teamRating = (arr: TeamRosterPlayer[], goalie: BalanceResult["goldGoalie"]) =>
+    arr.reduce((a, p) => a + ratingOf(p), 0) + Number(goalie?.weight || 0);
 
   function move(id: TeamRosterPlayer["id"]) {
-    const k = KEY(id);
-    setAssignment((a) => ({ ...a, [k]: a[k] === "Gold" ? "Black" : "Gold" }));
-    setLocks((l) => (l[k] ? { ...l, [k]: assignment[k] === "Gold" ? "Black" : "Gold" } : l));
+    const k = K(id);
+    const to: Team = assignment[k] === "Gold" ? "Black" : "Gold";
+    setAssignment((a) => ({ ...a, [k]: to }));
+    setLocks((l) => (l[k] ? { ...l, [k]: to } : l));
   }
 
   function toggleLock(id: TeamRosterPlayer["id"]) {
-    const k = KEY(id);
+    const k = K(id);
     setLocks((l) => {
-      const copy = { ...l };
-      if (copy[k]) delete copy[k];
-      else copy[k] = assignment[k] ?? "Gold";
-      return copy;
+      const c = { ...l };
+      if (c[k]) delete c[k];
+      else c[k] = assignment[k] ?? "Gold";
+      return c;
     });
+  }
+
+  function clearLocks() {
+    setLocks({});
   }
 
   function swapTeams() {
     setAssignment((a) => {
-      const flipped: Record<string, Team> = {};
-      for (const k of Object.keys(a)) flipped[k] = a[k] === "Gold" ? "Black" : "Gold";
-      return flipped;
+      const f: Record<string, Team> = {};
+      for (const k of Object.keys(a)) f[k] = a[k] === "Gold" ? "Black" : "Gold";
+      return f;
     });
     setLocks((l) => {
-      const flipped: Record<string, Team> = {};
-      for (const k of Object.keys(l)) flipped[k] = l[k] === "Gold" ? "Black" : "Gold";
-      return flipped;
+      const f: Record<string, Team> = {};
+      for (const k of Object.keys(l)) f[k] = l[k] === "Gold" ? "Black" : "Gold";
+      return f;
     });
+    swapGoalies();
+  }
+
+  function swapGoalies() {
     setGoldGoalie(blackGoalie);
     setBlackGoalie(goldGoalie);
   }
 
-  function pickForPairSplit(id: TeamRosterPlayer["id"]) {
-    if (!picker) return;
-    const k = KEY(id);
-    if (!picker.first) {
-      setPicker({ ...picker, first: k });
-      return;
-    }
-    if (picker.first === k) {
-      setPicker(null);
-      return;
-    }
-    const edge: [string, string] = [picker.first, k];
-    if (picker.mode === "pair") {
-      setSplits((s) => s.filter((e) => !sameEdge(e, edge)));
-      setPairs((p) => (p.some((e) => sameEdge(e, edge)) ? p : [...p, edge]));
+  const partnersFor = (k: string, list: [string, string][]) =>
+    list.filter((e) => e[0] === k || e[1] === k).map((e) => (e[0] === k ? e[1] : e[0]));
+
+  function onPickPlayer(id: TeamRosterPlayer["id"]) {
+    if (!pick) return;
+    const k = K(id);
+    if (!pick.first) return setPick({ ...pick, first: k });
+    if (pick.first === k) return setPick(null);
+    const edge: [string, string] = [pick.first, k];
+    const has = (l: [string, string][]) => l.some((e) => sameEdge(e, edge));
+    if (pick.mode === "pair") {
+      if (has(splits)) {
+        Alert.alert(
+          "Already split",
+          "These two are set to keep apart — remove that split first.",
+        );
+        return setPick(null);
+      }
+      if (!has(pairs)) setPairs((p) => [...p, edge]);
     } else {
-      setPairs((p) => p.filter((e) => !sameEdge(e, edge)));
-      setSplits((s) => (s.some((e) => sameEdge(e, edge)) ? s : [...s, edge]));
+      if (has(pairs)) {
+        Alert.alert(
+          "Already paired",
+          "These two are set to keep together — remove that pairing first.",
+        );
+        return setPick(null);
+      }
+      if (!has(splits)) setSplits((s) => [...s, edge]);
     }
-    setPicker(null);
+    setPick(null);
   }
 
-  const nameOf = (k: string) => players.find((p) => KEY(p.id) === k)?.name ?? "—";
+  const nameOf = (k: string) => players.find((p) => K(p.id) === k)?.name ?? "(removed)";
 
   async function onSave() {
-    if (!eventId) {
-      Alert.alert("Pick an event", "Saving a split needs an event to attach it to.");
-      return;
-    }
+    if (!eventId) return;
     try {
       await save.mutateAsync({
         goldPlayers: gold.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
@@ -176,7 +201,7 @@ export default function TeamGeneratorScreen() {
         note: note.trim() || undefined,
       });
       setNote("");
-      Alert.alert("Saved", "This split is in the event's team history.");
+      Alert.alert("Saved to History.");
     } catch (e) {
       Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : "Try again.");
     }
@@ -184,18 +209,22 @@ export default function TeamGeneratorScreen() {
 
   async function onExportPdf() {
     const evt = events.data?.find((e) => e.id === eventId);
-    const html = teamsHtml({
-      title: evt ? `${evt.display_name} — ${formatEventDate(evt.date)}` : "OBH Teams",
-      gold: gold.map((p) => `${p.name}`),
-      black: black.map((p) => `${p.name}`),
+    const html = teamsPdfHtml({
+      poolName: eventLabel(evt),
+      poolDescription: evt?.date ? `Event Date: ${evt.date}` : "",
+      nightImageUrl: nightArtUrl(evt),
+      goldNames: gold.map((p) => p.name),
+      blackNames: black.map((p) => p.name),
       goldGoalie: goldGoalie?.name,
       blackGoalie: blackGoalie?.name,
     });
     try {
       const { uri } = await Print.printToFileAsync({ html });
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
+      }
     } catch {
-      Alert.alert("Couldn't make the PDF", "Try again.");
+      Alert.alert("PDF export failed", "Try again.");
     }
   }
 
@@ -207,9 +236,11 @@ export default function TeamGeneratorScreen() {
           <Loading label="Loading…" />
         ) : events.isError ? (
           <ErrorState
-            message={events.error instanceof ApiError ? events.error.detail : "Couldn't load events."}
+            message={events.error instanceof ApiError ? events.error.detail : "Couldn't load."}
             onRetry={() => events.refetch()}
           />
+        ) : (events.data ?? []).length === 0 ? (
+          <Text style={styles.hint}>No active events.</Text>
         ) : (
           <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -220,6 +251,8 @@ export default function TeamGeneratorScreen() {
                     setEventId(e.id);
                     setAssignment({});
                     setLocks({});
+                    setPairs([]);
+                    setSplits([]);
                   }}
                   style={[styles.chip, eventId === e.id && styles.chipOn]}
                 >
@@ -234,133 +267,107 @@ export default function TeamGeneratorScreen() {
               <Text style={styles.hint}>Pick an event to pull its Yes roster.</Text>
             ) : roster.isLoading ? (
               <Loading label="Loading roster…" />
+            ) : roster.isError ? (
+              <ErrorState
+                message={roster.error instanceof ApiError ? roster.error.detail : "Couldn't load roster."}
+                onRetry={() => roster.refetch()}
+              />
             ) : (
               <>
-                <Pressable style={styles.toggleRow} onPress={() => setPresentOnly((v) => !v)} hitSlop={8}>
-                  <Ionicons
-                    name={presentOnly ? "checkbox" : "square-outline"}
-                    size={18}
-                    color={presentOnly ? colors.gold : colors.textMuted}
+                <Text style={styles.count}>
+                  {players.length} on roster · {players.filter((p) => p.present).length} present
+                </Text>
+
+                <View style={styles.bar}>
+                  <BarBtn label="Refresh" onPress={() => roster.refetch()} />
+                  <BarBtn
+                    label={`Present only: ${presentOnly ? "On" : "Off"}`}
+                    active={presentOnly}
+                    onPress={() => {
+                      const next = !presentOnly;
+                      setPresentOnly(next);
+                      if (balanced) runBalance(next);
+                    }}
                   />
-                  <Text style={styles.toggleText}>Present only ({players.filter((p) => p.present).length})</Text>
-                </Pressable>
-
-                {goalies.length > 0 ? (
-                  <Card>
-                    <Text style={styles.cardLabel}>Goalies</Text>
-                    {goalies.map((g) => {
-                      const k = KEY(g.id);
-                      const inactive = inactiveGoalies.has(k);
-                      return (
-                        <View key={k} style={styles.goalieRow}>
-                          <Pressable
-                            onPress={() =>
-                              setInactiveGoalies((s) => {
-                                const n = new Set(s);
-                                n.has(k) ? n.delete(k) : n.add(k);
-                                return n;
-                              })
-                            }
-                            hitSlop={6}
-                          >
-                            <Ionicons
-                              name={inactive ? "square-outline" : "checkbox"}
-                              size={18}
-                              color={inactive ? colors.textMuted : colors.gold}
-                            />
-                          </Pressable>
-                          <Text style={[styles.goalieName, inactive && styles.dim]}>{g.name}</Text>
-                          <View style={styles.seg}>
-                            {(["Auto", "Gold", "Black"] as const).map((opt) => {
-                              const on = (goaliePrefs[k] ?? "Auto") === opt;
-                              return (
-                                <Pressable
-                                  key={opt}
-                                  onPress={() => setGoaliePrefs((p) => ({ ...p, [k]: opt }))}
-                                  style={[styles.segItem, on && styles.segItemOn]}
-                                  disabled={inactive}
-                                >
-                                  <Text style={[styles.segText, on && styles.segTextOn]}>{opt[0]}</Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </Card>
-                ) : null}
-
-                <View style={styles.actionRow}>
-                  <Button label="Auto-balance" onPress={balance} />
+                  <BarBtn label="Auto-balance" gold onPress={() => runBalance()} />
                   {balanced ? (
-                    <Button label="Swap teams" variant="secondary" onPress={swapTeams} />
+                    <>
+                      <BarBtn label="Clear locks" onPress={clearLocks} />
+                      <BarBtn label="Swap teams" onPress={swapTeams} />
+                      <BarBtn label="Swap goalies" onPress={swapGoalies} />
+                    </>
                   ) : null}
                 </View>
 
+                <Card style={styles.psCard}>
+                  <Text style={styles.psTitle}>Pair &amp; Split</Text>
+                  <Text style={styles.psHint}>
+                    Tap Pair or Split, then tap the two players. Auto-balance again to apply.
+                  </Text>
+                  <View style={styles.bar}>
+                    <BarBtn
+                      label="🔗 Pair"
+                      active={pick?.mode === "pair"}
+                      onPress={() => setPick(pick?.mode === "pair" ? null : { mode: "pair", first: null })}
+                    />
+                    <BarBtn
+                      label="✂️ Split"
+                      active={pick?.mode === "split"}
+                      onPress={() => setPick(pick?.mode === "split" ? null : { mode: "split", first: null })}
+                    />
+                    {pairs.length + splits.length > 0 ? (
+                      <BarBtn
+                        label="Clear pairs/splits"
+                        onPress={() => {
+                          setPairs([]);
+                          setSplits([]);
+                        }}
+                      />
+                    ) : null}
+                  </View>
+                  {pick ? (
+                    <Text style={styles.psPrompt}>
+                      {pick.first ? `${nameOf(pick.first)} + tap another…` : "Tap the first player…"}
+                    </Text>
+                  ) : null}
+                  {pairs.map((e, i) => (
+                    <Chip key={`p${i}`} text={`🔗 ${nameOf(e[0])} ↔ ${nameOf(e[1])}`} onX={() => setPairs((p) => p.filter((x) => x !== e))} />
+                  ))}
+                  {splits.map((e, i) => (
+                    <Chip key={`s${i}`} text={`✂️ ${nameOf(e[0])} ↔ ${nameOf(e[1])}`} tone="split" onX={() => setSplits((s) => s.filter((x) => x !== e))} />
+                  ))}
+                </Card>
+
                 {balanced ? (
                   <View style={styles.teams}>
-                    <TeamColumn
+                    <TeamCol
                       name="Gold"
                       players={gold}
-                      goalie={goldGoalie?.name}
+                      goalie={goldGoalie}
+                      total={teamRating(gold, goldGoalie)}
                       locks={locks}
-                      picker={picker}
+                      pick={pick}
+                      pairPartners={(k) => partnersFor(k, pairs)}
+                      splitPartners={(k) => partnersFor(k, splits)}
                       onMove={move}
                       onLock={toggleLock}
-                      onPick={pickForPairSplit}
+                      onPick={onPickPlayer}
                     />
-                    <TeamColumn
+                    <TeamCol
                       name="Black"
                       players={black}
-                      goalie={blackGoalie?.name}
+                      goalie={blackGoalie}
+                      total={teamRating(black, blackGoalie)}
                       locks={locks}
-                      picker={picker}
+                      pick={pick}
+                      pairPartners={(k) => partnersFor(k, pairs)}
+                      splitPartners={(k) => partnersFor(k, splits)}
                       onMove={move}
                       onLock={toggleLock}
-                      onPick={pickForPairSplit}
+                      onPick={onPickPlayer}
                     />
                   </View>
                 ) : null}
-
-                <Card>
-                  <Text style={styles.cardLabel}>Keep together / apart</Text>
-                  <View style={styles.actionRow}>
-                    <Button
-                      label={picker?.mode === "pair" ? "Tap two players…" : "+ Keep together"}
-                      variant="secondary"
-                      onPress={() =>
-                        setPicker(picker?.mode === "pair" ? null : { mode: "pair", first: null })
-                      }
-                    />
-                    <Button
-                      label={picker?.mode === "split" ? "Tap two players…" : "+ Keep apart"}
-                      variant="secondary"
-                      onPress={() =>
-                        setPicker(picker?.mode === "split" ? null : { mode: "split", first: null })
-                      }
-                    />
-                  </View>
-                  {pairs.map((e, i) => (
-                    <ConstraintChip
-                      key={`p${i}`}
-                      label={`${nameOf(e[0])} + ${nameOf(e[1])}`}
-                      tone="pair"
-                      onRemove={() => setPairs((p) => p.filter((x) => x !== e))}
-                    />
-                  ))}
-                  {splits.map((e, i) => (
-                    <ConstraintChip
-                      key={`s${i}`}
-                      label={`${nameOf(e[0])} ⁄ ${nameOf(e[1])}`}
-                      tone="split"
-                      onRemove={() => setSplits((s) => s.filter((x) => x !== e))}
-                    />
-                  ))}
-                  {pairs.length + splits.length > 0 ? (
-                    <Text style={styles.note}>Auto-balance again to apply.</Text>
-                  ) : null}
-                </Card>
 
                 {balanced ? (
                   <Card>
@@ -371,8 +378,8 @@ export default function TeamGeneratorScreen() {
                       value={note}
                       onChangeText={setNote}
                     />
-                    <View style={styles.actionRow}>
-                      <Button label="Save split" onPress={onSave} loading={save.isPending} />
+                    <View style={styles.bar}>
+                      <Button label="Save to history" onPress={onSave} loading={save.isPending} />
                       <Button label="Export PDF" variant="secondary" onPress={onExportPdf} />
                     </View>
                     <Pressable
@@ -393,59 +400,91 @@ export default function TeamGeneratorScreen() {
   );
 }
 
-function ratingOf(p: TeamRosterPlayer) {
-  return p.is_goalie
-    ? p.rating_goalie
-    : ppv({
-        hockey_sense: p.rating_hockey_sense,
-        skating: p.rating_skating,
-        defense: p.rating_defense,
-        offense: p.rating_offense,
-        goalie: p.rating_goalie,
-      });
+function BarBtn({
+  label,
+  onPress,
+  active,
+  gold,
+}: {
+  label: string;
+  onPress: () => void;
+  active?: boolean;
+  gold?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.barBtn, gold && styles.barBtnGold, active && styles.barBtnActive]}
+    >
+      <Text style={[styles.barBtnText, (gold || active) && styles.barBtnTextOn]}>{label}</Text>
+    </Pressable>
+  );
 }
 
-function TeamColumn({
+function TeamCol({
   name,
   players,
   goalie,
+  total,
   locks,
-  picker,
+  pick,
+  pairPartners,
+  splitPartners,
   onMove,
   onLock,
   onPick,
 }: {
   name: Team;
   players: TeamRosterPlayer[];
-  goalie?: string;
+  goalie: BalanceResult["goldGoalie"];
+  total: number;
   locks: Record<string, Team>;
-  picker: null | { mode: "pair" | "split"; first: string | null };
+  pick: null | { mode: "pair" | "split"; first: string | null };
+  pairPartners: (k: string) => string[];
+  splitPartners: (k: string) => string[];
   onMove: (id: TeamRosterPlayer["id"]) => void;
   onLock: (id: TeamRosterPlayer["id"]) => void;
   onPick: (id: TeamRosterPlayer["id"]) => void;
 }) {
-  const total = players.reduce((a, p) => a + ratingOf(p), 0);
+  const goalieSkaters = players.filter((p) => p.is_goalie);
+  const others = players.filter((p) => !p.is_goalie);
+  const ordered = [...goalieSkaters, ...others];
   return (
     <View style={[styles.col, name === "Gold" ? styles.colGold : styles.colBlack]}>
-      <Text style={styles.colHead}>
-        {name} · {players.length}
-      </Text>
-      <Text style={styles.colTotal}>{total.toFixed(1)} PPV</Text>
-      {goalie ? <Text style={styles.colGoalie}>🥅 {goalie}</Text> : null}
-      {players.map((p) => {
+      <Text style={[styles.colHead, name === "Gold" && { color: colors.gold }]}>{name} Team</Text>
+      <Text style={styles.colTotal}>Team Rating: {total.toFixed(2)}</Text>
+
+      {goalie ? (
+        <View style={styles.pRow}>
+          <Text style={styles.pName} numberOfLines={1}>
+            {goalie.name} <Text style={styles.gBadge}>G</Text>
+          </Text>
+          <Text style={styles.pRate}>{Number(goalie.weight || 0).toFixed(2)}</Text>
+        </View>
+      ) : null}
+
+      {ordered.map((p) => {
         const k = String(p.id);
         const locked = !!locks[k];
-        const selected = picker?.first === k;
+        const selected = pick?.first === k;
+        const paired = pairPartners(k).length > 0;
+        const split = splitPartners(k).length > 0;
         return (
-          <Pressable
-            key={k}
-            style={[styles.playerRow, selected && styles.playerRowSel]}
-            onPress={() => (picker ? onPick(p.id) : onMove(p.id))}
-          >
-            <Text style={styles.playerName} numberOfLines={1}>
-              {p.name}
+          <View key={k} style={[styles.pRow, selected && styles.pRowSel]}>
+            <Pressable
+              style={styles.pTapArea}
+              onPress={() => (pick ? onPick(p.id) : onMove(p.id))}
+            >
+              <Text style={styles.pName} numberOfLines={1}>
+                {p.name}
+                {p.is_goalie ? <Text style={styles.gBadge}> G</Text> : null}
+                {paired ? " 🔗" : ""}
+                {split ? " ✂️" : ""}
+              </Text>
+            </Pressable>
+            <Text style={styles.pRate}>
+              {(p.is_goalie ? p.rating_goalie : ratingOf(p)).toFixed(2)}
             </Text>
-            <Text style={styles.playerPpv}>{ratingOf(p).toFixed(1)}</Text>
             <Pressable onPress={() => onLock(p.id)} hitSlop={6}>
               <Ionicons
                 name={locked ? "lock-closed" : "lock-open-outline"}
@@ -453,27 +492,30 @@ function TeamColumn({
                 color={locked ? colors.gold : colors.textMuted}
               />
             </Pressable>
-          </Pressable>
+            <Pressable onPress={() => onMove(p.id)} hitSlop={6}>
+              <Ionicons name="swap-horizontal" size={16} color={colors.textMuted} />
+            </Pressable>
+          </View>
         );
       })}
     </View>
   );
 }
 
-function ConstraintChip({
-  label,
+function Chip({
+  text,
   tone,
-  onRemove,
+  onX,
 }: {
-  label: string;
-  tone: "pair" | "split";
-  onRemove: () => void;
+  text: string;
+  tone?: "split";
+  onX: () => void;
 }) {
   return (
     <View style={[styles.constraint, tone === "split" && styles.constraintSplit]}>
-      <Text style={styles.constraintText}>{label}</Text>
-      <Pressable onPress={onRemove} hitSlop={8}>
-        <Ionicons name="close" size={16} color={colors.textMuted} />
+      <Text style={styles.constraintText}>{text}</Text>
+      <Pressable onPress={onX} hitSlop={8}>
+        <Ionicons name="close" size={15} color={colors.textMuted} />
       </Pressable>
     </View>
   );
@@ -483,36 +525,70 @@ function sameEdge(a: [string, string], b: [string, string]) {
   return (a[0] === b[0] && a[1] === b[1]) || (a[0] === b[1] && a[1] === b[0]);
 }
 
-function teamsHtml(d: {
-  title: string;
-  gold: string[];
-  black: string[];
+function eventLabel(evt?: TeamEvent) {
+  if (!evt) return "OBH Teams";
+  let when = "";
+  try {
+    const d = new Date(`${evt.date}T00:00:00`).toLocaleDateString();
+    const t = evt.start_time
+      ? new Date(`1970-01-01T${evt.start_time}`).toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "";
+    when = [d, t].filter(Boolean).join(" ");
+  } catch {
+    when = evt.date;
+  }
+  return `${evt.display_name}${when ? ` — ${when}` : ""}`;
+}
+
+function nightArtUrl(evt?: TeamEvent): string {
+  if (!evt?.display_name) return "";
+  const first = evt.display_name.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9_-]/g, "");
+  return first ? `${API_BASE}/static/invitations/${first}.png` : "";
+}
+
+/** Matches the website's jsPDF export: centered night art, event title +
+ *  date, then a bordered two-column Gold | Black table (goalie first, "(G)"). */
+function teamsPdfHtml(d: {
+  poolName: string;
+  poolDescription: string;
+  nightImageUrl: string;
+  goldNames: string[];
+  blackNames: string[];
   goldGoalie?: string;
   blackGoalie?: string;
 }) {
-  const li = (arr: string[]) => arr.map((n) => `<li>${escapeHtml(n)}</li>`).join("");
+  const esc = (s: string) =>
+    s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  const goldList = [...(d.goldGoalie ? [`(G) ${d.goldGoalie}`] : []), ...d.goldNames];
+  const blackList = [...(d.blackGoalie ? [`(G) ${d.blackGoalie}`] : []), ...d.blackNames];
+  const rows = Math.max(goldList.length, blackList.length, 1);
+  let body = "";
+  for (let i = 0; i < rows; i++) {
+    body += `<tr><td>${esc(goldList[i] || "")}</td><td>${esc(blackList[i] || "")}</td></tr>`;
+  }
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-    body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:32px;color:#111}
-    h1{font-size:18px;margin:0 0 4px} h2{font-size:15px;margin:0 0 8px}
-    .cols{display:flex;gap:32px;margin-top:16px}
-    .col{flex:1;border:1px solid #ccc;border-radius:8px;padding:16px}
-    .gold h2{color:#a8850f} ul{margin:8px 0 0 18px;line-height:1.6}
-    .goalie{font-weight:700;margin-top:4px}
+    @page { margin: 32pt; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #000; }
+    .hdr { text-align: center; }
+    .hdr img { max-height: 216pt; max-width: 100%; }
+    h1 { font-size: 18pt; margin: 12pt 0 0; }
+    .desc { font-size: 12pt; margin: 6pt 0 12pt; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12pt; }
+    th, td { border: 1pt solid #000; text-align: center; padding: 5pt; font-size: 13pt; }
+    th { font-size: 14pt; }
+    th.gold { color: #ffd54a; }
   </style></head><body>
-    <h1>${escapeHtml(d.title)}</h1>
-    <div class="cols">
-      <div class="col gold"><h2>Gold (${d.gold.length})</h2>
-        ${d.goldGoalie ? `<div class="goalie">🥅 ${escapeHtml(d.goldGoalie)}</div>` : ""}
-        <ul>${li(d.gold)}</ul></div>
-      <div class="col"><h2>Black (${d.black.length})</h2>
-        ${d.blackGoalie ? `<div class="goalie">🥅 ${escapeHtml(d.blackGoalie)}</div>` : ""}
-        <ul>${li(d.black)}</ul></div>
-    </div>
+    ${d.nightImageUrl ? `<div class="hdr"><img src="${esc(d.nightImageUrl)}"></div>` : ""}
+    <h1>${esc(d.poolName)}</h1>
+    ${d.poolDescription ? `<div class="desc">${esc(d.poolDescription)}</div>` : ""}
+    <table>
+      <thead><tr><th class="gold">Gold</th><th>Black</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
   </body></html>`;
-}
-
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
 const styles = StyleSheet.create({
@@ -520,7 +596,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.md, gap: spacing.md },
   chipRow: { gap: spacing.xs, paddingVertical: 2 },
   chip: {
-    maxWidth: 200,
+    maxWidth: 220,
     paddingVertical: 6,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
@@ -532,26 +608,31 @@ const styles = StyleSheet.create({
   chipText: { color: colors.textMuted, fontSize: font.xs, fontWeight: "700" },
   chipTextOn: { color: colors.goldText },
   hint: { color: colors.textMuted, fontSize: font.sm, padding: spacing.md },
-  toggleRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  toggleText: { color: colors.text, fontSize: font.sm },
-  cardLabel: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  goalieRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  goalieName: { color: colors.text, fontSize: font.sm, flex: 1 },
-  dim: { color: colors.textMuted },
-  seg: { flexDirection: "row", borderRadius: radius.sm, overflow: "hidden", borderWidth: 1, borderColor: colors.border },
-  segItem: { paddingVertical: 4, paddingHorizontal: 10, backgroundColor: colors.cardRaised },
-  segItemOn: { backgroundColor: colors.gold },
-  segText: { color: colors.textMuted, fontSize: font.xs, fontWeight: "800" },
-  segTextOn: { color: colors.goldText },
-  actionRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
+  count: { color: colors.textMuted, fontSize: font.xs },
+  bar: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  barBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+  },
+  barBtnGold: { backgroundColor: colors.gold, borderColor: colors.gold },
+  barBtnActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
+  barBtnText: { color: colors.text, fontSize: font.xs, fontWeight: "700" },
+  barBtnTextOn: { color: colors.goldText },
+  psCard: { gap: spacing.sm },
+  psTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  psHint: { color: colors.textMuted, fontSize: font.xs },
+  psPrompt: { color: colors.gold, fontSize: font.xs, fontWeight: "700" },
   teams: { flexDirection: "row", gap: spacing.sm },
-  col: { flex: 1, borderRadius: radius.md, borderWidth: 1, padding: spacing.sm, gap: 3 },
+  col: { flex: 1, borderRadius: radius.md, borderWidth: 1, padding: spacing.sm, gap: 2 },
   colGold: { borderColor: colors.gold },
   colBlack: { borderColor: colors.border },
   colHead: { color: colors.text, fontSize: font.sm, fontWeight: "800" },
   colTotal: { color: colors.textMuted, fontSize: font.xs, marginBottom: 2 },
-  colGoalie: { color: colors.gold, fontSize: font.xs, fontWeight: "700", marginBottom: 2 },
-  playerRow: {
+  pRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
@@ -559,9 +640,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  playerRowSel: { backgroundColor: colors.goldDim },
-  playerName: { color: colors.text, fontSize: font.xs, flex: 1 },
-  playerPpv: { color: colors.textMuted, fontSize: 10, fontVariant: ["tabular-nums"] },
+  pRowSel: { backgroundColor: colors.goldDim },
+  pTapArea: { flex: 1 },
+  pName: { color: colors.text, fontSize: font.xs },
+  gBadge: {
+    color: colors.gold,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  pRate: { color: colors.textMuted, fontSize: 10, fontVariant: ["tabular-nums"] },
   constraint: {
     flexDirection: "row",
     alignItems: "center",
@@ -574,7 +661,6 @@ const styles = StyleSheet.create({
   },
   constraintSplit: { borderColor: colors.red },
   constraintText: { color: colors.text, fontSize: font.xs, flex: 1 },
-  note: { color: colors.textMuted, fontSize: font.xs, fontStyle: "italic" },
   noteInput: {
     borderWidth: 1,
     borderColor: colors.border,
