@@ -911,6 +911,8 @@ function RosterCard({ event }: { event: EventDetail }) {
             key={`p-${p.player_id}`}
             name={p.name}
             isGoalie={p.is_goalie}
+            isDirector={p.is_director}
+            pays={p.pays}
             present={p.present}
             paid={p.paid}
             disabled={busy}
@@ -946,6 +948,7 @@ function RosterCard({ event }: { event: EventDetail }) {
           key={`dp-${dp.id}`}
           name={dp.name}
           isGoalie={dp.is_goalie}
+          pays={dp.pays}
           walkOn
           present={dp.present}
           paid={dp.paid}
@@ -1038,6 +1041,8 @@ function RosterCard({ event }: { event: EventDetail }) {
 function RosterAdminRow({
   name,
   isGoalie,
+  isDirector,
+  pays = true,
   walkOn,
   present,
   paid,
@@ -1058,6 +1063,8 @@ function RosterAdminRow({
 }: {
   name: string;
   isGoalie: boolean;
+  isDirector?: boolean;
+  pays?: boolean;
   walkOn?: boolean;
   present: boolean;
   paid: boolean;
@@ -1076,29 +1083,27 @@ function RosterAdminRow({
   onPaid: (v: boolean) => void;
   onRemove: () => void;
 }) {
+  const tag = isGoalie ? "G" : isDirector ? "Dir" : walkOn ? "walk-on" : "";
   return (
     <View style={styles.adminRow}>
-      <View style={styles.adminRowTop}>
+      <View style={styles.adminLine}>
         <Text style={styles.playerName} numberOfLines={1}>
           {name}
         </Text>
-        {isGoalie ? <Badge text="G" tone="goalie" /> : null}
-        {walkOn ? <Text style={styles.walkOnTag}>walk-on</Text> : null}
-        {beerOn ? <Badge text="🍺" tone="good" /> : null}
-        {whiskeyOn ? <Badge text="🥃" tone="caution" /> : null}
-      </View>
-      <View style={styles.adminRowActions}>
-        <TogglePill label="Present" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
-        <TogglePill label="Paid" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
-        {showBeer && onBeer ? (
-          <TogglePill label="Beer Guy" on={!!beerOn} disabled={disabled} onPress={onBeer} />
-        ) : null}
-        {showWhiskey && onWhiskey ? (
-          <TogglePill label="Whiskey Guy" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
-        ) : null}
-        <Pressable onPress={onRemove} disabled={disabled} hitSlop={8} style={styles.removeX}>
-          <Text style={styles.removeXText}>Remove</Text>
-        </Pressable>
+        {tag ? <Text style={styles.roleTag}>{tag}</Text> : null}
+        <View style={styles.tinyBtns}>
+          <TinyBtn label="P" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
+          {pays ? (
+            <TinyBtn label="$" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
+          ) : null}
+          {showBeer && onBeer ? (
+            <TinyBtn label="B" on={!!beerOn} disabled={disabled} onPress={onBeer} />
+          ) : null}
+          {showWhiskey && onWhiskey ? (
+            <TinyBtn label="W" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
+          ) : null}
+          <TinyBtn label="✕" danger disabled={disabled} onPress={onRemove} />
+        </View>
       </View>
 
       {guests.map((g, i) => (
@@ -1107,35 +1112,27 @@ function RosterAdminRow({
             + {g.name}
             {g.skill ? ` (${g.skill})` : ""}
           </Text>
-          <TogglePill
-            label="Present"
-            on={g.present}
-            disabled={disabled}
-            onPress={() => onGuestPresent?.(i, !g.present)}
-          />
-          <TogglePill
-            label="Paid"
-            on={g.paid}
-            disabled={disabled}
-            onPress={() => onGuestPaid?.(i, !g.paid)}
-          />
-          <Pressable onPress={() => onGuestRemove?.(i)} disabled={disabled} hitSlop={8}>
-            <Text style={styles.removeXText}>✕</Text>
-          </Pressable>
+          <View style={styles.tinyBtns}>
+            <TinyBtn label="P" on={g.present} disabled={disabled} onPress={() => onGuestPresent?.(i, !g.present)} />
+            <TinyBtn label="$" on={g.paid} disabled={disabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
+            <TinyBtn label="✕" danger disabled={disabled} onPress={() => onGuestRemove?.(i)} />
+          </View>
         </View>
       ))}
     </View>
   );
 }
 
-function TogglePill({
+function TinyBtn({
   label,
   on,
+  danger,
   disabled,
   onPress,
 }: {
   label: string;
-  on: boolean;
+  on?: boolean;
+  danger?: boolean;
   disabled?: boolean;
   onPress: () => void;
 }) {
@@ -1143,9 +1140,17 @@ function TogglePill({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={[styles.pill, on ? styles.pillOn : styles.pillOff, disabled && { opacity: 0.5 }]}
+      hitSlop={4}
+      style={[
+        styles.tiny,
+        on && styles.tinyOn,
+        danger && styles.tinyDanger,
+        disabled && { opacity: 0.4 },
+      ]}
     >
-      <Text style={[styles.pillText, on && styles.pillTextOn]}>{on ? `✓ ${label}` : label}</Text>
+      <Text style={[styles.tinyText, on && styles.tinyTextOn, danger && styles.tinyTextDanger]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -1614,34 +1619,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    flexWrap: "wrap",
     paddingLeft: spacing.md,
     paddingTop: 4,
   },
-  guestAdminName: { color: colors.textMuted, fontSize: font.xs, flexShrink: 1 },
+  guestAdminName: { color: colors.textMuted, fontSize: font.xs, flex: 1 },
 
   adminRow: {
-    paddingVertical: spacing.sm,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    gap: spacing.xs,
   },
   adminRowTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexWrap: "wrap" },
   adminRowActions: { flexDirection: "row", alignItems: "center", gap: spacing.md, flexWrap: "wrap" },
-  walkOnTag: { color: colors.textMuted, fontSize: font.xs },
-  linkText: { color: colors.gold, fontSize: font.xs, fontWeight: "700" },
-  pill: {
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    paddingVertical: 5,
-    paddingHorizontal: spacing.md,
-  },
-  pillOff: { borderColor: colors.border, backgroundColor: colors.cardRaised },
-  pillOn: { borderColor: colors.green, backgroundColor: colors.greenDim },
-  pillText: { color: colors.textMuted, fontSize: font.xs, fontWeight: "700" },
-  pillTextOn: { color: colors.green },
-  removeX: { marginLeft: "auto", paddingVertical: 5, paddingHorizontal: spacing.sm },
   removeXText: { color: colors.red, fontSize: font.xs, fontWeight: "700" },
+  adminLine: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  roleTag: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
+  tiny: {
+    minWidth: 26,
+    height: 26,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  tinyOn: { borderColor: colors.gold, backgroundColor: colors.gold },
+  tinyDanger: { borderColor: colors.redDim },
+  tinyText: { color: colors.textMuted, fontSize: 12, fontWeight: "800" },
+  tinyTextOn: { color: colors.goldText },
+  tinyTextDanger: { color: colors.red },
+  linkText: { color: colors.gold, fontSize: font.xs, fontWeight: "700" },
 
   walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
   goaliePick: {

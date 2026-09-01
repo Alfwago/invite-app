@@ -143,6 +143,8 @@ export interface RosterEntry {
   name: string;
   status: RsvpStatus;
   is_goalie: boolean;
+  is_director: boolean;
+  pays: boolean; // false = goalie / director / beer-or-whiskey guy who's exempt
   guest_count: number;
   guest_names: string[];
   guests: RosterGuest[]; // director view only; [] otherwise
@@ -157,6 +159,7 @@ export interface DayPlayer {
   id: number;
   name: string;
   is_goalie: boolean;
+  pays: boolean;
   present: boolean;
   paid: boolean;
 }
