@@ -37,6 +37,7 @@ export const keys = {
   teamEvents: ["team-events"] as const,
   teamRoster: (id: number) => ["team-roster", id] as const,
   teamHistory: (id: number) => ["team-history", id] as const,
+  approvals: ["approvals"] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
@@ -490,5 +491,22 @@ export function useDeleteTeamHistory(eventId: number) {
   return useMutation({
     mutationFn: (historyId: number) => api.deleteTeamHistory(historyId),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) }),
+  });
+}
+
+// ---- Player approval queue (director) -----------------------------
+
+export function useApprovals() {
+  return useQuery({
+    queryKey: keys.approvals,
+    queryFn: ({ signal }) => api.fetchApprovals(signal),
+  });
+}
+
+export function useApprovePlayer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: number) => api.approvePlayer(profileId),
+    onSuccess: (pending) => qc.setQueryData(keys.approvals, pending),
   });
 }

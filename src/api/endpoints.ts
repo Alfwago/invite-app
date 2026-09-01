@@ -18,6 +18,7 @@ import type {
   Night,
   NightMembersResponse,
   PenaltySeverity,
+  PendingApproval,
   PlayerDetail,
   PlayersResponse,
   SaveTeamsBody,
@@ -468,4 +469,19 @@ export function saveTeamHistory(
 
 export function deleteTeamHistory(historyId: number): Promise<void> {
   return apiFetch(`/api/teams/history/${historyId}/`, { method: "DELETE" });
+}
+
+// ---- Player approval queue (director) -----------------------------
+
+export async function fetchApprovals(signal?: AbortSignal): Promise<PendingApproval[]> {
+  const data = await apiFetch<{ pending: PendingApproval[] }>("/api/approvals/", { signal });
+  return data.pending;
+}
+
+export async function approvePlayer(profileId: number): Promise<PendingApproval[]> {
+  const data = await apiFetch<{ pending: PendingApproval[] }>(`/api/approvals/${profileId}/`, {
+    method: "POST",
+    body: { action: "approve" },
+  });
+  return data.pending;
 }

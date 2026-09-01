@@ -541,3 +541,14 @@ export interface SaveTeamsBody {
   blackGoalie: TeamHistoryGoalie | Record<string, never>;
   note?: string;
 }
+
+// ---- Player approval queue (director) ------------------------------
+
+export interface PendingApproval {
+  profile_id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  sponsor: string;
+  account_ready: boolean;
+}
