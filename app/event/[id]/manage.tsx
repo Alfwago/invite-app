@@ -128,6 +128,7 @@ export default function ManageEventScreen() {
 // ====================================================================
 
 function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventManage }) {
+  const router = useRouter();
   const r = event.roster;
   const going = event.players.filter((p) => p.status === "YES").length;
   const maybe = event.players.filter((p) => p.status === "MAYBE").length;
@@ -150,6 +151,11 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
           {event.rsvp_locked ? <Badge text="SKATERS LOCKED" tone="bad" /> : null}
           {event.goalie_rsvp_locked ? <Badge text="GOALIES LOCKED" tone="bad" /> : null}
         </View>
+        <Button
+          label="Team generator"
+          variant="secondary"
+          onPress={() => router.push(`/teams?event=${event.id}` as never)}
+        />
       </Card>
 
       <Card>

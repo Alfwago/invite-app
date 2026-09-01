@@ -5,16 +5,21 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { TeamHistoryEntry } from "@/src/api/types";
+import { Dropdown } from "@/src/components/Dropdown";
 import { Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
-import { useDeleteTeamHistory, useTeamHistory } from "@/src/hooks/queries";
+import { useDeleteTeamHistory, useTeamEvents, useTeamHistory } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function TeamHistoryScreen() {
-  const { event } = useLocalSearchParams<{ event: string }>();
-  const eventId = Number(event);
+  const params = useLocalSearchParams<{ event?: string }>();
+  const events = useTeamEvents();
+  const [eventId, setEventId] = useState<number | null>(
+    params.event ? Number(params.event) : null,
+  );
+
   const query = useTeamHistory(eventId);
-  const del = useDeleteTeamHistory(eventId);
+  const del = useDeleteTeamHistory(eventId ?? 0);
   const [open, setOpen] = useState<number | null>(null);
 
   function confirmDelete(id: number) {
@@ -26,9 +31,23 @@ export default function TeamHistoryScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Saved splits" }} />
+      <Stack.Screen options={{ title: "Team history" }} />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        {query.isLoading ? (
+        <View style={styles.pickerWrap}>
+          <Dropdown
+            placeholder="Choose an event…"
+            value={eventId != null ? String(eventId) : null}
+            options={(events.data ?? []).map((e) => ({ value: String(e.id), label: e.display_name }))}
+            onChange={(v) => {
+              setEventId(Number(v));
+              setOpen(null);
+            }}
+          />
+        </View>
+
+        {eventId == null ? (
+          <Text style={styles.empty}>Pick an event to see its saved splits.</Text>
+        ) : query.isLoading ? (
           <Loading label="Loading…" />
         ) : query.isError ? (
           <ErrorState
@@ -40,10 +59,7 @@ export default function TeamHistoryScreen() {
         ) : (
           (query.data ?? []).map((h) => (
             <Card key={h.id}>
-              <Pressable
-                style={styles.head}
-                onPress={() => setOpen((o) => (o === h.id ? null : h.id))}
-              >
+              <Pressable style={styles.head} onPress={() => setOpen((o) => (o === h.id ? null : h.id))}>
                 <View style={styles.headMain}>
                   <Text style={styles.when}>{formatDateTime(h.created_at)}</Text>
                   <Text style={styles.meta}>
@@ -106,6 +122,7 @@ function Side({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md },
+  pickerWrap: { alignSelf: "center", width: "100%", maxWidth: 420 },
   empty: { color: colors.textMuted, textAlign: "center", padding: spacing.xl },
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   headMain: { flex: 1, gap: 2 },

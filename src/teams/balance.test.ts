@@ -72,6 +72,14 @@ test("paired players land on the same team (3-player group too)", () => {
   assert.equal(team(2), team(3));
 });
 
+test("pair/split edges keyed by string still match numeric player ids", () => {
+  const players = [1, 2, 3, 4, 5, 6].map((i) => mk(i, 3));
+  // The app keys constraint edges by String(id); players carry numeric ids.
+  const r = run({ players, pairs: [["1", "2"] as unknown as [number, number]], splits: [] });
+  const team = (id: number) => (r.gold.some((p) => p.id === id) ? "G" : "B");
+  assert.equal(team(1), team(2));
+});
+
 test("split players end up apart", () => {
   const players = [1, 2, 3, 4].map((i) => mk(i, 3));
   const r = run({ players, pairs: [], splits: [[1, 2]] });

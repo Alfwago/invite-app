@@ -124,28 +124,33 @@ export function autoBalance(input: BalanceInput): BalanceResult {
   }
 
   // --- Pairs → connected components ("units") among unlocked players -------
-  const listIds = new Set(list.map((p) => p.id));
-  const adjacency = new Map<TGPlayer["id"], TGPlayer["id"][]>();
-  list.forEach((p) => adjacency.set(p.id, []));
-  for (const [a, b] of pairs) {
+  // Ids can be numbers (real players) or strings (guests / walk-ons), and the
+  // pair/split lists key by string — compare everything as strings.
+  const sid = (x: TGPlayer["id"]) => String(x);
+  const pairEdges = pairs.map(([a, b]) => [sid(a), sid(b)] as const);
+  const splitEdges = splits.map(([a, b]) => [sid(a), sid(b)] as const);
+  const listIds = new Set(list.map((p) => sid(p.id)));
+  const adjacency = new Map<string, string[]>();
+  list.forEach((p) => adjacency.set(sid(p.id), []));
+  for (const [a, b] of pairEdges) {
     if (listIds.has(a) && listIds.has(b)) {
       adjacency.get(a)!.push(b);
       adjacency.get(b)!.push(a);
     }
   }
   const pairPartnerIds = (id: TGPlayer["id"]) =>
-    pairs.filter(([a, b]) => a === id || b === id).map(([a, b]) => (a === id ? b : a));
+    pairEdges.filter(([a, b]) => a === sid(id) || b === sid(id)).map(([a, b]) => (a === sid(id) ? b : a));
   const splitPartnerIds = (id: TGPlayer["id"]) =>
-    splits.filter(([a, b]) => a === id || b === id).map(([a, b]) => (a === id ? b : a));
+    splitEdges.filter(([a, b]) => a === sid(id) || b === sid(id)).map(([a, b]) => (a === sid(id) ? b : a));
 
-  const unlockedIds = new Set(unlocked.map((p) => p.id));
-  const visited = new Set<TGPlayer["id"]>();
+  const unlockedIds = new Set(unlocked.map((p) => sid(p.id)));
+  const visited = new Set<string>();
   let units: { members: TGPlayer[]; rating: number }[] = [];
   for (const p of unlocked) {
-    if (visited.has(p.id)) continue;
-    const stack = [p.id];
-    const memberIds: TGPlayer["id"][] = [];
-    visited.add(p.id);
+    if (visited.has(sid(p.id))) continue;
+    const stack = [sid(p.id)];
+    const memberIds: string[] = [];
+    visited.add(sid(p.id));
     while (stack.length) {
       const cur = stack.pop()!;
       memberIds.push(cur);
@@ -157,7 +162,7 @@ export function autoBalance(input: BalanceInput): BalanceResult {
       }
     }
     const members = memberIds
-      .map((mid) => unlocked.find((u) => u.id === mid))
+      .map((mid) => unlocked.find((u) => sid(u.id) === mid))
       .filter((x): x is TGPlayer => !!x);
     units.push({ members, rating: sum(members) });
   }
@@ -168,7 +173,11 @@ export function autoBalance(input: BalanceInput): BalanceResult {
     const partnerTeams = new Set(
       pairPartnerIds(p.id)
         .map((pid) =>
-          gold.some((g) => g.id === pid) ? "Gold" : black.some((b) => b.id === pid) ? "Black" : null,
+          gold.some((g) => sid(g.id) === pid)
+            ? "Gold"
+            : black.some((b) => sid(b.id) === pid)
+              ? "Black"
+              : null,
         )
         .filter((t): t is TeamName => !!t),
     );
@@ -201,44 +210,46 @@ export function autoBalance(input: BalanceInput): BalanceResult {
   units.filter((u) => u.members.length <= 1).forEach(placeUnit);
 
   // --- Splits: separate any "keep apart" pair still on one team ----------
-  for (const [aId, bId] of splits) {
-    const aInGold = gold.some((p) => p.id === aId);
-    const aInBlack = black.some((p) => p.id === aId);
-    const bInGold = gold.some((p) => p.id === bId);
-    const bInBlack = black.some((p) => p.id === bId);
+  for (const [aId, bId] of splitEdges) {
+    const aInGold = gold.some((p) => sid(p.id) === aId);
+    const aInBlack = black.some((p) => sid(p.id) === aId);
+    const bInGold = gold.some((p) => sid(p.id) === bId);
+    const bInBlack = black.some((p) => sid(p.id) === bId);
     const together = (aInGold && bInGold) || (aInBlack && bInBlack);
     if (!together) continue;
 
-    const canMove = (id: TGPlayer["id"]) => {
-      const p = list.find((pl) => pl.id === id);
+    const canMove = (id: string) => {
+      const p = list.find((pl) => sid(pl.id) === id);
       if (!p || p.locked) return false;
       const partners = pairPartnerIds(id);
       return (
         partners.length === 0 ||
-        !partners.some((pid) => gold.some((g) => g.id === pid) || black.some((b) => b.id === pid))
+        !partners.some(
+          (pid) => gold.some((g) => sid(g.id) === pid) || black.some((b) => sid(b.id) === pid),
+        )
       );
     };
-    const createsNewSplit = (id: TGPlayer["id"], dest: TGPlayer[]) =>
-      splitPartnerIds(id).some((pid) => dest.some((p) => p.id === pid));
+    const createsNewSplit = (id: string, dest: TGPlayer[]) =>
+      splitPartnerIds(id).some((pid) => dest.some((p) => sid(p.id) === pid));
 
     const fromTeam = aInGold ? gold : black;
     const toTeam = aInGold ? black : gold;
     const mover = canMove(aId) ? aId : canMove(bId) ? bId : null;
     if (mover == null) continue;
 
-    const moverIdx = fromTeam.findIndex((p) => p.id === mover);
+    const moverIdx = fromTeam.findIndex((p) => sid(p.id) === mover);
     const [moved] = fromTeam.splice(moverIdx, 1);
     toTeam.push(moved);
 
     const moverRating = ratingFor(moved);
     const swap = toTeam
-      .filter((p) => p.id !== mover && canMove(p.id) && !createsNewSplit(p.id, fromTeam))
+      .filter((p) => sid(p.id) !== mover && canMove(sid(p.id)) && !createsNewSplit(sid(p.id), fromTeam))
       .sort(
         (x, y) => Math.abs(ratingFor(x) - moverRating) - Math.abs(ratingFor(y) - moverRating),
       )[0];
     if (swap) {
       toTeam.splice(
-        toTeam.findIndex((p) => p.id === swap.id),
+        toTeam.findIndex((p) => sid(p.id) === swap.id),
         1,
       );
       fromTeam.push(swap);

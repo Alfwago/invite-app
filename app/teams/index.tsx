@@ -8,13 +8,14 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 import { API_BASE, ApiError } from "@/src/api/client";
 import type { TeamEvent, TeamRosterPlayer } from "@/src/api/types";
+import { Dropdown } from "@/src/components/Dropdown";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useSaveTeamHistory, useTeamEvents, useTeamRoster } from "@/src/hooks/queries";
 import { autoBalance, ppv, type BalanceResult, type TGPlayer } from "@/src/teams/balance";
@@ -37,8 +38,11 @@ function ratingOf(p: TeamRosterPlayer) {
 
 export default function TeamGeneratorScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ event?: string }>();
   const events = useTeamEvents();
-  const [eventId, setEventId] = useState<number | null>(null);
+  const [eventId, setEventId] = useState<number | null>(
+    params.event ? Number(params.event) : null,
+  );
   const roster = useTeamRoster(eventId);
   const save = useSaveTeamHistory(eventId ?? 0);
 
@@ -243,25 +247,36 @@ export default function TeamGeneratorScreen() {
           <Text style={styles.hint}>No active events.</Text>
         ) : (
           <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              {(events.data ?? []).map((e) => (
-                <Pressable
-                  key={e.id}
-                  onPress={() => {
-                    setEventId(e.id);
-                    setAssignment({});
-                    setLocks({});
-                    setPairs([]);
-                    setSplits([]);
-                  }}
-                  style={[styles.chip, eventId === e.id && styles.chipOn]}
-                >
-                  <Text style={[styles.chipText, eventId === e.id && styles.chipTextOn]} numberOfLines={1}>
-                    {e.display_name}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+            <View style={styles.pickerWrap}>
+              <Dropdown
+                style={styles.picker}
+                placeholder="Choose an event…"
+                value={eventId != null ? String(eventId) : null}
+                options={(events.data ?? []).map((e) => ({
+                  value: String(e.id),
+                  label: e.display_name,
+                }))}
+                onChange={(v) => {
+                  setEventId(Number(v));
+                  setAssignment({});
+                  setLocks({});
+                  setPairs([]);
+                  setSplits([]);
+                }}
+              />
+              <Button
+                label="History"
+                variant="secondary"
+                onPress={() =>
+                  router.push(
+                    (eventId != null
+                      ? `/teams/history?event=${eventId}`
+                      : "/teams/history") as never,
+                  )
+                }
+                style={styles.historyBtn}
+              />
+            </View>
 
             {eventId == null ? (
               <Text style={styles.hint}>Pick an event to pull its Yes roster.</Text>
@@ -278,23 +293,24 @@ export default function TeamGeneratorScreen() {
                   {players.length} on roster · {players.filter((p) => p.present).length} present
                 </Text>
 
-                <View style={styles.bar}>
-                  <BarBtn label="Refresh" onPress={() => roster.refetch()} />
+                <View style={styles.toolGrid}>
+                  <BarBtn label="Auto-balance" gold grid onPress={() => runBalance()} />
                   <BarBtn
                     label={`Present only: ${presentOnly ? "On" : "Off"}`}
                     active={presentOnly}
+                    grid
                     onPress={() => {
                       const next = !presentOnly;
                       setPresentOnly(next);
                       if (balanced) runBalance(next);
                     }}
                   />
-                  <BarBtn label="Auto-balance" gold onPress={() => runBalance()} />
+                  <BarBtn label="Refresh" grid onPress={() => roster.refetch()} />
                   {balanced ? (
                     <>
-                      <BarBtn label="Clear locks" onPress={clearLocks} />
-                      <BarBtn label="Swap teams" onPress={swapTeams} />
-                      <BarBtn label="Swap goalies" onPress={swapGoalies} />
+                      <BarBtn label="Swap teams" grid onPress={swapTeams} />
+                      <BarBtn label="Swap goalies" grid onPress={swapGoalies} />
+                      <BarBtn label="Clear locks" grid onPress={clearLocks} />
                     </>
                   ) : null}
                 </View>
@@ -382,13 +398,6 @@ export default function TeamGeneratorScreen() {
                       <Button label="Save to history" onPress={onSave} loading={save.isPending} />
                       <Button label="Export PDF" variant="secondary" onPress={onExportPdf} />
                     </View>
-                    <Pressable
-                      style={styles.linkRow}
-                      onPress={() => router.push(`/teams/history?event=${eventId}` as never)}
-                    >
-                      <Ionicons name="time-outline" size={16} color={colors.gold} />
-                      <Text style={styles.link}>Saved splits for this event</Text>
-                    </Pressable>
                   </Card>
                 ) : null}
               </>
@@ -405,16 +414,23 @@ function BarBtn({
   onPress,
   active,
   gold,
+  grid,
 }: {
   label: string;
   onPress: () => void;
   active?: boolean;
   gold?: boolean;
+  grid?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.barBtn, gold && styles.barBtnGold, active && styles.barBtnActive]}
+      style={[
+        styles.barBtn,
+        grid && styles.barBtnGrid,
+        gold && styles.barBtnGold,
+        active && styles.barBtnActive,
+      ]}
     >
       <Text style={[styles.barBtnText, (gold || active) && styles.barBtnTextOn]}>{label}</Text>
     </Pressable>
@@ -594,33 +610,27 @@ function teamsPdfHtml(d: {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.md, gap: spacing.md },
-  chipRow: { gap: spacing.xs, paddingVertical: 2 },
-  chip: {
-    maxWidth: 220,
-    paddingVertical: 6,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardRaised,
-  },
-  chipOn: { backgroundColor: colors.gold, borderColor: colors.gold },
-  chipText: { color: colors.textMuted, fontSize: font.xs, fontWeight: "700" },
-  chipTextOn: { color: colors.goldText },
-  hint: { color: colors.textMuted, fontSize: font.sm, padding: spacing.md },
-  count: { color: colors.textMuted, fontSize: font.xs },
-  bar: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  pickerWrap: { alignSelf: "center", width: "100%", maxWidth: 420, gap: spacing.sm },
+  picker: { alignSelf: "stretch" },
+  historyBtn: { alignSelf: "center", minWidth: 140 },
+  hint: { color: colors.textMuted, fontSize: font.sm, padding: spacing.md, textAlign: "center" },
+  count: { color: colors.textMuted, fontSize: font.xs, textAlign: "center" },
+  bar: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  toolGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   barBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.cardRaised,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  barBtnGrid: { flexGrow: 1, flexBasis: "47%", minHeight: 44 },
   barBtnGold: { backgroundColor: colors.gold, borderColor: colors.gold },
   barBtnActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
-  barBtnText: { color: colors.text, fontSize: font.xs, fontWeight: "700" },
+  barBtnText: { color: colors.text, fontSize: font.sm, fontWeight: "700" },
   barBtnTextOn: { color: colors.goldText },
   psCard: { gap: spacing.sm },
   psTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
@@ -670,6 +680,4 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     fontSize: 15,
   },
-  linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingTop: spacing.xs },
-  link: { color: colors.gold, fontSize: font.sm, fontWeight: "700" },
 });
