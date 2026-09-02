@@ -571,15 +571,17 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
               {inBatch ? <Badge text="BATCH 2" tone="gold" /> : null}
             </View>
             <View style={styles.inviteeActions}>
-              <Pressable
-                onPress={() => act({ action: "send_invite", player_id: i.player_id })}
+              <TinyBtn
+                icon={i.sent_at ? "mail" : "mail-outline"}
+                gold
                 disabled={busy}
-                hitSlop={6}
-              >
-                <Text style={styles.linkText}>{i.sent_at ? "Resend" : "Send"}</Text>
-              </Pressable>
+                onPress={() => act({ action: "send_invite", player_id: i.player_id })}
+              />
               {batchOn ? (
-                <Pressable
+                <TinyBtn
+                  text={inBatch ? "−2" : "+2"}
+                  on={inBatch}
+                  disabled={busy}
                   onPress={() =>
                     act(
                       inBatch
@@ -587,19 +589,14 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
                         : { action: "add_batch", player_ids: [i.player_id] },
                     )
                   }
-                  disabled={busy}
-                  hitSlop={6}
-                >
-                  <Text style={styles.linkText}>{inBatch ? "− Batch 2" : "+ Batch 2"}</Text>
-                </Pressable>
+                />
               ) : null}
-              <Pressable
-                onPress={() => act({ action: "remove_invite", player_id: i.player_id })}
+              <TinyBtn
+                icon="close"
+                danger
                 disabled={busy}
-                hitSlop={6}
-              >
-                <Text style={styles.removeXText}>Remove</Text>
-              </Pressable>
+                onPress={() => act({ action: "remove_invite", player_id: i.player_id })}
+              />
             </View>
           </View>
         );
@@ -1128,6 +1125,7 @@ function TinyBtn({
   icon,
   on,
   danger,
+  gold,
   disabled,
   onPress,
 }: {
@@ -1135,10 +1133,17 @@ function TinyBtn({
   icon?: keyof typeof Ionicons.glyphMap;
   on?: boolean;
   danger?: boolean;
+  gold?: boolean;
   disabled?: boolean;
   onPress: () => void;
 }) {
-  const color = danger ? colors.red : on ? colors.goldText : colors.textMuted;
+  const color = danger
+    ? colors.red
+    : gold
+      ? colors.gold
+      : on
+        ? colors.goldText
+        : colors.textMuted;
   return (
     <Pressable
       onPress={onPress}
@@ -1662,9 +1667,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: spacing.md,
+    gap: spacing.xs,
     flexShrink: 0,
-    flexWrap: "wrap",
   },
   removeXText: { color: colors.red, fontSize: font.xs, fontWeight: "700" },
   adminLine: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
