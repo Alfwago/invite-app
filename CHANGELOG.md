@@ -3,6 +3,82 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-01 — P1 parity + director tools + UI polish (branch work, not shipped)
+
+Server work: `invite-server` `feature/mobile-director-roster` (Pi test stack,
+`~/invite-server-test`), now **~32 commits ahead of `origin/main`**, plus the
+uncommitted G+S role-picker changeset from the website agent. App work: `main`,
+**59 commits ahead of GitHub, still not pushed.** See `SAVESTATE.md` →
+"Going to production".
+
+**P1 director/player features**
+- **Director dashboard** (`app/director.tsx`) — your nights, other events you
+  manage, pending-approval alert, a Tools list. Reached from Home → Director
+  tools. ("Need an event" card removed — it listed nights you don't manage.)
+- **Player approval queue** (`app/approvals.tsx`, `api/approvals.py`) — approve
+  sign-ups; disabled until the account has a usable password.
+- **Polls** — player view & vote (`app/polls/`, `api/polls.py`); director
+  authoring (`app/polls/manage.tsx`, `app/polls/new.tsx`, `api/poll_admin.py`)
+  with per-choice result bars, close/reopen/delete.
+- **Direct messages / inbox** (`app/inbox/`, `api/dm.py`) — person-to-person +
+  an OBH-system bucket; compose is a full-screen sheet with working recipient
+  search; recipients gated by `messageable_players_qs`.
+- **Waitlist reorder** + roster extras in Manage → Roster (`reorder_waitlist`,
+  `set_beer_guy` / `set_whiskey_guy`, guest present/paid/remove).
+- **Team Generator** (`app/teams/`, `src/teams/balance.ts`) — port of the web
+  `autoBalance` with unit tests; pairs/splits, event picker, saved-split
+  history, PDF export. Unrated skill = 3 (never 0), matching the web.
+- **Player profiles + skill ratings** (`app/players/`, `api/players.py`) —
+  directory, per-night ratings edited directly (rating-request workflow dropped
+  server-side too).
+
+**Team Generator → "Push to players"** (`f565b38`, `70b9f68`;
+server `de2bb9b`)
+- New `POST /api/teams/events/<id>/publish/`, `TeamHistory.published_at/by`
+  (migration `0077`), `team_assignment` on `/api/home/` + `/api/events/<id>/`.
+- `TeamAssignmentCard` on Home (below the next skate) and the event screen —
+  "You're on Gold", jersey glyph, posted time, amber "Updated" badge on a
+  re-push. Push `data.type === "team_assignment"` deep-links to the event.
+
+**Roster: Goalie & Skater prompt** (`f5804d5`; server = website agent's
+changeset)
+- Adding a G+S player to the roster now prompts **Goalie or Skater?** per
+  player (`src/components/RolePicker.tsx`), cancel aborts the whole add;
+  `POST add { roles: {id: "goalie"|"skater"} }`. Promoting a G+S waitlist row
+  prompts too (`role`). No prompt on waitlist-add — matches the web.
+  Candidates rows now carry `is_goalie_skater`.
+- Roster tags: gold **G** (goalie), **ND** (night director), **AD** (assistant
+  director — `is_assistant_director`, server `8d6fced`) on both the manage and
+  player-facing rosters.
+
+**Navigation & shell**
+- **Persistent bottom bar** on every screen (`src/components/BottomBar.tsx`) —
+  the native Tabs bar is hidden; a custom bar at the root drives it.
+- **One flat header** for every Stack screen (`src/components/NavHeader.tsx`),
+  killing iOS 26's glass bar-button capsule. Consistent "Back".
+- Refresh on foreground (`focusManager` ↔ `AppState`) and on a foreground push
+  (`addNotificationReceivedListener` → invalidate home / inbox / event).
+
+**Form pickers** (`src/components/pickers.tsx`) — pure-JS calendar / time /
+number dropdowns (`DateField` / `ClockField` / `NumberField` / `DateTimeField`;
+`@react-native-community/datetimepicker` didn't work under Expo Go's New
+Architecture). Used on new-event (date / puck drop / roster limit), event
+settings, and schedule-invites. New-event now shows the **effective** preset
+time/capacity, not the raw night defaults.
+
+**Smaller UI**
+- Login: "Keep me signed in" checkbox. App renamed "OBH Invites"; version/build
+  footer.
+- Manage tab bar: fixed 5-across, no horizontal scroll.
+- Invite list: one-line rows, icon buttons (gold envelope / +2 / red ✕); batch-2
+  controls hidden unless "Send in two batches" is on.
+- Roster admin rows: single line, web pay rules (goalie / director / beer &
+  whiskey guy exemptions), beer/wine icons instead of emoji.
+- Gold text on the "Manage event" buttons.
+- Native deps added (need a dev build, work in Expo Go): `react-native-svg`,
+  `@react-native-community/slider`, `expo-print` / `expo-sharing` /
+  `expo-file-system`.
+
 ## 2026-08-31 — website parity rollout (branch work, not shipped)
 
 Server work is on `invite-server` branch `feature/mobile-director-roster`,
