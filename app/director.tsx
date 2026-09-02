@@ -17,9 +17,6 @@ export default function DirectorDashboard() {
   const polls = usePolls();
 
   const nights = (home.data?.nights ?? []).filter((n) => n.next_event?.can_manage);
-  const orphanNights = (home.data?.nights ?? []).filter(
-    (n) => !n.next_event || !n.next_event.can_manage,
-  );
   const custom = (home.data?.custom_events ?? []).filter((e) => e.can_manage);
   const pending = approvals.data?.length ?? 0;
   const openPolls = (polls.data ?? []).filter((p) => !p.all_answered).length;
@@ -62,23 +59,6 @@ export default function DirectorDashboard() {
             ) : (
               nights.map((n) => <NightCard key={n.id} night={n} onManage={() => router.push(`/event/${n.next_event!.id}/manage` as never)} />)
             )}
-
-            {orphanNights.length > 0 ? (
-              <Card>
-                <Text style={styles.sectionLabelInline}>Need an event</Text>
-                {orphanNights.map((n) => (
-                  <View key={n.id} style={styles.orphanRow}>
-                    <Text style={styles.orphanName}>{n.name}</Text>
-                    <Button
-                      label="Create next"
-                      variant="secondary"
-                      onPress={() => router.push("/new-event" as never)}
-                      style={styles.alertBtn}
-                    />
-                  </View>
-                ))}
-              </Card>
-            ) : null}
 
             {custom.length > 0 ? (
               <>
@@ -199,12 +179,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: spacing.sm,
   },
-  sectionLabelInline: {
-    color: colors.textMuted,
-    fontSize: font.xs,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
   muted: { color: colors.textMuted },
   nightName: { color: colors.text, fontSize: font.base, fontWeight: "800" },
   meta: { color: colors.textMuted, fontSize: font.sm },
@@ -227,8 +201,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  orphanRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingTop: spacing.xs },
-  orphanName: { color: colors.text, fontSize: font.sm, flex: 1 },
   toolRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md },
   toolRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   toolLabel: { color: colors.text, fontSize: font.base, fontWeight: "600", flex: 1 },
