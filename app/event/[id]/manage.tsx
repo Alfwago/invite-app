@@ -27,9 +27,8 @@ import type {
   RosterGuest,
   WaitlistEntry,
 } from "@/src/api/types";
-import { DateTimeField } from "@/src/components/pickers";
+import { ClockField, DateField, DateTimeField, NumberField } from "@/src/components/pickers";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
-import { TimeField } from "@/src/components/TimeField";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
@@ -333,21 +332,17 @@ function SettingsCard({ event }: { event: EventDetail }) {
         />
       </Field>
 
-      <View style={styles.twoCol}>
-        <Field label="Date (YYYY-MM-DD)" style={styles.col}>
-          <TextInput
-            style={styles.input}
-            value={date}
-            onChangeText={setDate}
-            placeholder="2026-09-03"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-          />
-        </Field>
-        <Field label="Start time" style={styles.col}>
-          <TimeField value={startTime} onChange={setStartTime} />
-        </Field>
-      </View>
+      <Field label="Date">
+        <DateField value={date} onChange={setDate} placeholder="Pick a date" />
+      </Field>
+
+      <Field label="Start time">
+        <ClockField
+          value={startTime}
+          onChange={setStartTime}
+          placeholder={event.start_time ? formatTime(event.start_time) : "Pick a time"}
+        />
+      </Field>
 
       <Field label="Location">
         <TextInput
@@ -360,36 +355,34 @@ function SettingsCard({ event }: { event: EventDetail }) {
       </Field>
 
       <View style={styles.twoCol}>
-        <Field label="Skater capacity" style={styles.col}>
-          <TextInput
-            style={styles.input}
+        <Field label="Roster limit" style={styles.col}>
+          <NumberField
             value={capacity}
-            onChangeText={setCapacity}
-            placeholder="—"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
+            onChange={setCapacity}
+            min={4}
+            max={60}
+            placeholder="No limit"
           />
         </Field>
         <Field label="Goalies needed" style={styles.col}>
-          <TextInput
-            style={styles.input}
+          <NumberField
             value={goaliesNeeded}
-            onChangeText={setGoaliesNeeded}
+            onChange={setGoaliesNeeded}
+            min={0}
+            max={6}
             placeholder="—"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
           />
         </Field>
       </View>
 
       <Field label="Late-change warning (hours before start)">
-        <TextInput
-          style={styles.input}
+        <NumberField
           value={warnHours}
-          onChangeText={setWarnHours}
+          onChange={setWarnHours}
+          min={0}
+          max={72}
+          unit="h"
           placeholder="—"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
         />
       </Field>
 
