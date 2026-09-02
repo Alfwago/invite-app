@@ -150,16 +150,30 @@ Console account (apparent).** `eas.json` `appVersionSource: remote` +
 `production.autoIncrement: true` → EAS manages build/version codes; app.json
 `version` is the marketing string.
 
-**Decisions first**
+**Rollout plan (decided 2026-09-02):**
+- **iOS first**, via **TestFlight** → then App Store.
+- **Android: distribute the APK directly (outside Google Play) to start**, via
+  the EAS internal-distribution install link. Google Play comes later.
+
+**Decisions / prep**
 - Bump `app.json` `expo.version` `0.1.0` → `1.0.0`.
-- **`expo-updates` is NOT installed** → no OTA; every JS/text change = a new
-  store build + review. Recommend `npx expo install expo-updates` +
-  `eas update:configure` before launch.
-- **Google Play Console** — $25 once + ~1–2 day identity verification for new
-  accounts. Start early.
-- **Privacy policy URL** — required both stores (app collects email, name,
-  phone, push token). Host a page.
-- **Demo login** — a real prod player account for the App Store / Play reviewers.
+- **`expo-updates` is NOT installed** → no OTA. Matters more now: a sideloaded
+  Android APK has no store auto-update, so a JS fix = re-send the APK link
+  unless OTA is set up. Recommend `npx expo install expo-updates` +
+  `eas update:configure` before the first external build.
+- **Privacy policy URL** — App Store requires it; also good practice for the
+  Android link. App collects email, name, phone, push token. Host a page.
+- **Demo login** — a real prod player account for the App Store reviewer.
+- **Keep the Android keystore safe** — EAS generates one on the first
+  `production-apk` build (`eas credentials -p android` to view/back up). It's
+  the app's identity; a future Play Store submission should reuse it (or enrol
+  it in Play App Signing).
+- **Google Play Console** — $25 once + ~1–2 day ID verification. Not needed for
+  the direct-APK launch; start it whenever the Play route begins.
+
+`eas.json` now has a **`production-apk`** profile (extends `production`, APK
+output, `distribution: internal`) for the sideload build. iOS uses
+`production` (store distribution → TestFlight/App Store).
 
 **1. Push the code** — ✅ DONE 2026-09-02 (`origin` + `pi` at `74ff6c6`).
 
@@ -179,14 +193,17 @@ app.json prod URL. `.env.local` is gitignored so it never reaches a build.
   no review; external = one-time ~24h Beta App Review.
 - Install on a real iPhone, run the full app against prod.
 
-**4. Android → Play internal testing**
-- Create the Play Console account + app (`com.falcon83.obhinvites`).
-- `eas build --platform android --profile production` → `.aab` (EAS-managed
-  signing).
-- Play Console → Setup → API access → service account JSON → put path in
-  `eas.json` `submit.production.android.serviceAccountKeyPath`.
-- `eas submit --platform android --latest` (or upload the first `.aab` manually
-  to the Internal testing track). Add testers, install, test.
+**4. Android → direct APK (no Play Store)**
+- `eas build --platform android --profile production-apk` → `.apk`, EAS
+  generates + stores a keystore.
+- EAS prints an install page URL (internal distribution). Send it to players;
+  on the phone: open link → download → allow "install unknown apps" for the
+  browser → install.
+- Push notifications still work (FCM doesn't need Play distribution — see §5).
+- LATER (Play Store): `eas build --profile production` → `.aab`; Play Console
+  account + app record + service-account JSON in `eas.json`
+  `submit.production.android.serviceAccountKeyPath`; `eas submit`. Reuse the
+  same keystore (or Play App Signing) so it's the same app to existing users.
 
 **5. Push (verify on real builds)**
 - `eas credentials --platform ios` → set up an APNs key (.p8), EAS registers it
@@ -197,17 +214,20 @@ app.json prod URL. `.env.local` is gitignored so it never reaches a build.
   trigger a push from prod (send invites, "Push to players") → confirm arrival +
   deep link. Final check for "item 8".
 
-**6. Store listings** — screenshots (per required device sizes), name/subtitle/
-description/keywords, support + marketing URLs, category = Sports, privacy
-policy URL, App Store privacy labels + Play Data-safety form, age-rating
-questionnaire. Store icon: 1024×1024, no alpha for iOS.
+**6. App Store listing (iOS only for now)** — screenshots (per required device
+sizes), name/subtitle/description/keywords, support + marketing URLs,
+category = Sports, privacy policy URL, App Store privacy labels, age-rating
+questionnaire. Store icon: 1024×1024, no alpha. The direct-APK Android launch
+needs none of this.
 
-**7. Submit for review** — iOS: submit the build in App Store Connect (24–48h,
-include demo account). Android: promote Internal → Closed/Open → Production.
+**7. Submit iOS for review** — App Store Connect → submit the build (24–48h,
+include the demo account + notes). Or stay on TestFlight for a closed group
+(up to 10k external testers; builds expire every 90 days) and skip the store
+review for now.
 
 **8. After launch** — `eas update --branch production` for JS fixes (needs
-`expo-updates`, step 0). Bump `app.json` `version` per store release; rebuild +
-resubmit.
+`expo-updates`, prep). Native change → bump `app.json` `version` → `eas build`
+→ iOS resubmit / re-send the Android APK link.
 
 ---
 
