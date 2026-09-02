@@ -905,6 +905,7 @@ function RosterCard({ event }: { event: EventDetail }) {
             name={p.name}
             isGoalie={p.is_goalie}
             isDirector={p.is_director}
+            isAssistantDirector={p.is_assistant_director}
             pays={p.pays}
             present={p.present}
             paid={p.paid}
@@ -1035,6 +1036,7 @@ function RosterAdminRow({
   name,
   isGoalie,
   isDirector,
+  isAssistantDirector,
   pays = true,
   walkOn,
   present,
@@ -1057,6 +1059,7 @@ function RosterAdminRow({
   name: string;
   isGoalie: boolean;
   isDirector?: boolean;
+  isAssistantDirector?: boolean;
   pays?: boolean;
   walkOn?: boolean;
   present: boolean;
@@ -1076,7 +1079,7 @@ function RosterAdminRow({
   onPaid: (v: boolean) => void;
   onRemove: () => void;
 }) {
-  const tag = isDirector ? "Dir" : walkOn ? "walk-on" : "";
+  const goldTag = isGoalie ? "G" : isDirector ? "ND" : isAssistantDirector ? "A" : "";
   const hasGuys = (showBeer && onBeer) || (showWhiskey && onWhiskey);
   return (
     <View style={styles.adminRow}>
@@ -1084,10 +1087,10 @@ function RosterAdminRow({
         <Text style={styles.playerName} numberOfLines={1}>
           {name}
         </Text>
-        {isGoalie ? (
-          <Text style={styles.goalieTag}>G</Text>
-        ) : tag ? (
-          <Text style={styles.roleTag}>{tag}</Text>
+        {goldTag ? (
+          <Text style={styles.goldTag}>{goldTag}</Text>
+        ) : walkOn ? (
+          <Text style={styles.roleTag}>walk-on</Text>
         ) : null}
         <View style={styles.tinyBtns}>
           <TinyBtn icon="checkmark" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
@@ -1682,7 +1685,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
   },
-  goalieTag: {
+  goldTag: {
     color: colors.gold,
     fontSize: 15,
     fontWeight: "900",

@@ -143,7 +143,8 @@ export interface RosterEntry {
   name: string;
   status: RsvpStatus;
   is_goalie: boolean;
-  is_director: boolean;
+  is_director: boolean; // night's primary director
+  is_assistant_director?: boolean; // night's assistant director
   pays: boolean; // false = goalie / director / beer-or-whiskey guy who's exempt
   guest_count: number;
   guest_names: string[];
