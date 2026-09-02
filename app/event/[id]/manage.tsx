@@ -529,6 +529,7 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
   const [picked, setPicked] = useState<number[]>([]);
 
   const busy = roster.isPending;
+  const batchOn = manage.batch_invites_enabled;
   const batchIds = new Set(manage.batch_invitee_ids);
   const invitees = [...manage.invitees].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -553,10 +554,13 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
   return (
     <Card>
       <Text style={styles.heading}>Invite list ({invitees.length})</Text>
-      <Text style={styles.hint}>Everyone who gets the invite email. Tap a name for batch 2.</Text>
+      <Text style={styles.hint}>
+        Everyone who gets the invite email.
+        {batchOn ? " Tap a name for batch 2." : ""}
+      </Text>
 
       {invitees.map((i) => {
-        const inBatch = batchIds.has(i.player_id);
+        const inBatch = batchOn && batchIds.has(i.player_id);
         return (
           <View key={i.player_id} style={styles.adminRow}>
             <View style={styles.adminRowTop}>
@@ -574,19 +578,21 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
               >
                 <Text style={styles.linkText}>{i.sent_at ? "Resend" : "Send"}</Text>
               </Pressable>
-              <Pressable
-                onPress={() =>
-                  act(
-                    inBatch
-                      ? { action: "remove_batch", player_id: i.player_id }
-                      : { action: "add_batch", player_ids: [i.player_id] },
-                  )
-                }
-                disabled={busy}
-                hitSlop={6}
-              >
-                <Text style={styles.linkText}>{inBatch ? "− Batch 2" : "+ Batch 2"}</Text>
-              </Pressable>
+              {batchOn ? (
+                <Pressable
+                  onPress={() =>
+                    act(
+                      inBatch
+                        ? { action: "remove_batch", player_id: i.player_id }
+                        : { action: "add_batch", player_ids: [i.player_id] },
+                    )
+                  }
+                  disabled={busy}
+                  hitSlop={6}
+                >
+                  <Text style={styles.linkText}>{inBatch ? "− Batch 2" : "+ Batch 2"}</Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 onPress={() => act({ action: "remove_invite", player_id: i.player_id })}
                 disabled={busy}
@@ -699,17 +705,19 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
       </Text>
 
       <Button label="Send invites now" onPress={confirmSend} loading={sendInvites.isPending} />
-      <Button
-        label="Send batch 2 now"
-        variant="secondary"
-        onPress={() =>
-          sendBatch.mutate(undefined, {
-            onSuccess: (r) => Alert.alert("Batch 2 sent", `${r.notified} notified.`),
-            onError: (e) => Alert.alert("Send failed", errText(e)),
-          })
-        }
-        loading={sendBatch.isPending}
-      />
+      {manage.batch_invites_enabled ? (
+        <Button
+          label="Send batch 2 now"
+          variant="secondary"
+          onPress={() =>
+            sendBatch.mutate(undefined, {
+              onSuccess: (r) => Alert.alert("Batch 2 sent", `${r.notified} notified.`),
+              onError: (e) => Alert.alert("Send failed", errText(e)),
+            })
+          }
+          loading={sendBatch.isPending}
+        />
+      ) : null}
 
       <View style={styles.divider} />
       <Text style={styles.subhead}>Schedule for later</Text>
