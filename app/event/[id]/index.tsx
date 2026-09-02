@@ -258,12 +258,23 @@ function StatTile({
   );
 }
 
+function RoleTag({ entry }: { entry: Pick<RosterEntry, "is_goalie" | "is_director" | "is_assistant_director"> }) {
+  const t = entry.is_goalie
+    ? "G"
+    : entry.is_director
+      ? "ND"
+      : entry.is_assistant_director
+        ? "AD"
+        : "";
+  return t ? <Text style={styles.goldTag}>{t}</Text> : null;
+}
+
 function DayPlayerLine({ dp }: { dp: DayPlayer }) {
   return (
     <View style={styles.playerRow}>
       <View style={styles.playerNameWrap}>
         <Text style={styles.playerName}>{dp.name}</Text>
-        {dp.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+        {dp.is_goalie ? <Text style={styles.goldTag}>G</Text> : null}
         <Text style={styles.walkOn}>walk-on</Text>
       </View>
     </View>
@@ -279,7 +290,7 @@ function PlayerLine({ entry }: { entry: RosterEntry }) {
             {entry.name}
             {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
           </Text>
-          {entry.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+          <RoleTag entry={entry} />
           {entry.is_beer_guy ? (
             <Ionicons name="beer" size={15} color={colors.green} />
           ) : null}
@@ -373,6 +384,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
+  goldTag: { color: colors.gold, fontSize: 15, fontWeight: "900" },
   walkOn: { color: colors.textMuted, fontSize: font.xs },
   guestLine: { color: colors.textMuted, fontSize: font.xs, marginLeft: spacing.md, marginBottom: 4 },
   threadBtn: {
