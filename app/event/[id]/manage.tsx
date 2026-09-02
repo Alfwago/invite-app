@@ -1076,7 +1076,7 @@ function RosterAdminRow({
   onPaid: (v: boolean) => void;
   onRemove: () => void;
 }) {
-  const tag = isGoalie ? "G" : isDirector ? "Dir" : walkOn ? "walk-on" : "";
+  const tag = isDirector ? "Dir" : walkOn ? "walk-on" : "";
   const hasGuys = (showBeer && onBeer) || (showWhiskey && onWhiskey);
   return (
     <View style={styles.adminRow}>
@@ -1084,7 +1084,11 @@ function RosterAdminRow({
         <Text style={styles.playerName} numberOfLines={1}>
           {name}
         </Text>
-        {tag ? <Text style={styles.roleTag}>{tag}</Text> : null}
+        {isGoalie ? (
+          <Text style={styles.goalieTag}>G</Text>
+        ) : tag ? (
+          <Text style={styles.roleTag}>{tag}</Text>
+        ) : null}
         <View style={styles.tinyBtns}>
           <TinyBtn icon="checkmark" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
           {pays ? (
@@ -1092,10 +1096,10 @@ function RosterAdminRow({
           ) : null}
           {hasGuys ? <View style={styles.grpGap} /> : null}
           {showBeer && onBeer ? (
-            <TinyBtn text="🍺" on={!!beerOn} disabled={disabled} onPress={onBeer} />
+            <TinyBtn icon="beer" on={!!beerOn} disabled={disabled} onPress={onBeer} />
           ) : null}
           {showWhiskey && onWhiskey ? (
-            <TinyBtn text="🥃" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
+            <TinyBtn icon="wine" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
           ) : null}
           <View style={styles.grpGap} />
           <TinyBtn icon="close" danger disabled={disabled} onPress={onRemove} />
@@ -1677,6 +1681,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",
+  },
+  goalieTag: {
+    color: colors.gold,
+    fontSize: 15,
+    fontWeight: "900",
   },
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
