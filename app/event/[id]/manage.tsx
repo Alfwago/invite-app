@@ -1079,7 +1079,7 @@ function RosterAdminRow({
   onPaid: (v: boolean) => void;
   onRemove: () => void;
 }) {
-  const goldTag = isGoalie ? "G" : isDirector ? "ND" : isAssistantDirector ? "A" : "";
+  const goldTag = isGoalie ? "G" : isDirector ? "ND" : isAssistantDirector ? "AD" : "";
   const hasGuys = (showBeer && onBeer) || (showWhiskey && onWhiskey);
   return (
     <View style={styles.adminRow}>
