@@ -27,7 +27,7 @@ import type {
   RosterGuest,
   WaitlistEntry,
 } from "@/src/api/types";
-import { DateTimeField } from "@/src/components/DateTimeField";
+import { DateTimeField } from "@/src/components/pickers";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { TimeField } from "@/src/components/TimeField";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";

@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
-import { TimeField } from "@/src/components/TimeField";
+import { ClockField, DateField, NumberField } from "@/src/components/pickers";
 import type { Night } from "@/src/api/types";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
@@ -118,38 +118,40 @@ export default function NewEventScreen() {
       ) : null}
 
       <Card>
-        <Text style={styles.label}>Date (optional)</Text>
-        <TextInput
-          style={styles.input}
+        <Text style={styles.label}>Date</Text>
+        <DateField
+          value={date}
+          onChange={setDate}
+          minimumDate={new Date()}
           placeholder={
             night?.next_default_date
-              ? `blank = ${night.next_default_date}`
-              : "YYYY-MM-DD — blank = today"
+              ? `Default · ${formatEventDate(night.next_default_date)}`
+              : "Default · today"
           }
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="none"
-          value={date}
-          onChangeText={setDate}
         />
 
-        <Text style={styles.label}>
-          Puck drop (optional
-          {night?.default_time ? ` — blank = ${formatTime(night.default_time)}` : ""})
-        </Text>
-        <TimeField value={startTime} onChange={setStartTime} />
+        <Text style={styles.label}>Puck drop</Text>
+        <ClockField
+          value={startTime}
+          onChange={setStartTime}
+          placeholder={
+            night?.default_time
+              ? `Default · ${formatTime(night.default_time)}`
+              : "Choose a time"
+          }
+        />
 
-        <Text style={styles.label}>Roster limit (optional)</Text>
-        <TextInput
-          style={styles.input}
+        <Text style={styles.label}>Roster limit</Text>
+        <NumberField
+          value={capacity}
+          onChange={setCapacity}
+          min={4}
+          max={60}
           placeholder={
             night?.default_capacity != null
-              ? `blank = ${night.default_capacity}`
-              : "blank = night default"
+              ? `Default · ${night.default_capacity} skaters`
+              : "Night default"
           }
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
-          value={capacity}
-          onChangeText={setCapacity}
         />
       </Card>
 
@@ -222,15 +224,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.gold },
-  input: {
-    backgroundColor: colors.bg,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: spacing.md,
-    color: colors.text,
-    fontSize: 16,
-  },
   hint: { color: colors.textMuted, fontSize: 13 },
   error: { color: colors.red, fontWeight: "600" },
   defaultRow: {

@@ -140,7 +140,7 @@ export default function EventDetailScreen() {
           </CollapsibleCard>
         ) : (
           <Card>
-            <Text style={styles.muted}>RSVPs aren't open for this event yet.</Text>
+            <Text style={styles.muted}>RSVPs aren&apos;t open for this event yet.</Text>
           </Card>
         )}
 
