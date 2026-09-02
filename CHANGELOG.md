@@ -3,6 +3,26 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-02 — App/Web cleanup: goalie marks, settings grid (branch work, not shipped)
+
+Paired with `invite-server` `feature/mobile-director-roster` changes of the same
+date (bold-gold "G", `is_goalie_skater` on roster/night-member API rows, and the
+`beer_guy_pays` field removed server-side — migration `0078`).
+
+- **Goalie mark is now a bold gold "G"** — Skate-group members
+  (`app/night/[id]/members.tsx`) dropped the solid gold chip. On the roster the
+  mark follows the slot: a Goalie & Skater added as a skater shows nothing, as a
+  goalie shows "G" (`RoleTag`). Where the slot is still open — waitlist,
+  skate-group membership, add / invite candidate lists — it reads "G/S".
+- **Manage → Settings is a 4-across toggle-button grid** (`app/event/[id]/manage.tsx`)
+  — Guests · Auto Waitlist · Beer Guy · Whiskey Guy, then a conditional
+  "WG Pays", then Roster Lock / Goalie Lock and the auto-lock note. Replaces the
+  switch list.
+- **"Beer Guy pays" removed** — beer guy never pays; the toggle and the
+  `beer_guy_pays` field/patch key are gone.
+- ND / AD roster tags: no app change (already rendered from the API's
+  `is_director` / `is_assistant_director`) — the web caught up to match.
+
 ## 2026-09-01 — P1 parity + director tools + UI polish (branch work, not shipped)
 
 Server work: `invite-server` `feature/mobile-director-roster` (Pi test stack,

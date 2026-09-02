@@ -280,7 +280,6 @@ function SettingsCard({ event }: { event: EventDetail }) {
   const [rsvpLocked, setRsvpLocked] = useState(event.rsvp_locked);
   const [goalieLocked, setGoalieLocked] = useState(event.goalie_rsvp_locked);
   const [beer, setBeer] = useState(event.beer_guy_enabled);
-  const [beerPays, setBeerPays] = useState(m.beer_guy_pays);
   const [whiskey, setWhiskey] = useState(event.whiskey_guy_enabled);
   const [whiskeyPays, setWhiskeyPays] = useState(m.whiskey_guy_pays);
   const [error, setError] = useState<string | null>(null);
@@ -310,7 +309,6 @@ function SettingsCard({ event }: { event: EventDetail }) {
       rsvp_locked: rsvpLocked,
       goalie_rsvp_locked: goalieLocked,
       beer_guy_enabled: beer,
-      beer_guy_pays: beerPays,
       whiskey_guy_enabled: whiskey,
       whiskey_guy_pays: whiskeyPays,
     };
@@ -388,22 +386,23 @@ function SettingsCard({ event }: { event: EventDetail }) {
       </Field>
 
       <View style={styles.divider} />
-      <ToggleRow label="Allow guest RSVPs" value={allowGuests} onChange={setAllowGuests} />
-      <ToggleRow label="Auto-waitlist when full" value={autoWaitlist} onChange={setAutoWaitlist} />
-      <ToggleRow label="Lock skater RSVPs" value={rsvpLocked} onChange={setRsvpLocked} />
-      <ToggleRow label="Lock goalie RSVPs" value={goalieLocked} onChange={setGoalieLocked} />
-      <Text style={styles.hint}>
-        Locks send new Yes responses straight to the waitlist. They also turn on automatically once
-        the first player is waitlisted.
-      </Text>
-
-      <View style={styles.divider} />
-      <ToggleRow label="Beer Guy sign-up" value={beer} onChange={setBeer} />
-      {beer ? <ToggleRow label="Beer Guy pays" value={beerPays} onChange={setBeerPays} /> : null}
-      <ToggleRow label="Whiskey Guy sign-up" value={whiskey} onChange={setWhiskey} />
+      <View style={styles.toggleGrid}>
+        <ToggleButton label="Guests" value={allowGuests} onChange={setAllowGuests} />
+        <ToggleButton label="Auto Waitlist" value={autoWaitlist} onChange={setAutoWaitlist} />
+        <ToggleButton label="Beer Guy" value={beer} onChange={setBeer} />
+        <ToggleButton label="Whiskey Guy" value={whiskey} onChange={setWhiskey} />
+      </View>
       {whiskey ? (
-        <ToggleRow label="Whiskey Guy pays" value={whiskeyPays} onChange={setWhiskeyPays} />
+        <ToggleRow label="WG Pays" value={whiskeyPays} onChange={setWhiskeyPays} />
       ) : null}
+      <View style={styles.lockRow}>
+        <ToggleButton label="Roster Lock" value={rsvpLocked} onChange={setRsvpLocked} />
+        <ToggleButton label="Goalie Lock" value={goalieLocked} onChange={setGoalieLocked} />
+      </View>
+      <Text style={styles.hint}>
+        Roster and Goalie lock turn on automatically once the first player/goalie is waitlisted. Turn
+        off and save to unlock.
+      </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label="Save configuration" onPress={save} loading={patch.isPending} />
@@ -617,7 +616,7 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
             {candidates.data.invitable.map((c) => (
               <CheckRow
                 key={c.id}
-                label={c.name + (c.is_goalie ? " (G)" : "")}
+                label={c.name + (c.is_goalie_skater ? " (G/S)" : c.is_goalie ? " (G)" : "")}
                 checked={picked.includes(c.id)}
                 onToggle={() =>
                   setPicked((s) =>
@@ -1495,6 +1494,35 @@ function ToggleRow({
   );
 }
 
+// On/off pill used in the Settings grid — matches the web's .settings-toggle.
+function ToggleButton({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onChange(!value)}
+      style={[styles.toggleBtn, value && styles.toggleBtnOn]}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+    >
+      <Text
+        style={[styles.toggleBtnText, value && styles.toggleBtnTextOn]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function CheckRow({
   label,
   checked,
@@ -1645,6 +1673,25 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   toggleLabel: { color: colors.text, fontSize: 15, flexShrink: 1 },
+
+  toggleGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  lockRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  toggleBtn: {
+    flexGrow: 1,
+    flexBasis: "22%",
+    minWidth: 68,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toggleBtnOn: { borderColor: colors.gold, backgroundColor: colors.gold },
+  toggleBtnText: { color: colors.textMuted, fontSize: font.sm, fontWeight: "700" },
+  toggleBtnTextOn: { color: colors.goldText },
 
   headerPreview: {
     width: "100%",

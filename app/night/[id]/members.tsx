@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { Stack, useLocalSearchParams } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
-import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
+import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useNightMemberMutations, useNightMembers } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -66,7 +66,11 @@ export default function NightMembersScreen() {
                     <Text style={styles.name} numberOfLines={1}>
                       {m.name}
                     </Text>
-                    {m.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+                    {m.is_goalie_skater ? (
+                      <Text style={styles.goldTag}>G/S</Text>
+                    ) : m.is_goalie ? (
+                      <Text style={styles.goldTag}>G</Text>
+                    ) : null}
                     <Pressable onPress={() => removeMember(m.id, m.name)} hitSlop={8}>
                       <Text style={styles.remove}>Remove</Text>
                     </Pressable>
@@ -104,7 +108,7 @@ export default function NightMembersScreen() {
                           </View>
                           <Text style={styles.name} numberOfLines={1}>
                             {a.name}
-                            {a.is_goalie ? " (G)" : ""}
+                            {a.is_goalie_skater ? " (G/S)" : a.is_goalie ? " (G)" : ""}
                           </Text>
                         </Pressable>
                       );
@@ -144,6 +148,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   name: { color: colors.text, fontSize: font.sm, flex: 1 },
+  goldTag: { color: colors.gold, fontSize: 15, fontWeight: "900" },
   remove: { color: colors.red, fontSize: font.xs, fontWeight: "700" },
   checkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 6 },
   checkbox: {

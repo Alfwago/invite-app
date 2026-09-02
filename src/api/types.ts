@@ -203,7 +203,6 @@ export interface EventManage {
   notes: string;
   date: string;
   rsvp_change_warning_hours: number | null;
-  beer_guy_pays: boolean;
   whiskey_guy_pays: boolean;
   invite_header_image: string | null;
   invites_send_at: string | null;
@@ -289,6 +288,7 @@ export interface NightMember {
   id: number;
   name: string;
   is_goalie: boolean;
+  is_goalie_skater: boolean;
 }
 
 export interface NightMembersResponse {
@@ -306,7 +306,6 @@ export interface EventPreset {
   capacity: number | null;
   rsvp_change_warning_hours: number | null;
   beer_guy_enabled: boolean;
-  beer_guy_pays: boolean;
   whiskey_guy_enabled: boolean;
   whiskey_guy_pays: boolean;
   roster_player_ids: number[];
@@ -452,7 +451,6 @@ export interface EventPatchBody {
   rsvp_change_warning_hours?: number | null;
   allow_guests?: boolean;
   beer_guy_enabled?: boolean;
-  beer_guy_pays?: boolean;
   whiskey_guy_enabled?: boolean;
   whiskey_guy_pays?: boolean;
   auto_waitlist_enabled?: boolean;

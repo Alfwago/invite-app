@@ -260,6 +260,8 @@ function StatTile({
 }
 
 function RoleTag({ entry }: { entry: Pick<RosterEntry, "is_goalie" | "is_director" | "is_assistant_director"> }) {
+  // Roster mark reflects the slot the player is actually filling — a
+  // Goalie & Skater added as a skater gets no mark, added as a goalie gets "G".
   const t = entry.is_goalie
     ? "G"
     : entry.is_director
