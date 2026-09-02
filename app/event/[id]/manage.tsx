@@ -27,6 +27,7 @@ import type {
   RosterGuest,
   WaitlistEntry,
 } from "@/src/api/types";
+import { DateTimeField } from "@/src/components/DateTimeField";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { TimeField } from "@/src/components/TimeField";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
@@ -648,8 +649,7 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
   const sendBatch = useSendBatch(event.id);
   const schedule = useInviteSchedule(event.id);
 
-  const [schedDate, setSchedDate] = useState("");
-  const [schedTime, setSchedTime] = useState("");
+  const [schedAt, setSchedAt] = useState<Date | null>(null);
   const [batchEnabled, setBatchEnabled] = useState(manage.batch_invites_enabled);
   const [batchDelay, setBatchDelay] = useState(String(manage.batch_invites_delay_hours ?? 24));
 
@@ -668,16 +668,18 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
   }
 
   function scheduleSend() {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(schedDate) || !/^\d{1,2}:\d{2}$/.test(schedTime)) {
-      Alert.alert("Check the date/time", "Use YYYY-MM-DD and HH:MM.");
+    if (!schedAt) {
+      Alert.alert("Pick a date and time", "Choose when the invites should go out.");
       return;
     }
-    const iso = `${schedDate}T${schedTime.padStart(5, "0")}:00`;
+    if (schedAt.getTime() <= Date.now()) {
+      Alert.alert("That time has passed", "Pick a date and time in the future.");
+      return;
+    }
+    const p = (n: number) => String(n).padStart(2, "0");
+    const iso = `${schedAt.getFullYear()}-${p(schedAt.getMonth() + 1)}-${p(schedAt.getDate())}T${p(schedAt.getHours())}:${p(schedAt.getMinutes())}:00`;
     schedule.set.mutate(iso, {
-      onSuccess: () => {
-        setSchedDate("");
-        setSchedTime("");
-      },
+      onSuccess: () => setSchedAt(null),
       onError: (e) => Alert.alert("Couldn't schedule", errText(e)),
     });
   }
@@ -718,15 +720,7 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
 
       <View style={styles.divider} />
       <Text style={styles.subhead}>Schedule for later</Text>
-      <TextInput
-        style={styles.input}
-        value={schedDate}
-        onChangeText={setSchedDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.textMuted}
-        keyboardType="numbers-and-punctuation"
-      />
-      <TimeField value={schedTime} onChange={setSchedTime} />
+      <DateTimeField value={schedAt} onChange={setSchedAt} minimumDate={new Date()} />
       <View style={styles.twoCol}>
         <Button
           label="Schedule"
