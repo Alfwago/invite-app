@@ -137,20 +137,74 @@ prod). **Prod now has the full mobile API (0.21.0), so this works.**
   used at app-build time (§4). So prod push is "enabled but dormant" — no real
   device tokens exist until there's a non-Expo-Go app build.
 
-### 4. Get the prod APP ready (store submission — multi-week, gated on accounts)
+### 4. Get the prod APP ready (store submission — the only thing left)
 
-- Bump `app.json` `version` (0.1.0 → e.g. 1.0.0). `eas.json` `production` has
-  `autoIncrement: true` so build/version codes bump themselves.
-- **iOS**: Apple Developer Program ($99/yr) → App Store Connect app record →
-  `eas build --profile production --platform ios` → `eas submit` → TestFlight →
-  App Store review.
-- **Android**: Google Play Console ($25 once) → app record → signing (EAS-
-  managed) → `eas build --profile production --platform android` → internal
-  testing → production track.
-- **Push creds**: APNs .p8 to Expo; Android FCM / `google-services.json`.
-- **Legal**: privacy policy URL + App Store privacy labels + Play data-safety
-  form (the app collects email, name, phone, push token).
-- Full device regression against a prod-like server before submitting.
+**Where it stands:** managed workflow (`ios/` + `android/` gitignored, EAS
+prebuilds). EAS project `@alfwagos-team/jvmalone`, Expo user `alfwago`. Apple
+Developer account exists (team `8977MZW8RA`). Internal builds have succeeded
+before (iOS `development` SDK 53 on 8/27; Android `preview` APK SDK 54 on 8/31).
+**No `production`-profile build has ever run. No store listings. No Google Play
+Console account (apparent).** `eas.json` `appVersionSource: remote` +
+`production.autoIncrement: true` → EAS manages build/version codes; app.json
+`version` is the marketing string.
+
+**Decisions first**
+- Bump `app.json` `expo.version` `0.1.0` → `1.0.0`.
+- **`expo-updates` is NOT installed** → no OTA; every JS/text change = a new
+  store build + review. Recommend `npx expo install expo-updates` +
+  `eas update:configure` before launch.
+- **Google Play Console** — $25 once + ~1–2 day identity verification for new
+  accounts. Start early.
+- **Privacy policy URL** — required both stores (app collects email, name,
+  phone, push token). Host a page.
+- **Demo login** — a real prod player account for the App Store / Play reviewers.
+
+**1. Push the code** — `git push origin main` + `git push pi main`.
+
+**2. Pre-build** — `npx tsc --noEmit`, `npm test`, `npm i -g eas-cli`,
+`eas whoami`. `preview`/`development` profiles stay pinned to the test stack;
+`production` has no env override → app.json prod URL. `.env.local` is gitignored
+so it never reaches a build.
+
+**3. iOS → TestFlight**
+- `eas build --platform ios --profile production` — first run prompts for App
+  Store Connect login, offers to create/manage the Distribution Certificate +
+  provisioning + the App Store Connect app record for `com.falcon83.obhinvites`.
+  **This is the interactive Apple login that blocked "item 8" — do it at a real
+  keyboard.**
+- `eas submit --platform ios --latest` → TestFlight. Internal testers (team) =
+  no review; external = one-time ~24h Beta App Review.
+- Install on a real iPhone, run the full app against prod.
+
+**4. Android → Play internal testing**
+- Create the Play Console account + app (`com.falcon83.obhinvites`).
+- `eas build --platform android --profile production` → `.aab` (EAS-managed
+  signing).
+- Play Console → Setup → API access → service account JSON → put path in
+  `eas.json` `submit.production.android.serviceAccountKeyPath`.
+- `eas submit --platform android --latest` (or upload the first `.aab` manually
+  to the Internal testing track). Add testers, install, test.
+
+**5. Push (verify on real builds)**
+- `eas credentials --platform ios` → set up an APNs key (.p8), EAS registers it
+  with Expo. `eas credentials --platform android` → upload the FCM v1
+  service-account JSON (Firebase project for `com.falcon83.obhinvites`).
+- Prod server already POSTs to `exp.host/--/api/v2/push/send`; Expo relays.
+- Test: TestFlight/internal build → app registers a real `ExponentPushToken` →
+  trigger a push from prod (send invites, "Push to players") → confirm arrival +
+  deep link. Final check for "item 8".
+
+**6. Store listings** — screenshots (per required device sizes), name/subtitle/
+description/keywords, support + marketing URLs, category = Sports, privacy
+policy URL, App Store privacy labels + Play Data-safety form, age-rating
+questionnaire. Store icon: 1024×1024, no alpha for iOS.
+
+**7. Submit for review** — iOS: submit the build in App Store Connect (24–48h,
+include demo account). Android: promote Internal → Closed/Open → Production.
+
+**8. After launch** — `eas update --branch production` for JS fixes (needs
+`expo-updates`, step 0). Bump `app.json` `version` per store release; rebuild +
+resubmit.
 
 ---
 
