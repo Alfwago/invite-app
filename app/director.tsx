@@ -73,6 +73,7 @@ export default function DirectorDashboard() {
                     <Button
                       label="Manage"
                       variant="secondary"
+                      labelColor={colors.gold}
                       onPress={() => router.push(`/event/${e.id}/manage` as never)}
                     />
                   </Card>
@@ -131,7 +132,7 @@ function NightCard({ night, onManage }: { night: HomeNight; onManage: () => void
           <Badge key={b.label} text={b.label} tone={b.tone} />
         ))}
       </View>
-      <Button label="Manage event" variant="secondary" onPress={onManage} />
+      <Button label="Manage event" variant="secondary" labelColor={colors.gold} onPress={onManage} />
     </Card>
   );
 }
