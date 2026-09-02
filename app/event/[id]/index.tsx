@@ -162,6 +162,7 @@ export default function EventDetailScreen() {
           <Button
             label="Manage event"
             variant="secondary"
+            labelColor={colors.gold}
             onPress={() => router.push(`/event/${event.id}/manage`)}
           />
         ) : null}

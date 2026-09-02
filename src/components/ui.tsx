@@ -32,6 +32,7 @@ export function Button({
   disabled,
   loading,
   style,
+  labelColor,
 }: {
   label: string;
   onPress: () => void;
@@ -39,10 +40,12 @@ export function Button({
   disabled?: boolean;
   loading?: boolean;
   style?: ViewStyle;
+  /** Override the label (and spinner) color — e.g. gold text on a secondary button. */
+  labelColor?: string;
 }) {
   const bg =
     variant === "primary" ? colors.gold : variant === "danger" ? colors.red : colors.cardRaised;
-  const fg = variant === "secondary" ? colors.text : colors.goldText;
+  const fg = labelColor ?? (variant === "secondary" ? colors.text : colors.goldText);
   const border = variant === "secondary" ? colors.border : bg;
   const isOff = disabled || loading;
 
