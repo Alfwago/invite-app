@@ -4,7 +4,6 @@ import {
   Image,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -85,23 +84,24 @@ export default function ManageEventScreen() {
       <Stack.Screen options={{ title: "Manage event" }} />
 
       <View style={styles.tabBarWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabBar}
-        >
+        <View style={styles.tabBar}>
           {TABS.map((t) => (
             <Pressable
               key={t.key}
               onPress={() => setTab(t.key)}
               style={[styles.tab, tab === t.key && styles.tabActive]}
             >
-              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>
+              <Text
+                style={[styles.tabText, tab === t.key && styles.tabTextActive]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
                 {t.label}
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       <KeyboardAwareScrollView
@@ -1467,17 +1467,24 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg },
 
-  tabBarWrap: { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
-  tabBar: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
-  tab: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
+  tabBarWrap: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
-  tabActive: { backgroundColor: colors.gold, borderColor: colors.gold },
-  tabText: { color: colors.textMuted, fontWeight: "700", fontSize: font.sm },
+  tabBar: { flexDirection: "row", gap: 4 },
+  tab: {
+    flex: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 2,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabActive: { backgroundColor: colors.gold },
+  tabText: { color: colors.textMuted, fontWeight: "700", fontSize: font.xs },
   tabTextActive: { color: colors.goldText },
 
   dirTag: {
