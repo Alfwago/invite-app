@@ -280,14 +280,14 @@ function PlayerLine({ entry }: { entry: RosterEntry }) {
             {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
           </Text>
           {entry.is_goalie ? <Badge text="G" tone="goalie" /> : null}
-        </View>
-        <View style={styles.playerTags}>
           {entry.is_beer_guy ? (
-            <Ionicons name="beer-outline" size={16} color={colors.green} />
+            <Ionicons name="beer" size={15} color={colors.green} />
           ) : null}
           {entry.is_whiskey_guy ? (
-            <Ionicons name="wine-outline" size={16} color={colors.amber} />
+            <Ionicons name="wine" size={15} color={colors.amber} />
           ) : null}
+        </View>
+        <View style={styles.playerTags}>
           {entry.present ? <Badge text="IN" tone="good" /> : null}
           {entry.paid ? <Badge text="PAID" tone="good" /> : null}
         </View>
