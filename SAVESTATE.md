@@ -80,8 +80,8 @@ not re-verified on the test iPhone since the picker/roster changes.
 
 ## RESUME HERE
 
-1. **Server is on prod** (0.21.0). Nothing left there for the mobile rollout
-   except optional deep web-QA of the G+S modal.
+1. **Server is on prod** (0.21.0) and QA'd — nothing left there for the mobile
+   rollout.
 2. **Device pass** on the test iPhone for the 2026-09-01 batch (pickers,
    roster tags/icons, G+S prompt, bottom bar, headers).
 3. **Push the app** — `git push origin main` + `git push pi main` (59 commits,
@@ -119,14 +119,14 @@ prod). **Prod now has the full mobile API (0.21.0), so this works.**
   the **test** stack; `production` has no env override ⇒ falls through to the
   `app.json` prod URL. So `eas build --profile production` already targets prod.
 
-### 3. Get the prod SERVER ready — ✅ DONE (0.21.0, 2026-09-01)
+### 3. Get the prod SERVER ready — ✅ DONE (0.21.0, shipped 2026-09-01)
 
 - ✅ G+S changeset committed + pushed (`5e05c02`).
 - ✅ 288 `invitations` tests pass (re-verified on prod). Note: they run
   `test invitations`, not the whole `manage.py test`.
-- 🟡 Website UI changes (roster-panel templates, `theme.css`, `role_picker.js`)
-  shipped + prod smoke-tested (login 200, `/teams/` 301, check clean). No
-  record of deep click-testing the new web G+S modal.
+- ✅ Website UI changes (roster-panel templates, `theme.css`, `role_picker.js`)
+  shipped; user click-tested the web G+S Goalie/Skater prompt several times on
+  prod (2026-09-02) — works.
 - ✅ Migration `0077` applied on prod (`[X]`).
 - ✅ `feature/mobile-director-roster` → `main` (`a4576ac`), deployed, restarted.
 - ✅ **Push (server side):** `send_push_notifications` gates on
