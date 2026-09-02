@@ -170,6 +170,9 @@ export interface WaitlistEntry {
   player_id: number;
   name: string;
   is_goalie: boolean;
+  /** Present on GET /events/<id>/candidates/ rows; true ⇒ prompt Goalie/Skater
+   *  before promoting. Not sent on EventDetail.waitlist. */
+  is_goalie_skater?: boolean;
   created_at: string;
 }
 
@@ -234,23 +237,43 @@ export interface EventDetail extends EventSummary {
   notices?: string[]; // present on the RSVP response
 }
 
-/** Players a director can add to an event, from GET /events/<id>/candidates/. */
+/** A player a director can add to an event, from GET /events/<id>/candidates/.
+ *  `is_goalie_skater` true ⇒ prompt Goalie/Skater before adding to the roster. */
+export interface Candidate {
+  id: number;
+  name: string;
+  is_goalie: boolean;
+  is_goalie_skater: boolean;
+}
+
 export interface EventCandidates {
-  addable: { id: number; name: string; is_goalie: boolean }[];
-  invitable: { id: number; name: string; is_goalie: boolean }[];
+  addable: Candidate[];
+  invitable: Candidate[];
   waitlist: WaitlistEntry[];
 }
 
 /** Body for POST /events/<id>/roster/ — one director roster edit. */
 export type RosterAction =
-  | { action: "add"; player_ids: number[]; to?: "roster" | "waitlist" }
+  | {
+      action: "add";
+      player_ids: number[];
+      to?: "roster" | "waitlist";
+      /** Goalie/Skater choice per Goalie&Skater player (id → role). */
+      roles?: Record<string, "goalie" | "skater">;
+    }
   | { action: "add_invites"; player_ids: number[] }
   | { action: "remove_invite"; player_id: number }
   | { action: "add_batch"; player_ids: number[] }
   | { action: "remove_batch"; player_id: number }
   | { action: "send_invite"; player_id: number }
   | { action: "remove"; player_id: number }
-  | { action: "promote"; waitlist_id?: number; player_id?: number }
+  | {
+      action: "promote";
+      waitlist_id?: number;
+      player_id?: number;
+      /** Goalie/Skater choice for a Goalie&Skater player being promoted. */
+      role?: "goalie" | "skater";
+    }
   | { action: "reorder_waitlist"; waitlist_id: number; direction: "up" | "down" }
   | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }

@@ -28,6 +28,7 @@ import type {
 } from "@/src/api/types";
 import { ClockField, DateField, DateTimeField, NumberField } from "@/src/components/pickers";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { useRolePicker } from "@/src/components/RolePicker";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
@@ -861,15 +862,32 @@ function PenaltyBoxCard({ event, manage }: { event: EventDetail; manage: EventMa
 
 function RosterCard({ event }: { event: EventDetail }) {
   const roster = useRosterAction(event.id);
+  const candidates = useCandidates(event.id);
   const [showAdd, setShowAdd] = useState(false);
   const [walkOn, setWalkOn] = useState("");
   const [walkOnGoalie, setWalkOnGoalie] = useState(false);
+  const { pick, modal } = useRolePicker();
 
   const going = event.players.filter((p) => p.status === "YES");
   const busy = roster.isPending;
 
+  // is_goalie_skater comes from the candidates endpoint, not EventDetail.waitlist.
+  const gsWaitlist = new Set(
+    (candidates.data?.waitlist ?? []).filter((w) => w.is_goalie_skater).map((w) => w.waitlist_id),
+  );
+
   function act(body: RosterAction) {
     roster.mutate(body, { onError: (e) => Alert.alert("Roster update failed", errText(e)) });
+  }
+
+  async function promote(w: WaitlistEntry) {
+    let role: "goalie" | "skater" | undefined;
+    if (gsWaitlist.has(w.waitlist_id)) {
+      const choice = await pick(w.name);
+      if (choice == null) return; // cancelled → don't promote
+      role = choice;
+    }
+    act({ action: "promote", waitlist_id: w.waitlist_id, ...(role ? { role } : {}) });
   }
 
   function confirmRemove(entry: RosterEntry) {
@@ -995,7 +1013,7 @@ function RosterCard({ event }: { event: EventDetail }) {
               <Text style={styles.wlNum}>{i + 1}</Text>
               <Text style={[styles.playerName, styles.grow]} numberOfLines={1}>
                 {w.name}
-                {w.is_goalie ? " (G)" : ""}
+                {gsWaitlist.has(w.waitlist_id) ? " (G/S)" : w.is_goalie ? " (G)" : ""}
               </Text>
               <Pressable
                 onPress={() =>
@@ -1020,7 +1038,7 @@ function RosterCard({ event }: { event: EventDetail }) {
               <Button
                 label="Promote"
                 variant="secondary"
-                onPress={() => act({ action: "promote", waitlist_id: w.waitlist_id })}
+                onPress={() => promote(w)}
                 disabled={busy}
                 style={styles.promoteBtn}
               />
@@ -1028,6 +1046,7 @@ function RosterCard({ event }: { event: EventDetail }) {
           ))}
         </>
       ) : null}
+      {modal}
     </Card>
   );
 }
@@ -1183,6 +1202,7 @@ function AddPlayerPanel({
 }) {
   const candidates = useCandidates(event.id);
   const [selected, setSelected] = useState<number[]>([]);
+  const { pick, modal } = useRolePicker();
 
   if (candidates.isLoading) return <Loading label="Loading players…" />;
   if (candidates.isError || !candidates.data) {
@@ -1198,9 +1218,25 @@ function AddPlayerPanel({
     );
   }
 
-  function submit(to: "roster" | "waitlist") {
+  async function submit(to: "roster" | "waitlist") {
     if (selected.length === 0) return;
-    onAct({ action: "add", player_ids: selected, to });
+
+    // Adding to the roster: ask Goalie/Skater for every Goalie&Skater player,
+    // one at a time. Cancelling any prompt aborts the whole add.
+    let roles: Record<string, "goalie" | "skater"> | undefined;
+    if (to === "roster") {
+      const picked: Record<string, "goalie" | "skater"> = {};
+      for (const id of selected) {
+        const c = addable.find((x) => x.id === id);
+        if (!c?.is_goalie_skater) continue;
+        const choice = await pick(c.name);
+        if (choice == null) return; // cancelled → add nothing
+        picked[String(id)] = choice;
+      }
+      if (Object.keys(picked).length > 0) roles = picked;
+    }
+
+    onAct({ action: "add", player_ids: selected, to, ...(roles ? { roles } : {}) });
     setSelected([]);
   }
 
@@ -1209,7 +1245,7 @@ function AddPlayerPanel({
       {addable.map((c) => (
         <CheckRow
           key={c.id}
-          label={c.name + (c.is_goalie ? " (G)" : "")}
+          label={c.name + (c.is_goalie_skater ? " (G/S)" : c.is_goalie ? " (G)" : "")}
           checked={selected.includes(c.id)}
           onToggle={() =>
             setSelected((s) => (s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id]))
@@ -1231,6 +1267,7 @@ function AddPlayerPanel({
           style={styles.grow}
         />
       </View>
+      {modal}
     </View>
   );
 }
