@@ -183,15 +183,41 @@ profiles stay pinned to the test stack; `production` has no env override →
 app.json prod URL. `.env.local` is gitignored so it never reaches a build.
 (No global `eas-cli` — `npx eas-cli@latest` works.)
 
-**3. iOS → TestFlight**
-- `eas build --platform ios --profile production` — first run prompts for App
-  Store Connect login, offers to create/manage the Distribution Certificate +
-  provisioning + the App Store Connect app record for `com.falcon83.obhinvites`.
-  **This is the interactive Apple login that blocked "item 8" — do it at a real
-  keyboard.**
-- `eas submit --platform ios --latest` → TestFlight. Internal testers (team) =
-  no review; external = one-time ~24h Beta App Review.
-- Install on a real iPhone, run the full app against prod.
+**3. iOS → TestFlight** (full runbook)
+
+*Prep (Mac):*
+- `app.json` `expo.version` → `1.0.0` (leave `ios.buildNumber` — EAS manages it,
+  `appVersionSource: remote` + `autoIncrement`).
+- *(recommended, do before the first build)* OTA: `npx expo install
+  expo-updates` && `npx eas-cli@latest update:configure`.
+- `git commit` + `git push origin main` + `git push pi main`.
+- `npx tsc --noEmit` / `npm test` / `npx eas-cli@latest whoami`.
+
+*Build (~20–40 min, on EAS):*
+- `npx eas-cli@latest build --platform ios --profile production`
+- Prompts: log in to Apple (**Apple ID + 2FA — this is the "item 8" blocker**);
+  team `8977MZW8RA`; **create the App Store Connect app record** for
+  `com.falcon83.obhinvites` → yes; **let EAS generate/manage** the Distribution
+  Certificate + Provisioning Profile; **set up the Push (APNs) key** → yes.
+
+*TestFlight (~10 min + Apple processing):*
+- `npx eas-cli@latest submit --platform ios --latest` — auth via a generated
+  App Store Connect **API key** (EAS stores it).
+- App Store Connect → app → **TestFlight**: wait out "Processing" (~5–30 min);
+  fill **Test Information** (desc, feedback email, URLs).
+- **Internal** testers (Users and Access → add → internal group) = instant, no
+  review. **External** group (up to 10k) = submit for Beta App Review (~24h
+  first time).
+- Testers: install TestFlight app → accept invite → install "OBH Invites"
+  (points at prod).
+
+*Verify:* sign in with a prod account; walk the app; trigger a push from prod
+(send invites / "Push to players") → confirm banner + deep link. **Closes
+"item 8".**
+
+Notes: certs/keys live on EAS (local `credentials.json` is only for `--local`).
+TestFlight builds expire after 90 days. Each new release = `eas build` →
+`eas submit` again; version auto-bumps.
 
 **4. Android → direct APK (no Play Store)**
 - `eas build --platform android --profile production-apk` → `.apk`, EAS
