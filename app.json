@@ -2,7 +2,7 @@
   "expo": {
     "name": "OBH Invites",
     "slug": "jvmalone",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "obhinvites",
     "userInterfaceStyle": "automatic",
@@ -61,6 +61,12 @@
         "projectId": "ccd02292-6cd0-4556-96ca-55ae6762d0e0"
       }
     },
-    "owner": "alfwagos-team"
+    "owner": "alfwagos-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ccd02292-6cd0-4556-96ca-55ae6762d0e0"
+    }
   }
 }
