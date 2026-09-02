@@ -30,6 +30,12 @@ export default function NewEventScreen() {
     ? options.find((n) => n.id === nightId)
     : undefined;
 
+  // A default preset overrides the night's plain defaults on create, so the
+  // "what you'll get" values must come from the preset when there is one.
+  const preset = night?.default_preset ?? null;
+  const effTime = preset?.start_time ?? night?.default_time ?? null;
+  const effCapacity = preset?.capacity ?? night?.default_capacity ?? null;
+
   if (nightsQuery.isLoading) return <Loading label="Loading nights…" />;
   if (nightsQuery.isError) {
     return (
@@ -97,22 +103,25 @@ export default function NewEventScreen() {
             k="Date"
             v={night.next_default_date ? formatEventDate(night.next_default_date) : "today"}
           />
-          <DefaultRow k="Puck drop" v={night.default_time ? formatTime(night.default_time) : "—"} />
+          <DefaultRow k="Puck drop" v={effTime ? formatTime(effTime) : "—"} />
           <DefaultRow k="Location" v={night.default_location || "—"} />
           <DefaultRow
             k="Roster limit"
-            v={night.default_capacity != null ? String(night.default_capacity) : "—"}
+            v={effCapacity != null ? String(effCapacity) : "—"}
           />
           <DefaultRow
             k="Goalies needed"
             v={night.default_goalies_needed != null ? String(night.default_goalies_needed) : "—"}
           />
-          {night.default_preset ? (
-            <DefaultRow k="Preset" v={`${night.default_preset.name} (applied)`} />
+          {preset ? (
+            <DefaultRow k="Preset" v={`${preset.name} (sets time, limit & roster)`} />
           ) : null}
           <Text style={styles.hint}>
-            The director message, invite list and any default-preset roster come from this skate
-            group too. Override the date/time/limit below if you need to.
+            {preset
+              ? `"${preset.name}" is this night's default preset — its time and roster limit win over the plain night defaults. `
+              : ""}
+            The director message and invite list come from this skate group too. Override the
+            date / time / limit below if you need to.
           </Text>
         </Card>
       ) : null}
@@ -134,11 +143,7 @@ export default function NewEventScreen() {
         <ClockField
           value={startTime}
           onChange={setStartTime}
-          placeholder={
-            night?.default_time
-              ? `Default · ${formatTime(night.default_time)}`
-              : "Choose a time"
-          }
+          placeholder={effTime ? `Default · ${formatTime(effTime)}` : "Choose a time"}
         />
 
         <Text style={styles.label}>Roster limit</Text>
@@ -148,9 +153,7 @@ export default function NewEventScreen() {
           min={4}
           max={60}
           placeholder={
-            night?.default_capacity != null
-              ? `Default · ${night.default_capacity} skaters`
-              : "Night default"
+            effCapacity != null ? `Default · ${effCapacity} skaters` : "Night default"
           }
         />
       </Card>
