@@ -562,15 +562,15 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
       {invitees.map((i) => {
         const inBatch = batchOn && batchIds.has(i.player_id);
         return (
-          <View key={i.player_id} style={styles.adminRow}>
-            <View style={styles.adminRowTop}>
+          <View key={i.player_id} style={styles.inviteeRow}>
+            <View style={styles.inviteeMain}>
               <Text style={styles.playerName} numberOfLines={1}>
                 {i.name}
               </Text>
               <Badge text={INVITEE_LABEL[i.status] ?? i.status} tone={INVITEE_TONE[i.status] ?? "neutral"} />
               {inBatch ? <Badge text="BATCH 2" tone="gold" /> : null}
             </View>
-            <View style={styles.adminRowActions}>
+            <View style={styles.inviteeActions}>
               <Pressable
                 onPress={() => act({ action: "send_invite", player_id: i.player_id })}
                 disabled={busy}
@@ -1643,6 +1643,29 @@ const styles = StyleSheet.create({
   },
   adminRowTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexWrap: "wrap" },
   adminRowActions: { flexDirection: "row", alignItems: "center", gap: spacing.md, flexWrap: "wrap" },
+  inviteeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  inviteeMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexWrap: "wrap",
+  },
+  inviteeActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: spacing.md,
+    flexShrink: 0,
+    flexWrap: "wrap",
+  },
   removeXText: { color: colors.red, fontSize: font.xs, fontWeight: "700" },
   adminLine: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   roleTag: {
