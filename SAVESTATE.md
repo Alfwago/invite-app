@@ -25,8 +25,11 @@ and device-tested. Now doing UI polish + heading toward a first release.
   288 `invitations` tests pass. There's now a `/deploy` skill in the server
   repo for the release process. Test stack (`test-invites.falcon83.com`) also
   still runs the same code.
-- **App: still local only.** 59 commits on `main`, not pushed to GitHub
-  (`Alfwago/invite-app`) or `pi`. Do not push without asking.
+- **App pushed (2026-09-02).** `main` @ `74ff6c6` is on GitHub
+  (`Alfwago/invite-app`) *and* `pi` (`git push pi main --force` — the Pi was a
+  stale mirror frozen at `1f2fc93`; its 3 unique commits were superseded work.
+  Pi repo set `receive.denyCurrentBranch=updateInstead` so pushes sync its
+  checkout). GitHub is the source of truth going forward.
 - The app's `app.json` already targets prod (`extra.apiUrl`); `.env.local`
   overrides to test for dev. Prod now has the endpoints, so an app build
   pointed at prod will work.
@@ -84,11 +87,10 @@ not re-verified on the test iPhone since the picker/roster changes.
    rollout.
 2. **Device pass** on the test iPhone for the 2026-09-01 batch (pickers,
    roster tags/icons, G+S prompt, bottom bar, headers).
-3. **Push the app** — `git push origin main` + `git push pi main` (59 commits,
-   local only). Ask first.
-4. **App store track** — §4 of "Going to production" below. Gated on an Apple
-   Developer account + Google Play Console. This is now the only thing between
-   here and a release.
+3. **App store track** — §4 of "Going to production", steps 3+ (iOS build →
+   TestFlight, Android build → Play internal, push creds, listings, submit).
+   Steps 1–2 done. Gated on a Google Play Console account; iOS uses the
+   existing Apple team `8977MZW8RA`.
 
 ---
 
@@ -159,12 +161,13 @@ Console account (apparent).** `eas.json` `appVersionSource: remote` +
   phone, push token). Host a page.
 - **Demo login** — a real prod player account for the App Store / Play reviewers.
 
-**1. Push the code** — `git push origin main` + `git push pi main`.
+**1. Push the code** — ✅ DONE 2026-09-02 (`origin` + `pi` at `74ff6c6`).
 
-**2. Pre-build** — `npx tsc --noEmit`, `npm test`, `npm i -g eas-cli`,
-`eas whoami`. `preview`/`development` profiles stay pinned to the test stack;
-`production` has no env override → app.json prod URL. `.env.local` is gitignored
-so it never reaches a build.
+**2. Pre-build** — ✅ DONE 2026-09-02: `npx tsc --noEmit` clean, `npm test`
+11/11, `npx eas-cli@latest whoami` = `alfwago`. `preview`/`development`
+profiles stay pinned to the test stack; `production` has no env override →
+app.json prod URL. `.env.local` is gitignored so it never reaches a build.
+(No global `eas-cli` — `npx eas-cli@latest` works.)
 
 **3. iOS → TestFlight**
 - `eas build --platform ios --profile production` — first run prompts for App
