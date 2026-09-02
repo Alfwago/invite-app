@@ -17,18 +17,19 @@ and device-tested. Now doing UI polish + heading toward a first release.
   **59 commits ahead of GitHub `origin/main` (`Alfwago/invite-app`) — NOT
   pushed.** Also a `pi` remote (`jvmalone@192.168.86.59:~/invite-app`). Runs in
   Expo Go (SDK 54 pinned).
-- **Server**: branch `feature/mobile-director-roster` on `invite-server`.
-  origin HEAD `8d6fced`, **~32 commits ahead of `origin/main`**. Deployed to the
-  **test** stack only (`https://test-invites.falcon83.com`), Pi worktree
-  `~/invite-server-test`. ~280 `invitations` tests green.
-  **NOT merged to `main`, NOT on prod.**
-  ⚠️ The Pi worktree has an **uncommitted G+S role-picker changeset** from the
-  website Claude agent (`roster_admin.py`, `forms.py`, `views.py`, roster-panel
-  templates, `role_picker.js`, tests). It's live on test but not in git —
-  needs the site agent to commit + push. Only 1 migration on the whole branch:
-  `0077_teamhistory_published_at...` (`makemigrations --check` clean).
-- **User is NOT ready to deploy.** Do not merge the server branch or ship to
-  prod without an explicit go. Do not push the app to GitHub without asking.
+- **Server: SHIPPED to prod as 0.21.0 (2026-09-01).** The website agent merged
+  `feature/mobile-director-roster` → `main` (now the same commit, `a4576ac`)
+  and deployed. `https://invites.falcon83.com` = 0.21.0 build 59: full mobile
+  API + Team-Generator "Push to players" (migration `0077`, applied) + the G+S
+  Goalie/Skater prompt (server commit `5e05c02`) + `is_assistant_director`.
+  288 `invitations` tests pass. There's now a `/deploy` skill in the server
+  repo for the release process. Test stack (`test-invites.falcon83.com`) also
+  still runs the same code.
+- **App: still local only.** 59 commits on `main`, not pushed to GitHub
+  (`Alfwago/invite-app`) or `pi`. Do not push without asking.
+- The app's `app.json` already targets prod (`extra.apiUrl`); `.env.local`
+  overrides to test for dev. Prod now has the endpoints, so an app build
+  pointed at prod will work.
 
 Test login: **`admin` / `obh-test-2026`** (superuser ⇒ director + president +
 verified). `.env.local` in this repo: `EXPO_PUBLIC_API_URL=https://test-invites.falcon83.com`.
@@ -79,15 +80,15 @@ not re-verified on the test iPhone since the picker/roster changes.
 
 ## RESUME HERE
 
-1. **Device pass** on the test iPhone for the 2026-09-01 batch (pickers,
+1. **Server is on prod** (0.21.0). Nothing left there for the mobile rollout
+   except optional deep web-QA of the G+S modal.
+2. **Device pass** on the test iPhone for the 2026-09-01 batch (pickers,
    roster tags/icons, G+S prompt, bottom bar, headers).
-2. **Source control — do this soon, both sides are only on local disk / the
-   test box:**
-   - App: `git push origin main` + `git push pi main` (59 commits). Ask first.
-   - Server: the website agent commits the G+S changeset on the Pi and pushes
-     `feature/mobile-director-roster` (see the ⚠️ in the TL;DR).
-3. **iOS dev build** for push (item 8) — still blocked on Apple Developer login.
-4. **Going to production** — see the section below.
+3. **Push the app** — `git push origin main` + `git push pi main` (59 commits,
+   local only). Ask first.
+4. **App store track** — §4 of "Going to production" below. Gated on an Apple
+   Developer account + Google Play Console. This is now the only thing between
+   here and a release.
 
 ---
 
@@ -104,11 +105,11 @@ not re-verified on the test iPhone since the picker/roster changes.
   (scope the add — `app/media/*.jpg` are test uploads, leave them). Do NOT
   `rsync` over the Pi worktree or `git add -A` there.
 
-### 2. Point the app at the production API
+### 2. Point the app at the production API — ready now
 
 Resolution order (`src/api/client.ts`): `EXPO_PUBLIC_API_URL` →
 `app.json > expo.extra.apiUrl` (= `https://invites.falcon83.com`, already
-prod).
+prod). **Prod now has the full mobile API (0.21.0), so this works.**
 
 - `app.json` is **already** pointed at prod.
 - `.env.local` (`EXPO_PUBLIC_API_URL=https://test-invites.falcon83.com`,
@@ -117,25 +118,24 @@ prod).
 - `eas.json`: `development` + `preview` profiles pin `EXPO_PUBLIC_API_URL` to
   the **test** stack; `production` has no env override ⇒ falls through to the
   `app.json` prod URL. So `eas build --profile production` already targets prod.
-- ⚠️ Prod (`origin/main`) does **not** have the ~32 mobile-API commits yet, so
-  aiming the app at prod today = most director/mobile screens 404. Server merge
-  (step 3) must land first.
 
-### 3. Get the prod SERVER ready
+### 3. Get the prod SERVER ready — ✅ DONE (0.21.0, 2026-09-01)
 
-- Commit + push the G+S changeset (step 1).
-- Clean checkout of `feature/mobile-director-roster`, run the **full** test
-  suite (not just `invitations` on the worktree): `python manage.py test`.
-- The branch also changes **website** UI (roster-panel templates, `theme.css`,
-  `role_picker.js`, `_role_picker_script.html`) — review/QA those on the site,
-  not just the API.
-- Migrations: only `0077_teamhistory_published_at...`. `makemigrations --check`
-  is clean. Confirm it applies on the prod DB (watch the historical
-  `fix/dup-migration-0003` situation).
-- PR `feature/mobile-director-roster` → `main`. Merge.
-- Deploy `main` to prod, `collectstatic`, `migrate`, restart.
-- **Push**: prod needs `PUSH_NOTIFICATIONS_ENABLED = True` + real APNs key
-  (.p8) / FCM credentials. Coupled to the iOS build (item 8).
+- ✅ G+S changeset committed + pushed (`5e05c02`).
+- ✅ 288 `invitations` tests pass (re-verified on prod). Note: they run
+  `test invitations`, not the whole `manage.py test`.
+- 🟡 Website UI changes (roster-panel templates, `theme.css`, `role_picker.js`)
+  shipped + prod smoke-tested (login 200, `/teams/` 301, check clean). No
+  record of deep click-testing the new web G+S modal.
+- ✅ Migration `0077` applied on prod (`[X]`).
+- ✅ `feature/mobile-director-roster` → `main` (`a4576ac`), deployed, restarted.
+- ✅ **Push (server side):** `send_push_notifications` gates on
+  `getattr(settings, "PUSH_NOTIFICATIONS_ENABLED", True)` — **default True**;
+  only `settings_test.py` sets it False. Prod sends push for any registered
+  token. It relays through Expo (`exp.host/--/api/v2/push/send`) — **no APNs
+  .p8 / FCM keys on the Django side**. Those live in the Expo project and are
+  used at app-build time (§4). So prod push is "enabled but dormant" — no real
+  device tokens exist until there's a non-Expo-Go app build.
 
 ### 4. Get the prod APP ready (store submission — multi-week, gated on accounts)
 
