@@ -219,17 +219,29 @@ Notes: certs/keys live on EAS (local `credentials.json` is only for `--local`).
 TestFlight builds expire after 90 days. Each new release = `eas build` →
 `eas submit` again; version auto-bumps.
 
-**4. Android → direct APK (no Play Store)**
-- `eas build --platform android --profile production-apk` → `.apk`, EAS
-  generates + stores a keystore.
-- EAS prints an install page URL (internal distribution). Send it to players;
-  on the phone: open link → download → allow "install unknown apps" for the
-  browser → install.
-- Push notifications still work (FCM doesn't need Play distribution — see §5).
+**4. Android → direct APK (no Play Store) — ✅ LIVE 2026-09-03**
+- Build: EAS `8cb34cbd`, profile `production-apk`, v1.0.0 build 2, universal
+  APK (~113 MB). Artifact:
+  `https://expo.dev/artifacts/eas/s3CWnpKjYlJ4p9kz749CL_Hkfg_KyeAviTGTEHaei6I.apk`
+- Hosted on prod (chosen over the EAS link — permanent, branded):
+  **https://invites.falcon83.com/app** — public install page +
+  `/app/obh-invites.apk`. Server change `8c4b507` on `invite-server` main
+  (public views `android_app` / `android_app_download` in `invitations/views.py`,
+  routes in `invites/urls.py`, template `invitations/android_app.html`). The
+  APK sits at `~/invite-server/app/media/obh-invites.apk` on the Pi — **not in
+  git** (`app/media/` gitignored); re-drop it there on each Android build.
+  ⚠️ Deployed WITHOUT the `/deploy` ceremony — no VERSION bump / CHANGELOG /
+  PICKUP_NOTES. Footer still says v0.22.0. Tell the site agent so they fold it
+  into the next release notes.
+- Android push still needs FCM creds (see §5); the page/install works without.
 - LATER (Play Store): `eas build --profile production` → `.aab`; Play Console
   account + app record + service-account JSON in `eas.json`
   `submit.production.android.serviceAccountKeyPath`; `eas submit`. Reuse the
   same keystore (or Play App Signing) so it's the same app to existing users.
+- Updating the APK: `eas build --profile production-apk` → `curl` the new
+  artifact into `~/invite-server/app/media/obh-invites.apk` on the Pi (over
+  `jvmalone@108.7.41.231` when off the home LAN) → done, no restart needed
+  (FileResponse re-reads the file). JS-only fixes go via `eas update` instead.
 
 **5. Push (verify on real builds)**
 - `eas credentials --platform ios` → set up an APNs key (.p8), EAS registers it
