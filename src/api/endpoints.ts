@@ -342,6 +342,35 @@ export function removePenaltyBox(
   });
 }
 
+// ---- Penalty-box chirps (any invited player) -------------------------
+
+export function fetchChirpOptions(
+  signal?: AbortSignal,
+): Promise<{ presets: string[]; options: string[] }> {
+  return apiFetch("/api/chirps/", { signal });
+}
+
+export function postTaunt(
+  eventId: number | string,
+  entryId: number,
+  text: string,
+  preset = false,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${eventId}/penalty-box/${entryId}/taunts/`, {
+    method: "POST",
+    body: { text, preset },
+  });
+}
+
+export function deleteTaunt(
+  eventId: number | string,
+  tauntId: number,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${eventId}/penalty-box/taunts/${tauntId}/`, {
+    method: "DELETE",
+  });
+}
+
 export function scheduleInvites(
   id: number | string,
   sendAtIso: string,

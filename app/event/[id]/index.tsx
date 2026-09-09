@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ApiError } from "@/src/api/client";
 import type { DayPlayer, EventDetail, RosterEntry, RsvpStatus } from "@/src/api/types";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { PenaltyBoxCard } from "@/src/components/PenaltyBoxCard";
 import { RsvpControls } from "@/src/components/RsvpControls";
 import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
 import {
@@ -133,6 +134,8 @@ export default function EventDetailScreen() {
           </Text>
           <RosterTabs event={event} />
         </CollapsibleCard>
+
+        <PenaltyBoxCard event={event} />
 
         {event.status === "OPEN" ? (
           <CollapsibleCard title="Your RSVP" defaultOpen>

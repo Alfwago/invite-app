@@ -351,6 +351,29 @@ export function usePenaltyBox(id: number | string) {
   };
 }
 
+export function useChirpOptions() {
+  return useQuery({
+    queryKey: ["chirp-options"],
+    queryFn: ({ signal }) => api.fetchChirpOptions(signal),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useTaunts(id: number | string) {
+  const invalidate = useInvalidateEvent(id);
+  return {
+    post: useMutation({
+      mutationFn: (v: { entryId: number; text: string; preset?: boolean }) =>
+        api.postTaunt(id, v.entryId, v.text, v.preset ?? false),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+    remove: useMutation({
+      mutationFn: (tauntId: number) => api.deleteTaunt(id, tauntId),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+  };
+}
+
 export function useInviteSchedule(id: number | string) {
   const invalidate = useInvalidateEvent(id);
   return {

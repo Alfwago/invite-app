@@ -192,6 +192,36 @@ export interface PenaltyBoxEntry {
   is_active: boolean;
 }
 
+export interface Taunt {
+  id: number;
+  author: string;
+  author_id: number;
+  mine: boolean;
+  text: string;
+  created_at: string;
+}
+
+/** Active penalty-box entry as seen by any player on the event (top-level
+ *  EventDetail.penalty_box) — carries chirps + whether the viewer may chirp. */
+export interface PlayerPenaltyEntry {
+  id: number;
+  player_id: number;
+  name: string;
+  is_me: boolean;
+  severity: PenaltySeverity;
+  reason: string;
+  eligible_at: string | null;
+  can_taunt: boolean;
+  taunts: Taunt[];
+}
+
+export interface MyPenalty {
+  in_box: boolean;
+  eligible_at: string | null;
+  severity: PenaltySeverity;
+  reason: string;
+}
+
 export interface InviteeEntry {
   player_id: number;
   name: string;
@@ -235,6 +265,8 @@ export interface EventDetail extends EventSummary {
   waitlist: WaitlistEntry[]; // director view only; [] for players
   messages_unread: number; // unseen director posts on the event thread
   team_assignment: TeamAssignment | null; // set once a director publishes teams
+  penalty_box: PlayerPenaltyEntry[]; // active entries + chirps, visible to all
+  my_penalty: MyPenalty | null; // the viewer's own box status, or null
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
 }
