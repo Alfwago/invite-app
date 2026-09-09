@@ -433,6 +433,8 @@ export interface ChatMessage {
   can_delete: boolean;
   can_edit: boolean;
   reactions: MessageReaction[];
+  /** @-mentions on this post (board messages only; [] elsewhere). */
+  mentions?: { id: number; name: string }[];
 }
 
 export type BoardMessage = ChatMessage;
@@ -473,12 +475,15 @@ export interface NewMessage {
   imageUri?: string;
   /** director only — also email the board's members */
   notify?: boolean;
+  /** ids of @-mentioned board members */
+  mentionIds?: number[];
 }
 
 export interface EditMessage {
   id: number;
   body?: string;
   imageUri?: string;
+  mentionIds?: number[];
 }
 
 export interface CreateNextEventBody {

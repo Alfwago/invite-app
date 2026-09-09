@@ -147,8 +147,12 @@ export function usePostMessage(board: number | null) {
 export function useEditMessage(board: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: number; body?: string; imageUri?: string }) =>
-      api.editMessage(args.id, args.body, args.imageUri),
+    mutationFn: (args: {
+      id: number;
+      body?: string;
+      imageUri?: string;
+      mentionIds?: number[];
+    }) => api.editMessage(args.id, args.body, args.imageUri, args.mentionIds),
     onSuccess: (fresh) => patchMessageInCache(qc, board, fresh),
   });
 }

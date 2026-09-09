@@ -178,23 +178,50 @@ export function postMessage(msg: NewMessage): Promise<BoardMessage> {
     form.append("body", msg.body);
     if (msg.board != null) form.append("board", String(msg.board));
     if (msg.notify) form.append("notify", "true");
+    (msg.mentionIds ?? []).forEach((id) => form.append("mention_ids", String(id)));
     form.append("image", imagePart(msg.imageUri));
     return apiFetch("/api/messages/", { method: "POST", form });
   }
   return apiFetch("/api/messages/", {
     method: "POST",
-    body: { body: msg.body, board: msg.board, notify: msg.notify ?? false },
+    body: {
+      body: msg.body,
+      board: msg.board,
+      notify: msg.notify ?? false,
+      mention_ids: msg.mentionIds ?? [],
+    },
   });
 }
 
-export function editMessage(id: number, body?: string, imageUri?: string): Promise<BoardMessage> {
+export function editMessage(
+  id: number,
+  body?: string,
+  imageUri?: string,
+  mentionIds?: number[],
+): Promise<BoardMessage> {
   if (imageUri) {
     const form = new FormData();
     if (body != null) form.append("body", body);
+    (mentionIds ?? []).forEach((m) => form.append("mention_ids", String(m)));
     form.append("image", imagePart(imageUri));
     return apiFetch(`/api/messages/${id}/`, { method: "PATCH", form });
   }
-  return apiFetch(`/api/messages/${id}/`, { method: "PATCH", body: { body } });
+  return apiFetch(`/api/messages/${id}/`, {
+    method: "PATCH",
+    body: { body, ...(mentionIds ? { mention_ids: mentionIds } : {}) },
+  });
+}
+
+export function fetchMentionable(
+  board: number | null,
+  q: string,
+  signal?: AbortSignal,
+): Promise<{ players: { id: number; name: string }[] }> {
+  const params = new URLSearchParams();
+  if (board != null) params.set("board", String(board));
+  if (q.trim()) params.set("q", q.trim());
+  const qs = params.toString();
+  return apiFetch(`/api/messages/mentionable/${qs ? `?${qs}` : ""}`, { signal });
 }
 
 export function reactToMessage(id: number, emoji: string): Promise<BoardMessage> {
