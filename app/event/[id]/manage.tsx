@@ -865,6 +865,8 @@ function RosterCard({ event }: { event: EventDetail }) {
   const [showAdd, setShowAdd] = useState(false);
   const [walkOn, setWalkOn] = useState("");
   const [walkOnGoalie, setWalkOnGoalie] = useState(false);
+  const [walkOnRating, setWalkOnRating] = useState("");
+  const [editWalkOn, setEditWalkOn] = useState<DayPlayer | null>(null);
   const { pick, modal } = useRolePicker();
 
   const going = event.players.filter((p) => p.status === "YES");
@@ -903,9 +905,16 @@ function RosterCard({ event }: { event: EventDetail }) {
   function addWalkOn() {
     const name = walkOn.trim();
     if (!name) return;
-    act({ action: "add_day_player", name, is_goalie: walkOnGoalie });
+    const rating = walkOnRating.trim();
+    act({
+      action: "add_day_player",
+      name,
+      is_goalie: walkOnGoalie,
+      ...(rating ? { rating_ppv: rating } : {}),
+    });
     setWalkOn("");
     setWalkOnGoalie(false);
+    setWalkOnRating("");
   }
 
   return (
@@ -954,21 +963,36 @@ function RosterCard({ event }: { event: EventDetail }) {
         ))
       )}
 
-      {event.day_players.map((dp: DayPlayer) => (
-        <RosterAdminRow
-          key={`dp-${dp.id}`}
-          name={dp.name}
-          isGoalie={dp.is_goalie}
-          pays={dp.pays}
-          walkOn
-          present={dp.present}
-          paid={dp.paid}
-          disabled={busy}
-          onPresent={(v) => act({ action: "set_present", day_player_id: dp.id, present: v })}
-          onPaid={(v) => act({ action: "set_paid", day_player_id: dp.id, paid: v })}
-          onRemove={() => act({ action: "remove_day_player", day_player_id: dp.id })}
-        />
-      ))}
+      {event.day_players.map((dp: DayPlayer) =>
+        editWalkOn?.id === dp.id ? (
+          <WalkOnEditor
+            key={`dp-${dp.id}`}
+            dp={dp}
+            busy={busy}
+            onCancel={() => setEditWalkOn(null)}
+            onSave={(patch) => {
+              act({ action: "edit_day_player", day_player_id: dp.id, ...patch });
+              setEditWalkOn(null);
+            }}
+          />
+        ) : (
+          <RosterAdminRow
+            key={`dp-${dp.id}`}
+            name={dp.name}
+            isGoalie={dp.is_goalie}
+            pays={dp.pays}
+            walkOn
+            ratingPpv={dp.rating_ppv}
+            present={dp.present}
+            paid={dp.paid}
+            disabled={busy}
+            onEdit={() => setEditWalkOn(dp)}
+            onPresent={(v) => act({ action: "set_present", day_player_id: dp.id, present: v })}
+            onPaid={(v) => act({ action: "set_paid", day_player_id: dp.id, paid: v })}
+            onRemove={() => act({ action: "remove_day_player", day_player_id: dp.id })}
+          />
+        ),
+      )}
 
       <View style={styles.divider} />
 
@@ -994,6 +1018,19 @@ function RosterCard({ event }: { event: EventDetail }) {
         >
           <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
         </Pressable>
+      </View>
+      <View style={styles.walkOnRow}>
+        <TextInput
+          style={[styles.input, styles.walkOnRatingInput]}
+          value={walkOnRating}
+          onChangeText={setWalkOnRating}
+          keyboardType="decimal-pad"
+          placeholder={walkOnGoalie ? "Goalie score" : "PPV"}
+          placeholderTextColor={colors.textMuted}
+        />
+        <Text style={[styles.muted, styles.grow]}>
+          {walkOnGoalie ? "0–3, defaults to 2.0" : "0–5, defaults to 3.0"} · feeds Team Generator
+        </Text>
       </View>
       <Button
         label="Add walk-on"
@@ -1050,6 +1087,70 @@ function RosterCard({ event }: { event: EventDetail }) {
   );
 }
 
+function WalkOnEditor({
+  dp,
+  busy,
+  onSave,
+  onCancel,
+}: {
+  dp: DayPlayer;
+  busy?: boolean;
+  onSave: (patch: { name: string; is_goalie: boolean; rating_ppv?: string }) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(dp.name);
+  const [goalie, setGoalie] = useState(dp.is_goalie);
+  const [rating, setRating] = useState(dp.rating_ppv ?? "");
+  const max = goalie ? 3 : 5;
+  const bad = rating.trim() !== "" && (Number.isNaN(Number(rating)) || Number(rating) < 0 || Number(rating) > max);
+  return (
+    <View style={styles.walkOnEditor}>
+      <View style={styles.walkOnRow}>
+        <TextInput
+          style={[styles.input, styles.grow]}
+          value={name}
+          onChangeText={setName}
+          placeholder="Name"
+          placeholderTextColor={colors.textMuted}
+        />
+        <Pressable
+          onPress={() => setGoalie((g) => !g)}
+          style={[styles.goaliePick, goalie && styles.goaliePickOn]}
+        >
+          <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
+        </Pressable>
+      </View>
+      <View style={styles.walkOnRow}>
+        <TextInput
+          style={[styles.input, styles.walkOnRatingInput]}
+          value={rating}
+          onChangeText={setRating}
+          keyboardType="decimal-pad"
+          placeholder={goalie ? "Goalie score" : "PPV"}
+          placeholderTextColor={colors.textMuted}
+        />
+        <Text style={[styles.muted, styles.grow]}>{goalie ? "0–3" : "0–5"}</Text>
+      </View>
+      {bad ? <Text style={styles.walkOnErr}>{goalie ? "Goalie score must be 0–3." : "PPV must be 0–5."}</Text> : null}
+      <View style={styles.walkOnRow}>
+        <Button
+          label="Save"
+          onPress={() =>
+            onSave({
+              name: name.trim() || dp.name,
+              is_goalie: goalie,
+              ...(rating.trim() ? { rating_ppv: rating.trim() } : {}),
+            })
+          }
+          disabled={busy || bad || !name.trim()}
+          style={styles.grow}
+        />
+        <Button label="Cancel" variant="secondary" onPress={onCancel} disabled={busy} style={styles.grow} />
+      </View>
+    </View>
+  );
+}
+
 function RosterAdminRow({
   name,
   isGoalie,
@@ -1057,6 +1158,7 @@ function RosterAdminRow({
   isAssistantDirector,
   pays = true,
   walkOn,
+  ratingPpv,
   present,
   paid,
   disabled,
@@ -1070,6 +1172,7 @@ function RosterAdminRow({
   onGuestPresent,
   onGuestPaid,
   onGuestRemove,
+  onEdit,
   onPresent,
   onPaid,
   onRemove,
@@ -1080,6 +1183,7 @@ function RosterAdminRow({
   isAssistantDirector?: boolean;
   pays?: boolean;
   walkOn?: boolean;
+  ratingPpv?: string | null;
   present: boolean;
   paid: boolean;
   disabled?: boolean;
@@ -1093,6 +1197,7 @@ function RosterAdminRow({
   onGuestPresent?: (i: number, v: boolean) => void;
   onGuestPaid?: (i: number, v: boolean) => void;
   onGuestRemove?: (i: number) => void;
+  onEdit?: () => void;
   onPresent: (v: boolean) => void;
   onPaid: (v: boolean) => void;
   onRemove: () => void;
@@ -1110,6 +1215,11 @@ function RosterAdminRow({
         ) : walkOn ? (
           <Text style={styles.roleTag}>walk-on</Text>
         ) : null}
+        {walkOn && ratingPpv != null ? (
+          <Text style={styles.dpRating}>
+            {isGoalie ? "G" : "PPV"} {ratingPpv}
+          </Text>
+        ) : null}
         <View style={styles.tinyBtns}>
           <TinyBtn icon="checkmark" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
           {pays ? (
@@ -1123,6 +1233,9 @@ function RosterAdminRow({
             <TinyBtn icon="wine" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
           ) : null}
           <View style={styles.grpGap} />
+          {onEdit ? (
+            <TinyBtn icon="pencil" disabled={disabled} onPress={onEdit} />
+          ) : null}
           <TinyBtn icon="close" danger disabled={disabled} onPress={onRemove} />
         </View>
       </View>
@@ -1807,6 +1920,26 @@ const styles = StyleSheet.create({
   goaliePickOn: { borderColor: colors.gold, backgroundColor: colors.goldDim },
   goaliePickText: { color: colors.textMuted, fontWeight: "800" },
   goaliePickTextOn: { color: colors.gold },
+  walkOnRatingInput: { width: 120 },
+  walkOnEditor: {
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  walkOnErr: { color: colors.red, fontSize: font.xs },
+  dpRating: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.blue,
+    borderWidth: 1,
+    borderColor: colors.blue,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
 
   addPanel: {
     borderWidth: 1,

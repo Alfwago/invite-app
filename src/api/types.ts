@@ -163,6 +163,9 @@ export interface DayPlayer {
   pays: boolean;
   present: boolean;
   paid: boolean;
+  /** One score, interpreted by is_goalie: 0-3 goalie, 0-5 skater. Feeds
+   *  Team Generator. Director view only — null for players. */
+  rating_ppv: string | null;
 }
 
 export interface WaitlistEntry {
@@ -276,7 +279,22 @@ export type RosterAction =
   | { action: "reorder_waitlist"; waitlist_id: number; direction: "up" | "down" }
   | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
-  | { action: "add_day_player"; name: string; email?: string; is_goalie?: boolean }
+  | {
+      action: "add_day_player";
+      name: string;
+      email?: string;
+      is_goalie?: boolean;
+      /** 0-3 goalie / 0-5 skater; omitted → server default (2.0 / 3.0). */
+      rating_ppv?: number | string;
+    }
+  | {
+      action: "edit_day_player";
+      day_player_id: number;
+      name?: string;
+      email?: string;
+      is_goalie?: boolean;
+      rating_ppv?: number | string;
+    }
   | { action: "remove_day_player"; day_player_id: number }
   | { action: "set_beer_guy"; player_id: number | null }
   | { action: "set_whiskey_guy"; player_id: number | null }
