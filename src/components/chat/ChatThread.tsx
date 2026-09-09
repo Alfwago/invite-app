@@ -21,6 +21,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { ApiError } from "@/src/api/client";
 import type { ChatMessage, EmojiGroup } from "@/src/api/types";
 import { ErrorState, Loading } from "@/src/components/ui";
+import { LinkText } from "@/src/components/LinkText";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 const GAP_MS = 60 * 60 * 1000; // show a time header when the break is > 1h
@@ -359,7 +360,14 @@ function MessageRow({
           {msg.image_url ? (
             <Image source={{ uri: msg.image_url }} style={styles.image} resizeMode="cover" />
           ) : null}
-          {msg.body ? <Text style={[styles.body, mine && styles.bodyMine]}>{msg.body}</Text> : null}
+          {msg.body ? (
+            <LinkText
+              style={[styles.body, mine && styles.bodyMine]}
+              linkStyle={mine ? styles.linkMine : undefined}
+            >
+              {msg.body}
+            </LinkText>
+          ) : null}
         </Pressable>
 
         {msg.reactions.length > 0 ? (
@@ -445,6 +453,7 @@ const styles = StyleSheet.create({
   bubbleMine: { backgroundColor: colors.gold, borderTopRightRadius: 6 },
   body: { color: colors.text, fontSize: 15, lineHeight: 20 },
   bodyMine: { color: colors.goldText },
+  linkMine: { color: colors.goldText, textDecorationLine: "underline", fontWeight: "700" },
   image: {
     width: 220,
     height: 220,

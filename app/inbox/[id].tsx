@@ -15,6 +15,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 
 import { ApiError } from "@/src/api/client";
 import type { DMMessage } from "@/src/api/types";
+import { LinkText } from "@/src/components/LinkText";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
 import { useDmThread, useSendDm } from "@/src/hooks/queries";
@@ -123,7 +124,12 @@ function Bubble({ msg, onEvent }: { msg: DMMessage; onEvent: (eventId: number) =
   return (
     <View style={[styles.bubbleRow, msg.mine ? styles.mineRow : styles.theirRow]}>
       <View style={[styles.bubble, msg.mine ? styles.mine : styles.theirs]}>
-        <Text style={[styles.bubbleText, msg.mine && styles.bubbleTextMine]}>{msg.body}</Text>
+        <LinkText
+          style={[styles.bubbleText, msg.mine && styles.bubbleTextMine]}
+          linkStyle={msg.mine ? styles.linkMine : undefined}
+        >
+          {msg.body}
+        </LinkText>
       </View>
       <Text style={styles.when}>{formatDateTime(msg.created_at)}</Text>
     </View>
@@ -158,6 +164,7 @@ const styles = StyleSheet.create({
   },
   bubbleText: { color: colors.text, fontSize: 15, lineHeight: 20 },
   bubbleTextMine: { color: colors.goldText },
+  linkMine: { color: colors.goldText, textDecorationLine: "underline", fontWeight: "700" },
   when: { color: colors.textMuted, fontSize: 10 },
   composer: {
     flexDirection: "row",
