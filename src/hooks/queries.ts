@@ -611,6 +611,47 @@ export function useDeleteDmThread() {
   });
 }
 
+/** React / edit / delete one message inside a DM thread. */
+export function useDmMessageActions(who: number | "system") {
+  const qc = useQueryClient();
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: keys.dmThread(who) });
+    qc.invalidateQueries({ queryKey: keys.inbox });
+  };
+  return {
+    react: useMutation({
+      mutationFn: (v: { messageId: number; emoji: string }) =>
+        api.reactDmMessage(v.messageId, v.emoji),
+      onSuccess: refresh,
+    }),
+    edit: useMutation({
+      mutationFn: (v: { messageId: number; body: string }) =>
+        api.editDmMessage(v.messageId, v.body),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({
+      mutationFn: (messageId: number) => api.deleteDmMessage(messageId),
+      onSuccess: refresh,
+    }),
+  };
+}
+
+export function useNightDirectors(nightId: number | null) {
+  return useQuery({
+    queryKey: ["night-directors", nightId],
+    queryFn: ({ signal }) => api.fetchNightDirectors(nightId as number, signal),
+    enabled: nightId != null,
+  });
+}
+
+export function useMessageNightDirectors(nightId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => api.messageNightDirectors(nightId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.inbox }),
+  });
+}
+
 // ---- Poll authoring (director) --------------------------------
 
 export function useManagePolls() {

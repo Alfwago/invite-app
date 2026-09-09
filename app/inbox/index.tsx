@@ -1,8 +1,10 @@
 import { useState } from "react";
 import {
+  Alert,
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +12,7 @@ import {
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Swipeable } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,14 +20,30 @@ import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
-import { useInbox } from "@/src/hooks/queries";
+import { useDeleteDmThread, useHome, useInbox } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function InboxScreen() {
   const router = useRouter();
   const query = useInbox();
+  const home = useHome();
+  const del = useDeleteDmThread();
   const [compose, setCompose] = useState(false);
   const convos = query.data?.conversations ?? [];
+  const nights = home.data?.nights ?? [];
+
+  function confirmDelete(who: number | "system", name: string) {
+    Alert.alert(
+      who === "system" ? "Clear all notifications?" : "Delete conversation?",
+      who === "system"
+        ? "This clears the OBH notifications from your inbox."
+        : `Removes this conversation from your view only — ${name} keeps their copy.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => del.mutate(who) },
+      ],
+    );
+  }
 
   return (
     <>
@@ -45,6 +64,26 @@ export default function InboxScreen() {
       />
 
       <View style={styles.screen}>
+        {nights.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.dirScroll}
+            contentContainerStyle={styles.dirRow}
+          >
+            {nights.map((n) => (
+              <Pressable
+                key={n.id}
+                style={styles.dirChip}
+                onPress={() => router.push(`/inbox/directors/${n.id}` as never)}
+              >
+                <Ionicons name="mail-outline" size={13} color={colors.textMuted} />
+                <Text style={styles.dirChipText}>{n.name} directors</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
+
         {query.isLoading ? (
           <Loading label="Loading…" />
         ) : query.isError ? (
@@ -60,11 +99,27 @@ export default function InboxScreen() {
             keyExtractor={(c) => String(c.user_id ?? "system")}
             contentContainerStyle={styles.list}
             renderItem={({ item }) => (
+              <Swipeable
+                overshootRight={false}
+                renderRightActions={() => (
+                  <Pressable
+                    style={styles.swipeDelete}
+                    onPress={() => confirmDelete(item.user_id ?? "system", item.name)}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#fff" />
+                    <Text style={styles.swipeDeleteText}>Delete</Text>
+                  </Pressable>
+                )}
+              >
               <Pressable
                 style={styles.row}
                 onPress={() =>
                   router.push(`/inbox/${item.user_id ?? "system"}` as never)
                 }
+                onLongPress={() =>
+                  confirmDelete(item.user_id ?? "system", item.name)
+                }
+                delayLongPress={300}
               >
                 <View style={styles.avatar}>
                   <Ionicons
@@ -90,6 +145,7 @@ export default function InboxScreen() {
                   ) : null}
                 </View>
               </Pressable>
+              </Swipeable>
             )}
           />
         )}
@@ -179,6 +235,28 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   empty: { color: colors.textMuted, textAlign: "center", padding: spacing.xl },
   list: { padding: spacing.md },
+  dirScroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
+  dirRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
+  dirChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    marginRight: spacing.xs,
+  },
+  dirChipText: { color: colors.textMuted, fontSize: font.xs },
+  swipeDelete: {
+    backgroundColor: colors.red,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 88,
+    gap: 2,
+  },
+  swipeDeleteText: { color: "#fff", fontSize: font.xs, fontWeight: "700" },
   row: {
     flexDirection: "row",
     alignItems: "center",

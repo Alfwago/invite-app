@@ -700,7 +700,10 @@ export interface DMMessage {
   is_system: boolean;
   author: string;
   created_at: string;
+  edited_at: string | null;
+  can_edit: boolean;
   event_id: number | null;
+  reactions: MessageReaction[];
 }
 
 export interface DMThread {
@@ -708,6 +711,7 @@ export interface DMThread {
   other_name: string;
   is_system: boolean;
   can_reply?: boolean;
+  reaction_choices?: string[];
   messages: DMMessage[];
 }
 

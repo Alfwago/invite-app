@@ -19,7 +19,9 @@ import type {
   NightMembersResponse,
   PenaltySeverity,
   DMConversation,
+  DMMessage,
   DMThread,
+  MessageReaction,
   NewPoll,
   PollResults,
   PollSummary,
@@ -572,6 +574,37 @@ export function sendDm(userId: number, body: string): Promise<DMThread> {
 
 export function deleteDmThread(who: number | "system"): Promise<void> {
   return apiFetch(who === "system" ? "/api/dm/system/" : `/api/dm/${who}/`, { method: "DELETE" });
+}
+
+export function reactDmMessage(
+  messageId: number,
+  emoji: string,
+): Promise<{ reactions: MessageReaction[] }> {
+  return apiFetch(`/api/dm/messages/${messageId}/react/`, { method: "POST", body: { emoji } });
+}
+
+export function editDmMessage(messageId: number, body: string): Promise<DMMessage> {
+  return apiFetch(`/api/dm/messages/${messageId}/`, { method: "PATCH", body: { body } });
+}
+
+export function deleteDmMessage(messageId: number): Promise<void> {
+  return apiFetch(`/api/dm/messages/${messageId}/`, { method: "DELETE" });
+}
+
+// ---- "Message the night's directors" contact shortcut ---------------
+
+export function fetchNightDirectors(
+  nightId: number,
+  signal?: AbortSignal,
+): Promise<{ night_id: number; night_name: string; directors: { id: number; name: string }[] }> {
+  return apiFetch(`/api/dm/night/${nightId}/directors/`, { signal });
+}
+
+export function messageNightDirectors(
+  nightId: number,
+  body: string,
+): Promise<{ messaged: { id: number; name: string }[] }> {
+  return apiFetch(`/api/dm/night/${nightId}/directors/`, { method: "POST", body: { body } });
 }
 
 // ---- Poll authoring (director) ---------------------------------
