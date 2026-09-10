@@ -152,7 +152,10 @@ export default function EventDetailScreen() {
           onPress={() => router.push(`/event/${event.id}/messages`)}
         >
           <Ionicons name="chatbubbles-outline" size={20} color={colors.text} />
-          <Text style={styles.threadBtnText}>Messages</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.threadBtnText}>Messages</Text>
+            <Text style={styles.threadBtnSub}>Everyone invited to this skate can see these</Text>
+          </View>
           {event.messages_unread > 0 ? (
             <View style={styles.threadBadge}>
               <Text style={styles.threadBadgeText}>{event.messages_unread}</Text>
@@ -160,6 +163,23 @@ export default function EventDetailScreen() {
           ) : null}
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
+
+        {event.night && event.night_directors.length > 0 ? (
+          <Card>
+            <Text style={styles.contactLabel}>Contact the directors</Text>
+            <Text style={styles.muted}>
+              A question just for whoever runs {event.night.name}? This goes privately to{" "}
+              {event.night_directors.map((d) => d.name).join(" and ")} — not the skate thread.
+            </Text>
+            <Pressable
+              style={styles.contactBtn}
+              onPress={() => router.push(`/inbox/directors/${event.night!.id}` as never)}
+            >
+              <Ionicons name="mail" size={18} color={colors.goldText} />
+              <Text style={styles.contactBtnText}>Contact Directors</Text>
+            </Pressable>
+          </Card>
+        ) : null}
 
         {event.can_manage ? (
           <Button
@@ -404,7 +424,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },
-  threadBtnText: { color: colors.text, fontSize: font.base, fontWeight: "700", flex: 1 },
+  threadBtnText: { color: colors.text, fontSize: font.base, fontWeight: "700" },
+  threadBtnSub: { color: colors.textMuted, fontSize: font.xs, marginTop: 1 },
+  contactLabel: { color: colors.text, fontSize: font.md, fontWeight: "700", marginBottom: spacing.xs },
+  contactBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+  },
+  contactBtnText: { color: colors.goldText, fontSize: font.base, fontWeight: "700" },
   threadBadge: {
     minWidth: 20,
     height: 20,

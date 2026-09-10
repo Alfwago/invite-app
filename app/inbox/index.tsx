@@ -4,7 +4,6 @@ import {
   FlatList,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -31,6 +30,20 @@ export default function InboxScreen() {
   const [compose, setCompose] = useState(false);
   const convos = query.data?.conversations ?? [];
   const nights = home.data?.nights ?? [];
+
+  function contactDirectors() {
+    if (nights.length === 1) {
+      router.push(`/inbox/directors/${nights[0].id}` as never);
+      return;
+    }
+    Alert.alert("Contact directors", "Which skate?", [
+      ...nights.map((n) => ({
+        text: n.name,
+        onPress: () => router.push(`/inbox/directors/${n.id}` as never),
+      })),
+      { text: "Cancel", style: "cancel" as const },
+    ]);
+  }
 
   function confirmDelete(who: number | "system", name: string) {
     Alert.alert(
@@ -65,23 +78,15 @@ export default function InboxScreen() {
 
       <View style={styles.screen}>
         {nights.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.dirScroll}
-            contentContainerStyle={styles.dirRow}
-          >
-            {nights.map((n) => (
-              <Pressable
-                key={n.id}
-                style={styles.dirChip}
-                onPress={() => router.push(`/inbox/directors/${n.id}` as never)}
-              >
-                <Ionicons name="mail-outline" size={13} color={colors.textMuted} />
-                <Text style={styles.dirChipText}>{n.name} directors</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <View style={styles.dirRow}>
+            <Pressable style={styles.dirBtn} onPress={contactDirectors}>
+              <Ionicons name="mail" size={16} color={colors.goldText} />
+              <Text style={styles.dirBtnText}>Contact Directors</Text>
+            </Pressable>
+            <Text style={styles.dirHint}>
+              Reach whoever runs your skate — a private message, not the skate thread.
+            </Text>
+          </View>
         ) : null}
 
         {query.isLoading ? (
@@ -235,20 +240,25 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   empty: { color: colors.textMuted, textAlign: "center", padding: spacing.xl },
   list: { padding: spacing.md },
-  dirScroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: colors.border },
-  dirRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
-  dirChip: {
+  dirRow: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dirBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 999,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    marginRight: spacing.xs,
+    alignSelf: "flex-start",
+    gap: spacing.xs,
+    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  dirChipText: { color: colors.textMuted, fontSize: font.xs },
+  dirBtnText: { color: colors.goldText, fontSize: font.sm, fontWeight: "700" },
+  dirHint: { color: colors.textMuted, fontSize: font.xs },
   swipeDelete: {
     backgroundColor: colors.red,
     justifyContent: "center",

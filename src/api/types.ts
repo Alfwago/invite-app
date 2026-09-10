@@ -267,6 +267,7 @@ export interface EventDetail extends EventSummary {
   team_assignment: TeamAssignment | null; // set once a director publishes teams
   penalty_box: PlayerPenaltyEntry[]; // active entries + chirps, visible to all
   my_penalty: MyPenalty | null; // the viewer's own box status, or null
+  night_directors: { id: number; name: string }[]; // [] if none / can't message
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
 }
