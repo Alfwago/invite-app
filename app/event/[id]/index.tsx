@@ -164,6 +164,15 @@ export default function EventDetailScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </Pressable>
 
+        {event.can_manage ? (
+          <Button
+            label="Manage event"
+            variant="secondary"
+            labelColor={colors.gold}
+            onPress={() => router.push(`/event/${event.id}/manage`)}
+          />
+        ) : null}
+
         {event.night && event.night_directors.length > 0 ? (
           <Card>
             <Text style={styles.contactLabel}>Contact the directors</Text>
@@ -179,15 +188,6 @@ export default function EventDetailScreen() {
               <Text style={styles.contactBtnText}>Contact Directors</Text>
             </Pressable>
           </Card>
-        ) : null}
-
-        {event.can_manage ? (
-          <Button
-            label="Manage event"
-            variant="secondary"
-            labelColor={colors.gold}
-            onPress={() => router.push(`/event/${event.id}/manage`)}
-          />
         ) : null}
       </KeyboardAwareScrollView>
     </>
