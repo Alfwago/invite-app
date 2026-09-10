@@ -80,7 +80,7 @@ export default function InboxScreen() {
         {nights.length > 0 ? (
           <View style={styles.dirRow}>
             <Pressable style={styles.dirBtn} onPress={contactDirectors}>
-              <Ionicons name="mail" size={16} color={colors.goldText} />
+              <Ionicons name="mail" size={32} color={colors.goldText} />
               <Text style={styles.dirBtnText}>Contact Directors</Text>
             </Pressable>
             <Text style={styles.dirHint}>

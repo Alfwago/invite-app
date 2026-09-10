@@ -175,7 +175,7 @@ export default function EventDetailScreen() {
               style={styles.contactBtn}
               onPress={() => router.push(`/inbox/directors/${event.night!.id}` as never)}
             >
-              <Ionicons name="mail" size={18} color={colors.goldText} />
+              <Ionicons name="mail" size={36} color={colors.goldText} />
               <Text style={styles.contactBtnText}>Contact Directors</Text>
             </Pressable>
           </Card>
