@@ -85,9 +85,8 @@ export async function setAppBadge(count: number): Promise<void> {
   if (!pushSupported) return;
   try {
     await require("expo-notifications").setBadgeCountAsync(clamped);
-    console.log("[push] setAppBadge set to", clamped);
-  } catch (e) {
-    console.log("[push] setAppBadge failed:", e);
+  } catch {
+    // native module not present — ignore
   }
 }
 
@@ -106,21 +105,15 @@ function projectId(): string | undefined {
  * No-ops in Expo Go / on web / when permission is denied.
  */
 export async function registerForPush(): Promise<void> {
-  console.log("[push] registerForPush() called, pushSupported =", pushSupported);
   if (!pushSupported) return;
   try {
     const Notifications = require("expo-notifications");
 
     let { status } = await Notifications.getPermissionsAsync();
-    console.log("[push] existing permission status =", status);
     if (status !== "granted") {
       status = (await Notifications.requestPermissionsAsync()).status;
-      console.log("[push] requested permission, result =", status);
     }
-    if (status !== "granted") {
-      console.log("[push] permission not granted, stopping");
-      return;
-    }
+    if (status !== "granted") return;
 
     // Permission may have just been granted after setAppBadge() already
     // ran once with no authorization to display it under — reapply it now.
