@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs, useRouter } from "expo-router";
 
-import { useBoards, useInbox } from "@/src/hooks/queries";
+import { useBoards, useEvents, useInbox } from "@/src/hooks/queries";
 import { setAppBadge } from "@/src/push";
 import { colors } from "@/src/theme";
 
@@ -16,8 +16,16 @@ export default function TabsLayout() {
   const router = useRouter();
   const boards = useBoards();
   const inbox = useInbox();
+  const events = useEvents();
   const dmUnread = inbox.data?.unread_total ?? 0;
-  const unread = (boards.data?.unread_total ?? 0) + dmUnread;
+  // Mirrors the server's `pending_invite_count`: an open, upcoming invite
+  // this player hasn't acted on yet. `my_rsvp` is null for events the
+  // player can see but isn't invited to (a director's other nights), which
+  // must not count.
+  const pendingInvites = (events.data ?? []).filter(
+    (e) => e.status === "OPEN" && e.my_rsvp != null && e.my_rsvp.responded_at == null,
+  ).length;
+  const unread = (boards.data?.unread_total ?? 0) + dmUnread + pendingInvites;
 
   useEffect(() => {
     setAppBadge(unread);
