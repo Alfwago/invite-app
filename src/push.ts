@@ -70,12 +70,22 @@ export async function configureAndroidChannels(): Promise<void> {
 
 let registeredToken: string | null = null;
 
+// The last badge count TabsLayout asked for. Callers request this well
+// before the user has necessarily answered the permission prompt (it takes
+// real time to tap Allow), so a value set while permission is still
+// "undetermined" never reaches the Home Screen — iOS won't retroactively
+// show a badge that was set before authorization existed. Once permission
+// is granted, registerForPush() replays this so the icon catches up.
+let lastRequestedBadge: number | null = null;
+
 /** Set the app-icon badge number. No-op on web / in Expo Go / on failure. */
 export async function setAppBadge(count: number): Promise<void> {
+  const clamped = Math.max(0, count);
+  lastRequestedBadge = clamped;
   if (!pushSupported) return;
   try {
-    await require("expo-notifications").setBadgeCountAsync(Math.max(0, count));
-    console.log("[push] setAppBadge set to", Math.max(0, count));
+    await require("expo-notifications").setBadgeCountAsync(clamped);
+    console.log("[push] setAppBadge set to", clamped);
   } catch (e) {
     console.log("[push] setAppBadge failed:", e);
   }
@@ -110,6 +120,12 @@ export async function registerForPush(): Promise<void> {
     if (status !== "granted") {
       console.log("[push] permission not granted, stopping");
       return;
+    }
+
+    // Permission may have just been granted after setAppBadge() already
+    // ran once with no authorization to display it under — reapply it now.
+    if (lastRequestedBadge !== null) {
+      await setAppBadge(lastRequestedBadge);
     }
 
     await configureAndroidChannels();
