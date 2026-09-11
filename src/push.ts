@@ -75,8 +75,9 @@ export async function setAppBadge(count: number): Promise<void> {
   if (!pushSupported) return;
   try {
     await require("expo-notifications").setBadgeCountAsync(Math.max(0, count));
-  } catch {
-    // native module not present — ignore
+    console.log("[push] setAppBadge set to", Math.max(0, count));
+  } catch (e) {
+    console.log("[push] setAppBadge failed:", e);
   }
 }
 
@@ -89,24 +90,35 @@ function projectId(): string | undefined {
 }
 
 /**
- * Ask permission, fetch the Expo push token, and register it with the server.
- * No-ops in Expo Go / on web / on a simulator / when permission is denied.
+ * Ask notification permission (covers the iOS app-icon badge, which needs
+ * badge authorization even on a simulator), then — on real hardware only —
+ * fetch the Expo push token and register it with the server.
+ * No-ops in Expo Go / on web / when permission is denied.
  */
 export async function registerForPush(): Promise<void> {
+  console.log("[push] registerForPush() called, pushSupported =", pushSupported);
   if (!pushSupported) return;
   try {
-    const Device = require("expo-device");
     const Notifications = require("expo-notifications");
 
-    if (!Device.isDevice) return;
-
     let { status } = await Notifications.getPermissionsAsync();
+    console.log("[push] existing permission status =", status);
     if (status !== "granted") {
       status = (await Notifications.requestPermissionsAsync()).status;
+      console.log("[push] requested permission, result =", status);
     }
-    if (status !== "granted") return;
+    if (status !== "granted") {
+      console.log("[push] permission not granted, stopping");
+      return;
+    }
 
     await configureAndroidChannels();
+
+    // A simulator can hold badge authorization and show setAppBadge() counts,
+    // but can't hold an Expo push token — remote-push registration needs real
+    // hardware.
+    const Device = require("expo-device");
+    if (!Device.isDevice) return;
 
     const id = projectId();
     if (!id) {
