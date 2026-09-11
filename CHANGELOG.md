@@ -3,6 +3,36 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-11 — Messaging + roster batch, deep links, app-icon badge
+
+Paired with `invite-server` `0.23.0` (server released; this app work is
+pending its own store/EAS submission).
+
+- **@mentions in the message board composer** — typeahead suggests board
+  members after typing `@`; tagged players get a push.
+- **DM reactions + edit/delete, swipe-delete inbox, message-directors
+  button** — direct messages get the same tapback reactions as boards, the
+  sender can edit/delete their own message, inbox rows swipe to delete, and
+  a "Contact Directors" button messages a night's directors as private 1:1s.
+- **Penalty box + chirps** on the player event screen — see who's boxed and
+  clap back with a chirp, mirroring the website's public card.
+- **Tappable links in message bubbles.**
+- **Walk-on rating**: set on add, edit later (items 9/10).
+- **Contact Directors** promoted to a real card with a gold button, a
+  monochrome mail icon (2x larger), moved below "Manage event".
+- **Universal Links / App Links**: the app now claims `invites.falcon83.com`
+  `/event/*`, `/messages/*`, `/inbox/*` — invite and message emails open
+  straight into the app instead of the browser.
+- **App-icon badge**: the Home Screen icon now shows pending invites +
+  unread messages, kept in sync with the server's own count on every push.
+  Fixed along the way: `registerForPush()` was skipping the notification
+  permission request entirely on any build without real push-token hardware
+  (including the Simulator), so badge authorization was never granted there;
+  and a badge set while permission was still `"undetermined"` (the request
+  takes real time to answer) never reached the Home Screen once granted —
+  the last-requested count is now replayed right after permission flips to
+  granted.
+
 ## 2026-09-02 — App/Web cleanup: goalie marks, settings grid (branch work, not shipped)
 
 Paired with `invite-server` `feature/mobile-director-roster` changes of the same
