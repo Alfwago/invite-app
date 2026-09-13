@@ -70,11 +70,21 @@ export async function configureAndroidChannels(): Promise<void> {
 
 let registeredToken: string | null = null;
 
+// The last badge count TabsLayout asked for. Callers request this well
+// before the user has necessarily answered the permission prompt (it takes
+// real time to tap Allow), so a value set while permission is still
+// "undetermined" never reaches the Home Screen — iOS won't retroactively
+// show a badge that was set before authorization existed. Once permission
+// is granted, registerForPush() replays this so the icon catches up.
+let lastRequestedBadge: number | null = null;
+
 /** Set the app-icon badge number. No-op on web / in Expo Go / on failure. */
 export async function setAppBadge(count: number): Promise<void> {
+  const clamped = Math.max(0, count);
+  lastRequestedBadge = clamped;
   if (!pushSupported) return;
   try {
-    await require("expo-notifications").setBadgeCountAsync(Math.max(0, count));
+    await require("expo-notifications").setBadgeCountAsync(clamped);
   } catch {
     // native module not present — ignore
   }
@@ -89,16 +99,15 @@ function projectId(): string | undefined {
 }
 
 /**
- * Ask permission, fetch the Expo push token, and register it with the server.
- * No-ops in Expo Go / on web / on a simulator / when permission is denied.
+ * Ask notification permission (covers the iOS app-icon badge, which needs
+ * badge authorization even on a simulator), then — on real hardware only —
+ * fetch the Expo push token and register it with the server.
+ * No-ops in Expo Go / on web / when permission is denied.
  */
 export async function registerForPush(): Promise<void> {
   if (!pushSupported) return;
   try {
-    const Device = require("expo-device");
     const Notifications = require("expo-notifications");
-
-    if (!Device.isDevice) return;
 
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") {
@@ -106,7 +115,19 @@ export async function registerForPush(): Promise<void> {
     }
     if (status !== "granted") return;
 
+    // Permission may have just been granted after setAppBadge() already
+    // ran once with no authorization to display it under — reapply it now.
+    if (lastRequestedBadge !== null) {
+      await setAppBadge(lastRequestedBadge);
+    }
+
     await configureAndroidChannels();
+
+    // A simulator can hold badge authorization and show setAppBadge() counts,
+    // but can't hold an Expo push token — remote-push registration needs real
+    // hardware.
+    const Device = require("expo-device");
+    if (!Device.isDevice) return;
 
     const id = projectId();
     if (!id) {

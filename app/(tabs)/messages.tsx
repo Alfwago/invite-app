@@ -86,6 +86,7 @@ export default function MessagesScreen() {
         onRetry={messagesQuery.refetch}
         sending={post.isPending || edit.isPending}
         emptyLabel="No messages"
+        mentionBoard={board}
         accessory={
           canEmail ? (
             <Pressable
@@ -103,11 +104,13 @@ export default function MessagesScreen() {
             </Pressable>
           ) : null
         }
-        onSend={async (body, imageUri) => {
-          await post.mutateAsync({ body, board, imageUri, notify: emailGroup });
+        onSend={async (body, imageUri, mentionIds) => {
+          await post.mutateAsync({ body, board, imageUri, notify: emailGroup, mentionIds });
           setEmailGroup(false);
         }}
-        onEdit={(id, body, imageUri) => edit.mutateAsync({ id, body, imageUri })}
+        onEdit={(id, body, imageUri, mentionIds) =>
+          edit.mutateAsync({ id, body, imageUri, mentionIds })
+        }
         onDelete={(id) => del.mutate(id)}
         onReact={(id, emoji) => react.mutate({ id, emoji })}
       />

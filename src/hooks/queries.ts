@@ -24,6 +24,7 @@ import type {
   PublishTeamsBody,
   RatingPatch,
   SaveTeamsBody,
+  TeamGeneratorSnapshot,
   RosterAction,
   RsvpBody,
 } from "@/src/api/types";
@@ -39,6 +40,7 @@ export const keys = {
   teamEvents: ["team-events"] as const,
   teamRoster: (id: number) => ["team-roster", id] as const,
   teamHistory: (id: number) => ["team-history", id] as const,
+  teamGeneratorState: (id: number) => ["team-generator-state", id] as const,
   approvals: ["approvals"] as const,
   polls: ["polls"] as const,
   inbox: ["inbox"] as const,
@@ -147,8 +149,12 @@ export function usePostMessage(board: number | null) {
 export function useEditMessage(board: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: number; body?: string; imageUri?: string }) =>
-      api.editMessage(args.id, args.body, args.imageUri),
+    mutationFn: (args: {
+      id: number;
+      body?: string;
+      imageUri?: string;
+      mentionIds?: number[];
+    }) => api.editMessage(args.id, args.body, args.imageUri, args.mentionIds),
     onSuccess: (fresh) => patchMessageInCache(qc, board, fresh),
   });
 }
@@ -351,6 +357,29 @@ export function usePenaltyBox(id: number | string) {
   };
 }
 
+export function useChirpOptions() {
+  return useQuery({
+    queryKey: ["chirp-options"],
+    queryFn: ({ signal }) => api.fetchChirpOptions(signal),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useTaunts(id: number | string) {
+  const invalidate = useInvalidateEvent(id);
+  return {
+    post: useMutation({
+      mutationFn: (v: { entryId: number; text: string; preset?: boolean }) =>
+        api.postTaunt(id, v.entryId, v.text, v.preset ?? false),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+    remove: useMutation({
+      mutationFn: (tauntId: number) => api.deleteTaunt(id, tauntId),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+  };
+}
+
 export function useInviteSchedule(id: number | string) {
   const invalidate = useInvalidateEvent(id);
   return {
@@ -513,6 +542,38 @@ export function usePublishTeams(eventId: number) {
   });
 }
 
+export function useTeamGeneratorState(eventId: number | null) {
+  return useQuery({
+    queryKey: keys.teamGeneratorState(eventId ?? 0),
+    queryFn: ({ signal }) => api.fetchTeamGeneratorState(eventId as number, signal),
+    enabled: eventId != null,
+    staleTime: 0, // always fresh on open — a lock made on the other platform must show up
+  });
+}
+
+export function useLockTeamGeneratorState(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (state: TeamGeneratorSnapshot) => api.lockTeamGeneratorState(eventId, state),
+    onSuccess: (data) => qc.setQueryData(keys.teamGeneratorState(eventId), data),
+  });
+}
+
+export function useUnlockTeamGeneratorState(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.unlockTeamGeneratorState(eventId),
+    onSuccess: () =>
+      qc.setQueryData(keys.teamGeneratorState(eventId), {
+        locked: false,
+        state: {},
+        locked_by: "",
+        locked_at: null,
+        updated_at: null,
+      }),
+  });
+}
+
 // ---- Player approval queue (director) -----------------------------
 
 export function useApprovals() {
@@ -584,6 +645,47 @@ export function useDeleteDmThread() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (who: number | "system") => api.deleteDmThread(who),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.inbox }),
+  });
+}
+
+/** React / edit / delete one message inside a DM thread. */
+export function useDmMessageActions(who: number | "system") {
+  const qc = useQueryClient();
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: keys.dmThread(who) });
+    qc.invalidateQueries({ queryKey: keys.inbox });
+  };
+  return {
+    react: useMutation({
+      mutationFn: (v: { messageId: number; emoji: string }) =>
+        api.reactDmMessage(v.messageId, v.emoji),
+      onSuccess: refresh,
+    }),
+    edit: useMutation({
+      mutationFn: (v: { messageId: number; body: string }) =>
+        api.editDmMessage(v.messageId, v.body),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({
+      mutationFn: (messageId: number) => api.deleteDmMessage(messageId),
+      onSuccess: refresh,
+    }),
+  };
+}
+
+export function useNightDirectors(nightId: number | null) {
+  return useQuery({
+    queryKey: ["night-directors", nightId],
+    queryFn: ({ signal }) => api.fetchNightDirectors(nightId as number, signal),
+    enabled: nightId != null,
+  });
+}
+
+export function useMessageNightDirectors(nightId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => api.messageNightDirectors(nightId, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.inbox }),
   });
 }

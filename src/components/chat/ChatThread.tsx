@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
   FlatList,
@@ -19,9 +20,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useHeaderHeight } from "@react-navigation/elements";
 
 import { ApiError } from "@/src/api/client";
+import * as api from "@/src/api/endpoints";
 import type { ChatMessage, EmojiGroup } from "@/src/api/types";
 import { ErrorState, Loading } from "@/src/components/ui";
+import { LinkText } from "@/src/components/LinkText";
 import { colors, font, radius, spacing } from "@/src/theme";
+
+const MENTION_TRIGGER = /(?:^|\s)@([\p{L}\p{N}'’.\- ]{0,40})$/u;
 
 const GAP_MS = 60 * 60 * 1000; // show a time header when the break is > 1h
 
@@ -61,8 +66,11 @@ export interface ChatThreadProps {
   placeholder?: string;
   /** Rendered just above the composer row (e.g. an "email the group" toggle). */
   accessory?: ReactNode;
-  onSend: (body: string, imageUri?: string) => Promise<unknown>;
-  onEdit: (id: number, body: string, imageUri?: string) => Promise<unknown>;
+  /** Board id (or null for the main board) to enable @mentions. Omit to disable
+   *  (e.g. per-event threads). */
+  mentionBoard?: number | null;
+  onSend: (body: string, imageUri?: string, mentionIds?: number[]) => Promise<unknown>;
+  onEdit: (id: number, body: string, imageUri?: string, mentionIds?: number[]) => Promise<unknown>;
   onDelete: (id: number) => void;
   onReact: (id: number, emoji: string) => void;
 }
@@ -81,6 +89,7 @@ export function ChatThread({
   emptyLabel = "No messages",
   placeholder = "Message…",
   accessory,
+  mentionBoard,
   onSend,
   onEdit,
   onDelete,
@@ -91,8 +100,32 @@ export function ChatThread({
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const [sheetFor, setSheetFor] = useState<ChatMessage | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [picks, setPicks] = useState<{ id: number; name: string }[]>([]);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const headerHeight = useHeaderHeight();
+
+  const mentionsOn = mentionBoard !== undefined;
+  const mentionTerm =
+    mentionsOn ? (draft.match(MENTION_TRIGGER)?.[1] ?? null) : null;
+  const suggestQuery = useQuery({
+    queryKey: ["mentionable", mentionBoard ?? "main", mentionTerm ?? ""],
+    queryFn: ({ signal }) =>
+      api.fetchMentionable(mentionBoard ?? null, mentionTerm ?? "", signal),
+    enabled: mentionsOn && mentionTerm !== null,
+  });
+  const suggestions = mentionTerm !== null ? suggestQuery.data?.players ?? [] : [];
+
+  function applyMention(p: { id: number; name: string }) {
+    setDraft((d) => d.replace(MENTION_TRIGGER, (whole) => {
+      const lead = whole.startsWith("@") ? "" : whole[0];
+      return `${lead}@${p.name} `;
+    }));
+    setPicks((prev) => (prev.some((x) => x.id === p.id) ? prev : [...prev, p]));
+  }
+
+  function currentMentionIds(text: string): number[] {
+    return picks.filter((p) => text.includes(`@${p.name}`)).map((p) => p.id);
+  }
 
   async function pickImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -113,14 +146,16 @@ export function ChatThread({
   async function send() {
     const text = draft.trim();
     if (!text && !imageUri) return;
+    const mentionIds = mentionsOn ? currentMentionIds(text) : undefined;
     try {
       if (editing) {
-        await onEdit(editing.id, text, imageUri);
+        await onEdit(editing.id, text, imageUri, mentionIds);
       } else {
-        await onSend(text, imageUri);
+        await onSend(text, imageUri, mentionIds);
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
       }
       resetComposer();
+      setPicks([]);
     } catch (e) {
       Alert.alert("Couldn't send", e instanceof ApiError ? e.detail : "Try again.");
     }
@@ -134,6 +169,7 @@ export function ChatThread({
     setEditing(msg);
     setDraft(msg.body);
     setImageUri(undefined);
+    setPicks(msg.mentions ?? []);
     closeSheet();
   }
   function confirmDelete(msg: ChatMessage) {
@@ -223,6 +259,20 @@ export function ChatThread({
       ) : null}
 
       {!editing ? accessory : null}
+
+      {mentionTerm !== null && suggestions.length > 0 ? (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={styles.mentionBar}
+          contentContainerStyle={styles.mentionBarInner}
+        >
+          {suggestions.map((p) => (
+            <Pressable key={p.id} style={styles.mentionOpt} onPress={() => applyMention(p)}>
+              <Text style={styles.mentionOptText}>{p.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
 
       <View style={styles.composer}>
         <Pressable onPress={pickImage} style={styles.iconBtn} hitSlop={6}>
@@ -359,7 +409,15 @@ function MessageRow({
           {msg.image_url ? (
             <Image source={{ uri: msg.image_url }} style={styles.image} resizeMode="cover" />
           ) : null}
-          {msg.body ? <Text style={[styles.body, mine && styles.bodyMine]}>{msg.body}</Text> : null}
+          {msg.body ? (
+            <LinkText
+              style={[styles.body, mine && styles.bodyMine]}
+              linkStyle={mine ? styles.linkMine : undefined}
+              mentions={(msg.mentions ?? []).map((x) => x.name)}
+            >
+              {msg.body}
+            </LinkText>
+          ) : null}
         </Pressable>
 
         {msg.reactions.length > 0 ? (
@@ -445,6 +503,7 @@ const styles = StyleSheet.create({
   bubbleMine: { backgroundColor: colors.gold, borderTopRightRadius: 6 },
   body: { color: colors.text, fontSize: 15, lineHeight: 20 },
   bodyMine: { color: colors.goldText },
+  linkMine: { color: colors.goldText, textDecorationLine: "underline", fontWeight: "700" },
   image: {
     width: 220,
     height: 220,
@@ -478,6 +537,15 @@ const styles = StyleSheet.create({
   },
   editBannerText: { color: colors.textMuted, fontSize: 13, flex: 1 },
   editCancel: { color: colors.gold, fontWeight: "700", fontSize: 13 },
+
+  mentionBar: {
+    maxHeight: 132,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  mentionBarInner: { paddingVertical: 4 },
+  mentionOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  mentionOptText: { color: colors.text, fontSize: font.sm },
 
   previewRow: {
     flexDirection: "row",

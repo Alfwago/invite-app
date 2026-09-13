@@ -163,6 +163,9 @@ export interface DayPlayer {
   pays: boolean;
   present: boolean;
   paid: boolean;
+  /** One score, interpreted by is_goalie: 0-3 goalie, 0-5 skater. Feeds
+   *  Team Generator. Director view only — null for players. */
+  rating_ppv: string | null;
 }
 
 export interface WaitlistEntry {
@@ -187,6 +190,36 @@ export interface PenaltyBoxEntry {
   reason: string;
   eligible_at: string | null;
   is_active: boolean;
+}
+
+export interface Taunt {
+  id: number;
+  author: string;
+  author_id: number;
+  mine: boolean;
+  text: string;
+  created_at: string;
+}
+
+/** Active penalty-box entry as seen by any player on the event (top-level
+ *  EventDetail.penalty_box) — carries chirps + whether the viewer may chirp. */
+export interface PlayerPenaltyEntry {
+  id: number;
+  player_id: number;
+  name: string;
+  is_me: boolean;
+  severity: PenaltySeverity;
+  reason: string;
+  eligible_at: string | null;
+  can_taunt: boolean;
+  taunts: Taunt[];
+}
+
+export interface MyPenalty {
+  in_box: boolean;
+  eligible_at: string | null;
+  severity: PenaltySeverity;
+  reason: string;
 }
 
 export interface InviteeEntry {
@@ -232,6 +265,9 @@ export interface EventDetail extends EventSummary {
   waitlist: WaitlistEntry[]; // director view only; [] for players
   messages_unread: number; // unseen director posts on the event thread
   team_assignment: TeamAssignment | null; // set once a director publishes teams
+  penalty_box: PlayerPenaltyEntry[]; // active entries + chirps, visible to all
+  my_penalty: MyPenalty | null; // the viewer's own box status, or null
+  night_directors: { id: number; name: string }[]; // [] if none / can't message
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
 }
@@ -276,7 +312,22 @@ export type RosterAction =
   | { action: "reorder_waitlist"; waitlist_id: number; direction: "up" | "down" }
   | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
-  | { action: "add_day_player"; name: string; email?: string; is_goalie?: boolean }
+  | {
+      action: "add_day_player";
+      name: string;
+      email?: string;
+      is_goalie?: boolean;
+      /** 0-3 goalie / 0-5 skater; omitted → server default (2.0 / 3.0). */
+      rating_ppv?: number | string;
+    }
+  | {
+      action: "edit_day_player";
+      day_player_id: number;
+      name?: string;
+      email?: string;
+      is_goalie?: boolean;
+      rating_ppv?: number | string;
+    }
   | { action: "remove_day_player"; day_player_id: number }
   | { action: "set_beer_guy"; player_id: number | null }
   | { action: "set_whiskey_guy"; player_id: number | null }
@@ -383,6 +434,8 @@ export interface ChatMessage {
   can_delete: boolean;
   can_edit: boolean;
   reactions: MessageReaction[];
+  /** @-mentions on this post (board messages only; [] elsewhere). */
+  mentions?: { id: number; name: string }[];
 }
 
 export type BoardMessage = ChatMessage;
@@ -423,12 +476,15 @@ export interface NewMessage {
   imageUri?: string;
   /** director only — also email the board's members */
   notify?: boolean;
+  /** ids of @-mentioned board members */
+  mentionIds?: number[];
 }
 
 export interface EditMessage {
   id: number;
   body?: string;
   imageUri?: string;
+  mentionIds?: number[];
 }
 
 export interface CreateNextEventBody {
@@ -595,6 +651,26 @@ export interface SaveTeamsBody {
   note?: string;
 }
 
+/** Opaque snapshot shared with the website's Team Generator — see
+ *  TeamGeneratorState / obh_event_generator_state_api on the server. Neither
+ *  client validates the other's write; it's read back verbatim. */
+export interface TeamGeneratorSnapshot {
+  assignment: Record<string, "Gold" | "Black">;
+  pairs: [string, string][];
+  splits: [string, string][];
+  presentOnly: boolean;
+}
+
+/** GET/POST/DELETE /api/teams/events/<id>/generator-state/ — the director's
+ *  "Lock Teams" draft. Locking on web is visible on the app and vice versa. */
+export interface TeamGeneratorState {
+  locked: boolean;
+  state: TeamGeneratorSnapshot | Record<string, never>;
+  locked_by: string;
+  locked_at: string | null;
+  updated_at: string | null;
+}
+
 // ---- Player approval queue (director) ------------------------------
 
 export interface PendingApproval {
@@ -650,7 +726,10 @@ export interface DMMessage {
   is_system: boolean;
   author: string;
   created_at: string;
+  edited_at: string | null;
+  can_edit: boolean;
   event_id: number | null;
+  reactions: MessageReaction[];
 }
 
 export interface DMThread {
@@ -658,6 +737,7 @@ export interface DMThread {
   other_name: string;
   is_system: boolean;
   can_reply?: boolean;
+  reaction_choices?: string[];
   messages: DMMessage[];
 }
 

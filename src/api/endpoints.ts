@@ -19,7 +19,9 @@ import type {
   NightMembersResponse,
   PenaltySeverity,
   DMConversation,
+  DMMessage,
   DMThread,
+  MessageReaction,
   NewPoll,
   PollResults,
   PollSummary,
@@ -31,6 +33,8 @@ import type {
   PublishTeamsResult,
   SaveTeamsBody,
   TeamEvent,
+  TeamGeneratorSnapshot,
+  TeamGeneratorState,
   TeamHistoryEntry,
   TeamRosterPlayer,
   ProfilePatch,
@@ -176,23 +180,50 @@ export function postMessage(msg: NewMessage): Promise<BoardMessage> {
     form.append("body", msg.body);
     if (msg.board != null) form.append("board", String(msg.board));
     if (msg.notify) form.append("notify", "true");
+    (msg.mentionIds ?? []).forEach((id) => form.append("mention_ids", String(id)));
     form.append("image", imagePart(msg.imageUri));
     return apiFetch("/api/messages/", { method: "POST", form });
   }
   return apiFetch("/api/messages/", {
     method: "POST",
-    body: { body: msg.body, board: msg.board, notify: msg.notify ?? false },
+    body: {
+      body: msg.body,
+      board: msg.board,
+      notify: msg.notify ?? false,
+      mention_ids: msg.mentionIds ?? [],
+    },
   });
 }
 
-export function editMessage(id: number, body?: string, imageUri?: string): Promise<BoardMessage> {
+export function editMessage(
+  id: number,
+  body?: string,
+  imageUri?: string,
+  mentionIds?: number[],
+): Promise<BoardMessage> {
   if (imageUri) {
     const form = new FormData();
     if (body != null) form.append("body", body);
+    (mentionIds ?? []).forEach((m) => form.append("mention_ids", String(m)));
     form.append("image", imagePart(imageUri));
     return apiFetch(`/api/messages/${id}/`, { method: "PATCH", form });
   }
-  return apiFetch(`/api/messages/${id}/`, { method: "PATCH", body: { body } });
+  return apiFetch(`/api/messages/${id}/`, {
+    method: "PATCH",
+    body: { body, ...(mentionIds ? { mention_ids: mentionIds } : {}) },
+  });
+}
+
+export function fetchMentionable(
+  board: number | null,
+  q: string,
+  signal?: AbortSignal,
+): Promise<{ players: { id: number; name: string }[] }> {
+  const params = new URLSearchParams();
+  if (board != null) params.set("board", String(board));
+  if (q.trim()) params.set("q", q.trim());
+  const qs = params.toString();
+  return apiFetch(`/api/messages/mentionable/${qs ? `?${qs}` : ""}`, { signal });
 }
 
 export function reactToMessage(id: number, emoji: string): Promise<BoardMessage> {
@@ -342,6 +373,35 @@ export function removePenaltyBox(
   });
 }
 
+// ---- Penalty-box chirps (any invited player) -------------------------
+
+export function fetchChirpOptions(
+  signal?: AbortSignal,
+): Promise<{ presets: string[]; options: string[] }> {
+  return apiFetch("/api/chirps/", { signal });
+}
+
+export function postTaunt(
+  eventId: number | string,
+  entryId: number,
+  text: string,
+  preset = false,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${eventId}/penalty-box/${entryId}/taunts/`, {
+    method: "POST",
+    body: { text, preset },
+  });
+}
+
+export function deleteTaunt(
+  eventId: number | string,
+  tauntId: number,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${eventId}/penalty-box/taunts/${tauntId}/`, {
+    method: "DELETE",
+  });
+}
+
 export function scheduleInvites(
   id: number | string,
   sendAtIso: string,
@@ -487,6 +547,29 @@ export function publishTeams(
   return apiFetch(`/api/teams/events/${eventId}/publish/`, { method: "POST", body });
 }
 
+/** The director's "Lock Teams" draft for one event — shared with the
+ *  website, so locking here shows up there and vice versa. */
+export function fetchTeamGeneratorState(
+  eventId: number,
+  signal?: AbortSignal,
+): Promise<TeamGeneratorState> {
+  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, { signal });
+}
+
+export function lockTeamGeneratorState(
+  eventId: number,
+  state: TeamGeneratorSnapshot,
+): Promise<TeamGeneratorState> {
+  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, {
+    method: "POST",
+    body: { state },
+  });
+}
+
+export function unlockTeamGeneratorState(eventId: number): Promise<void> {
+  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, { method: "DELETE" });
+}
+
 // ---- Player approval queue (director) -----------------------------
 
 export async function fetchApprovals(signal?: AbortSignal): Promise<PendingApproval[]> {
@@ -543,6 +626,37 @@ export function sendDm(userId: number, body: string): Promise<DMThread> {
 
 export function deleteDmThread(who: number | "system"): Promise<void> {
   return apiFetch(who === "system" ? "/api/dm/system/" : `/api/dm/${who}/`, { method: "DELETE" });
+}
+
+export function reactDmMessage(
+  messageId: number,
+  emoji: string,
+): Promise<{ reactions: MessageReaction[] }> {
+  return apiFetch(`/api/dm/messages/${messageId}/react/`, { method: "POST", body: { emoji } });
+}
+
+export function editDmMessage(messageId: number, body: string): Promise<DMMessage> {
+  return apiFetch(`/api/dm/messages/${messageId}/`, { method: "PATCH", body: { body } });
+}
+
+export function deleteDmMessage(messageId: number): Promise<void> {
+  return apiFetch(`/api/dm/messages/${messageId}/`, { method: "DELETE" });
+}
+
+// ---- "Message the night's directors" contact shortcut ---------------
+
+export function fetchNightDirectors(
+  nightId: number,
+  signal?: AbortSignal,
+): Promise<{ night_id: number; night_name: string; directors: { id: number; name: string }[] }> {
+  return apiFetch(`/api/dm/night/${nightId}/directors/`, { signal });
+}
+
+export function messageNightDirectors(
+  nightId: number,
+  body: string,
+): Promise<{ messaged: { id: number; name: string }[] }> {
+  return apiFetch(`/api/dm/night/${nightId}/directors/`, { method: "POST", body: { body } });
 }
 
 // ---- Poll authoring (director) ---------------------------------

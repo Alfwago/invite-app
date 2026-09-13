@@ -2,7 +2,7 @@
   "expo": {
     "name": "OBH Invites",
     "slug": "jvmalone",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "scheme": "obhinvites",
     "userInterfaceStyle": "automatic",
@@ -14,7 +14,11 @@
       "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": [
+        "applinks:invites.falcon83.com",
+        "applinks:test-invites.falcon83.com"
+      ]
     },
     "android": {
       "package": "com.falcon83.obhinvites",
@@ -25,6 +29,21 @@
       },
       "permissions": [
         "android.permission.RECORD_AUDIO"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "invites.falcon83.com", "pathPrefix": "/event" },
+            { "scheme": "https", "host": "invites.falcon83.com", "pathPrefix": "/messages" },
+            { "scheme": "https", "host": "invites.falcon83.com", "pathPrefix": "/inbox" },
+            { "scheme": "https", "host": "test-invites.falcon83.com", "pathPrefix": "/event" },
+            { "scheme": "https", "host": "test-invites.falcon83.com", "pathPrefix": "/messages" },
+            { "scheme": "https", "host": "test-invites.falcon83.com", "pathPrefix": "/inbox" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {

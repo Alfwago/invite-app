@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -10,6 +11,7 @@ import {
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Swipeable } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,14 +19,44 @@ import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
-import { useInbox } from "@/src/hooks/queries";
+import { useDeleteDmThread, useHome, useInbox } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function InboxScreen() {
   const router = useRouter();
   const query = useInbox();
+  const home = useHome();
+  const del = useDeleteDmThread();
   const [compose, setCompose] = useState(false);
   const convos = query.data?.conversations ?? [];
+  const nights = home.data?.nights ?? [];
+
+  function contactDirectors() {
+    if (nights.length === 1) {
+      router.push(`/inbox/directors/${nights[0].id}` as never);
+      return;
+    }
+    Alert.alert("Contact directors", "Which skate?", [
+      ...nights.map((n) => ({
+        text: n.name,
+        onPress: () => router.push(`/inbox/directors/${n.id}` as never),
+      })),
+      { text: "Cancel", style: "cancel" as const },
+    ]);
+  }
+
+  function confirmDelete(who: number | "system", name: string) {
+    Alert.alert(
+      who === "system" ? "Clear all notifications?" : "Delete conversation?",
+      who === "system"
+        ? "This clears the OBH notifications from your inbox."
+        : `Removes this conversation from your view only — ${name} keeps their copy.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => del.mutate(who) },
+      ],
+    );
+  }
 
   return (
     <>
@@ -45,6 +77,18 @@ export default function InboxScreen() {
       />
 
       <View style={styles.screen}>
+        {nights.length > 0 ? (
+          <View style={styles.dirRow}>
+            <Pressable style={styles.dirBtn} onPress={contactDirectors}>
+              <Ionicons name="mail" size={32} color={colors.goldText} />
+              <Text style={styles.dirBtnText}>Contact Directors</Text>
+            </Pressable>
+            <Text style={styles.dirHint}>
+              Reach whoever runs your skate — a private message, not the skate thread.
+            </Text>
+          </View>
+        ) : null}
+
         {query.isLoading ? (
           <Loading label="Loading…" />
         ) : query.isError ? (
@@ -60,11 +104,27 @@ export default function InboxScreen() {
             keyExtractor={(c) => String(c.user_id ?? "system")}
             contentContainerStyle={styles.list}
             renderItem={({ item }) => (
+              <Swipeable
+                overshootRight={false}
+                renderRightActions={() => (
+                  <Pressable
+                    style={styles.swipeDelete}
+                    onPress={() => confirmDelete(item.user_id ?? "system", item.name)}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#fff" />
+                    <Text style={styles.swipeDeleteText}>Delete</Text>
+                  </Pressable>
+                )}
+              >
               <Pressable
                 style={styles.row}
                 onPress={() =>
                   router.push(`/inbox/${item.user_id ?? "system"}` as never)
                 }
+                onLongPress={() =>
+                  confirmDelete(item.user_id ?? "system", item.name)
+                }
+                delayLongPress={300}
               >
                 <View style={styles.avatar}>
                   <Ionicons
@@ -90,6 +150,7 @@ export default function InboxScreen() {
                   ) : null}
                 </View>
               </Pressable>
+              </Swipeable>
             )}
           />
         )}
@@ -179,6 +240,33 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   empty: { color: colors.textMuted, textAlign: "center", padding: spacing.xl },
   list: { padding: spacing.md },
+  dirRow: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dirBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: spacing.xs,
+    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  dirBtnText: { color: colors.goldText, fontSize: font.sm, fontWeight: "700" },
+  dirHint: { color: colors.textMuted, fontSize: font.xs },
+  swipeDelete: {
+    backgroundColor: colors.red,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 88,
+    gap: 2,
+  },
+  swipeDeleteText: { color: "#fff", fontSize: font.xs, fontWeight: "700" },
   row: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { AppState, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -37,14 +38,16 @@ focusManager.setEventListener((handleFocus) => {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <SafeAreaProvider>
-          <StatusBar style="light" />
-          <RootNavigator />
-        </SafeAreaProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <SafeAreaProvider>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </SafeAreaProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -165,6 +168,7 @@ function RootNavigator() {
       <Stack.Screen name="polls/new" options={{ title: "New poll", presentation: "modal" }} />
       <Stack.Screen name="inbox/index" options={{ title: "Inbox" }} />
       <Stack.Screen name="inbox/[id]" options={{ title: "Message" }} />
+      <Stack.Screen name="inbox/directors/[nightId]" options={{ title: "Directors" }} />
       <Stack.Screen
         name="new-event"
         options={{ title: "New event", presentation: "modal" }}

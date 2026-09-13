@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -14,14 +14,22 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 import { API_BASE, ApiError } from "@/src/api/client";
-import type { SaveTeamsBody, TeamEvent, TeamRosterPlayer } from "@/src/api/types";
+import type {
+  SaveTeamsBody,
+  TeamEvent,
+  TeamGeneratorSnapshot,
+  TeamRosterPlayer,
+} from "@/src/api/types";
 import { Dropdown } from "@/src/components/Dropdown";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import {
+  useLockTeamGeneratorState,
   usePublishTeams,
   useSaveTeamHistory,
   useTeamEvents,
+  useTeamGeneratorState,
   useTeamRoster,
+  useUnlockTeamGeneratorState,
 } from "@/src/hooks/queries";
 import {
   autoBalance,
@@ -57,6 +65,10 @@ export default function TeamGeneratorScreen() {
   const roster = useTeamRoster(eventId);
   const save = useSaveTeamHistory(eventId ?? 0);
   const publish = usePublishTeams(eventId ?? 0);
+  const generatorState = useTeamGeneratorState(eventId);
+  const lockMutation = useLockTeamGeneratorState(eventId ?? 0);
+  const unlockMutation = useUnlockTeamGeneratorState(eventId ?? 0);
+  const isLocked = !!generatorState.data?.locked;
 
   const [presentOnly, setPresentOnly] = useState(false);
   const [locks, setLocks] = useState<Record<string, Team>>({});
@@ -67,6 +79,82 @@ export default function TeamGeneratorScreen() {
   const [blackGoalie, setBlackGoalie] = useState<BalanceResult["blackGoalie"]>(null);
   const [note, setNote] = useState("");
   const [pick, setPick] = useState<null | { mode: "pair" | "split"; first: string | null }>(null);
+
+  // Lock Teams — see TeamGeneratorState on the server. Restoring a locked
+  // draft happens once per event, as soon as both the roster and the lock
+  // state have loaded; a roster refetch afterwards must not clobber further
+  // edits, hence the ref guard instead of an effect dependency on the data.
+  const restoredForEvent = useRef<number | null>(null);
+  const lastSavedSnapshotJson = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (eventId == null) return;
+    if (restoredForEvent.current === eventId) return;
+    if (!generatorState.data || !roster.data) return;
+    restoredForEvent.current = eventId;
+    if (!generatorState.data.locked) return;
+
+    const snap = (generatorState.data.state || {}) as TeamGeneratorSnapshot;
+    const restoredAssignment = (snap.assignment ?? {}) as Record<string, Team>;
+    const restoredPairs = snap.pairs ?? [];
+    const restoredSplits = snap.splits ?? [];
+    const restoredPresentOnly = !!snap.presentOnly;
+
+    setLocks(restoredAssignment);
+    setPairs(restoredPairs);
+    setSplits(restoredSplits);
+    setPresentOnly(restoredPresentOnly);
+
+    // Re-run the balancer directly (not runBalance(), whose memoized inputs
+    // haven't picked up the state just set above yet) so gold/black/goalies
+    // come out exactly as they were when locked.
+    const tgPlayers: TGPlayer[] = roster.data.map((r) => ({
+      id: r.id,
+      name: r.name,
+      is_goalie: r.is_goalie,
+      present: r.present,
+      ratings: {
+        hockey_sense: r.rating_hockey_sense,
+        skating: r.rating_skating,
+        defense: r.rating_defense,
+        offense: r.rating_offense,
+        goalie: r.rating_goalie,
+      },
+      locked: restoredAssignment[K(r.id)] ?? null,
+    }));
+    const result = autoBalance({
+      players: tgPlayers,
+      pairs: restoredPairs,
+      splits: restoredSplits,
+      presentOnly: restoredPresentOnly,
+      shuffle: true,
+    });
+    const nextAssignment: Record<string, Team> = {};
+    result.gold.forEach((p) => (nextAssignment[K(p.id)] = "Gold"));
+    result.black.forEach((p) => (nextAssignment[K(p.id)] = "Black"));
+    setAssignment(nextAssignment);
+    setGoldGoalie(result.goldGoalie);
+    setBlackGoalie(result.blackGoalie);
+    lastSavedSnapshotJson.current = JSON.stringify({
+      assignment: nextAssignment,
+      pairs: restoredPairs,
+      splits: restoredSplits,
+      presentOnly: restoredPresentOnly,
+    });
+  }, [eventId, generatorState.data, roster.data]);
+
+  // Once locked, every further edit (move, pair/split, swap, re-balance)
+  // re-saves so nothing done after the initial lock is lost either.
+  useEffect(() => {
+    if (!isLocked || eventId == null) return;
+    if (restoredForEvent.current !== eventId) return;
+    const snap: TeamGeneratorSnapshot = { assignment, pairs, splits, presentOnly };
+    const json = JSON.stringify(snap);
+    if (json === lastSavedSnapshotJson.current) return;
+    lastSavedSnapshotJson.current = json;
+    lockMutation.mutate(snap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLocked, eventId, assignment, pairs, splits, presentOnly]);
 
   const players = roster.data ?? [];
   const balanced = Object.keys(assignment).length > 0;
@@ -225,6 +313,58 @@ export default function TeamGeneratorScreen() {
     }
   }
 
+  async function onLock() {
+    if (!eventId || !balanced) return;
+    // Pin every currently-placed player — the same manual 🔒 already
+    // available per-player, applied to everyone at once.
+    setLocks(assignment);
+    const snap: TeamGeneratorSnapshot = { assignment, pairs, splits, presentOnly };
+    try {
+      await lockMutation.mutateAsync(snap);
+      lastSavedSnapshotJson.current = JSON.stringify(snap);
+    } catch (e) {
+      Alert.alert("Couldn't lock teams", e instanceof ApiError ? e.detail : "Try again.");
+    }
+  }
+
+  async function syncLockStateAfterPublish() {
+    try {
+      const result = await generatorState.refetch();
+      const data = result.data;
+      if (data?.locked) {
+        const snap = (data.state || {}) as TeamGeneratorSnapshot;
+        setLocks((snap.assignment ?? {}) as Record<string, Team>);
+      }
+      lastSavedSnapshotJson.current = JSON.stringify({ assignment, pairs, splits, presentOnly });
+    } catch {
+      // best-effort UI sync only — the server already locked it during publish
+    }
+  }
+
+  function onUnlock() {
+    if (!eventId) return;
+    Alert.alert(
+      "Unlock teams?",
+      "Auto-balance and pair/split changes will be able to move players again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Unlock",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await unlockMutation.mutateAsync();
+              clearLocks();
+              lastSavedSnapshotJson.current = null;
+            } catch (e) {
+              Alert.alert("Couldn't unlock teams", e instanceof ApiError ? e.detail : "Try again.");
+            }
+          },
+        },
+      ],
+    );
+  }
+
   function onPush() {
     if (!eventId) return;
     const n = gold.length + black.length;
@@ -242,6 +382,11 @@ export default function TeamGeneratorScreen() {
                 "Teams pushed",
                 `Notified ${res.notified} of ${res.recipients} players.`,
               );
+              // The server auto-locks the published split whether or not
+              // the director hit Lock Teams themselves — sync the
+              // button/status to match rather than re-locking (and risking
+              // a misleading error right after a successful push).
+              await syncLockStateAfterPublish();
             } catch (e) {
               Alert.alert("Couldn't push", e instanceof ApiError ? e.detail : "Try again.");
             }
@@ -302,6 +447,8 @@ export default function TeamGeneratorScreen() {
                   setLocks({});
                   setPairs([]);
                   setSplits([]);
+                  restoredForEvent.current = null;
+                  lastSavedSnapshotJson.current = null;
                 }}
               />
               <Button
@@ -332,8 +479,23 @@ export default function TeamGeneratorScreen() {
                 <Text style={styles.count}>
                   {players.length} on roster · {players.filter((p) => p.present).length} present
                 </Text>
+                {isLocked ? (
+                  <Text style={styles.lockStatus}>
+                    🔒 Locked
+                    {generatorState.data?.locked_by ? ` by ${generatorState.data.locked_by}` : ""} —
+                    edits are saved automatically.
+                  </Text>
+                ) : null}
 
                 <View style={styles.toolGrid}>
+                  {balanced ? (
+                    <BarBtn
+                      label={isLocked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
+                      active={isLocked}
+                      grid
+                      onPress={isLocked ? onUnlock : onLock}
+                    />
+                  ) : null}
                   <BarBtn label="Auto-balance" gold grid onPress={() => runBalance()} />
                   <BarBtn
                     label={`Present only: ${presentOnly ? "On" : "Off"}`}
@@ -670,6 +832,7 @@ const styles = StyleSheet.create({
   historyBtn: { alignSelf: "center", minWidth: 140 },
   hint: { color: colors.textMuted, fontSize: font.sm, padding: spacing.md, textAlign: "center" },
   count: { color: colors.textMuted, fontSize: font.xs, textAlign: "center" },
+  lockStatus: { color: colors.gold, fontSize: font.xs, fontWeight: "700", textAlign: "center" },
   bar: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   saveActions: { gap: spacing.sm, marginTop: spacing.xs },
   wideBtn: { alignSelf: "stretch", minHeight: 52, paddingVertical: spacing.md + 2 },
