@@ -3,6 +3,21 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-13 — Team Generator: Lock Teams (branch work, not merged)
+
+Paired with `invite-server` `0.24.0` (server released and live on prod;
+this app work is on branch `feature/team-generator-lock`, authored on the
+Pi, NOT typechecked or merged to `main` yet).
+
+- **Lock Teams**: pins every player's current team plus the
+  pairs/splits/present-only filter and saves it to the server per event —
+  reopening the generator (this app or the website, either device) restores
+  it instead of resetting to a fresh auto-balance. Every edit made after
+  locking autosaves. Unlock releases it.
+- **Push to players auto-locks the split** server-side regardless of
+  whether Lock was hit first; the app now syncs its Lock button to match
+  right after a successful push.
+
 ## 2026-09-11 — Messaging + roster batch, deep links, app-icon badge
 
 Paired with `invite-server` `0.23.0` (server released; this app work is
