@@ -24,6 +24,7 @@ import type {
   PublishTeamsBody,
   RatingPatch,
   SaveTeamsBody,
+  TeamGeneratorSnapshot,
   RosterAction,
   RsvpBody,
 } from "@/src/api/types";
@@ -39,6 +40,7 @@ export const keys = {
   teamEvents: ["team-events"] as const,
   teamRoster: (id: number) => ["team-roster", id] as const,
   teamHistory: (id: number) => ["team-history", id] as const,
+  teamGeneratorState: (id: number) => ["team-generator-state", id] as const,
   approvals: ["approvals"] as const,
   polls: ["polls"] as const,
   inbox: ["inbox"] as const,
@@ -537,6 +539,38 @@ export function usePublishTeams(eventId: number) {
       qc.invalidateQueries({ queryKey: keys.event(eventId) }); // team_assignment
       qc.invalidateQueries({ queryKey: keys.home });
     },
+  });
+}
+
+export function useTeamGeneratorState(eventId: number | null) {
+  return useQuery({
+    queryKey: keys.teamGeneratorState(eventId ?? 0),
+    queryFn: ({ signal }) => api.fetchTeamGeneratorState(eventId as number, signal),
+    enabled: eventId != null,
+    staleTime: 0, // always fresh on open — a lock made on the other platform must show up
+  });
+}
+
+export function useLockTeamGeneratorState(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (state: TeamGeneratorSnapshot) => api.lockTeamGeneratorState(eventId, state),
+    onSuccess: (data) => qc.setQueryData(keys.teamGeneratorState(eventId), data),
+  });
+}
+
+export function useUnlockTeamGeneratorState(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.unlockTeamGeneratorState(eventId),
+    onSuccess: () =>
+      qc.setQueryData(keys.teamGeneratorState(eventId), {
+        locked: false,
+        state: {},
+        locked_by: "",
+        locked_at: null,
+        updated_at: null,
+      }),
   });
 }
 

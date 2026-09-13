@@ -651,6 +651,26 @@ export interface SaveTeamsBody {
   note?: string;
 }
 
+/** Opaque snapshot shared with the website's Team Generator — see
+ *  TeamGeneratorState / obh_event_generator_state_api on the server. Neither
+ *  client validates the other's write; it's read back verbatim. */
+export interface TeamGeneratorSnapshot {
+  assignment: Record<string, "Gold" | "Black">;
+  pairs: [string, string][];
+  splits: [string, string][];
+  presentOnly: boolean;
+}
+
+/** GET/POST/DELETE /api/teams/events/<id>/generator-state/ — the director's
+ *  "Lock Teams" draft. Locking on web is visible on the app and vice versa. */
+export interface TeamGeneratorState {
+  locked: boolean;
+  state: TeamGeneratorSnapshot | Record<string, never>;
+  locked_by: string;
+  locked_at: string | null;
+  updated_at: string | null;
+}
+
 // ---- Player approval queue (director) ------------------------------
 
 export interface PendingApproval {

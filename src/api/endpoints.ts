@@ -33,6 +33,8 @@ import type {
   PublishTeamsResult,
   SaveTeamsBody,
   TeamEvent,
+  TeamGeneratorSnapshot,
+  TeamGeneratorState,
   TeamHistoryEntry,
   TeamRosterPlayer,
   ProfilePatch,
@@ -543,6 +545,29 @@ export function publishTeams(
   body: PublishTeamsBody,
 ): Promise<PublishTeamsResult> {
   return apiFetch(`/api/teams/events/${eventId}/publish/`, { method: "POST", body });
+}
+
+/** The director's "Lock Teams" draft for one event — shared with the
+ *  website, so locking here shows up there and vice versa. */
+export function fetchTeamGeneratorState(
+  eventId: number,
+  signal?: AbortSignal,
+): Promise<TeamGeneratorState> {
+  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, { signal });
+}
+
+export function lockTeamGeneratorState(
+  eventId: number,
+  state: TeamGeneratorSnapshot,
+): Promise<TeamGeneratorState> {
+  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, {
+    method: "POST",
+    body: { state },
+  });
+}
+
+export function unlockTeamGeneratorState(eventId: number): Promise<void> {
+  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, { method: "DELETE" });
 }
 
 // ---- Player approval queue (director) -----------------------------
