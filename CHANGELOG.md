@@ -3,6 +3,30 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-13 — watchOS companion, step 2: main watch screen
+
+Not yet functional — RSVP taps update local state only, no phone sync yet
+(that's step 3). Builds on step 1's target scaffold.
+
+- Main screen (`targets/watch/ContentView.swift` + `Views/`): night name +
+  date/time, current RSVP status as the dominant color-coded element
+  (green Yes / red No / amber Maybe / gray No Response — matches the
+  selected-choice colors in `RsvpControls.tsx`, not the muted roster-badge
+  convention), a one-tap Yes/No/Maybe row, and a jersey color badge
+  ("You're on Gold — wear your gold jersey") or "Teams not set yet".
+- `targets/_shared/WatchDisplay.swift`: SwiftUI color/label/date-formatting
+  helpers on the step-1 shared model types, reused as-is by the
+  complication in step 4.
+- `targets/watch/NextSkateStore.swift`: the view model RSVP taps go
+  through. Its public surface won't change in step 3 — only the body of
+  `setRsvp` does, swapping the local-only update for a WatchConnectivity
+  round-trip to the phone's real `submitRsvp`.
+- Verified on the simulator: built both the watch and main app schemes
+  clean, then ran all four RSVP colors plus the Gold/Black/no-team jersey
+  states and the no-next-skate state by swapping the sample data and
+  reinstalling — screenshotted each on the paired Apple Watch Series 11
+  (46mm) simulator.
+
 ## 2026-09-13 — watchOS companion, step 1: target scaffold (in progress)
 
 Not yet functional — this is the Xcode plumbing only, done first so later

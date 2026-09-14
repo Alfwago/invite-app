@@ -1,32 +1,26 @@
 import SwiftUI
 
-// Placeholder screen for step 1: proves the target builds and links the
-// shared model types from targets/_shared/WatchModels.swift. The real
-// night/RSVP/jersey UI (step 2) and live data via WatchConnectivity
-// (step 3) replace this.
+/// Main watch screen: next skate's night/date/time, current RSVP status as
+/// the dominant color-coded element, a one-tap Yes/No/Maybe row, and the
+/// jersey color badge (or "Teams not set yet").
 struct ContentView: View {
-    // Static sample data, just to exercise the shared types at compile time.
-    private let sample = WatchNextSkate(
-        eventId: 1,
-        nightName: "Tuesday Night",
-        date: "2026-09-15",
-        startTime: "21:00:00",
-        myRsvp: .noResponse,
-        teamAssignment: nil
-    )
+    @StateObject private var store = NextSkateStore()
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text(sample.nightName)
-                .font(.headline)
-            Text(sample.myRsvp.rawValue)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("OBH Invites")
-                .font(.footnote)
-                .foregroundStyle(Color.accentColor)
+        ScrollView {
+            VStack(spacing: 10) {
+                if let skate = store.nextSkate {
+                    NightHeaderView(nightName: skate.nightName, date: skate.date, startTime: skate.startTime)
+                    RsvpStatusBadge(status: skate.myRsvp)
+                    RsvpButtonRow(current: skate.myRsvp) { store.setRsvp($0) }
+                    JerseyBadge(assignment: skate.teamAssignment)
+                } else {
+                    NoSkateView()
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
-        .padding()
     }
 }
 
