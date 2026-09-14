@@ -13,12 +13,12 @@ struct ContentView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 if let skate = store.nextSkate {
                     NightHeaderView(nightName: skate.nightName, date: skate.date, startTime: skate.startTime)
-                    RsvpStatusBadge(status: skate.myRsvp)
 
                     if skate.myRsvp == .noResponse {
+                        RsvpStatusBadge(status: skate.myRsvp)
                         RsvpButtonRow(current: skate.myRsvp) { store.setRsvp($0) }
                     } else {
                         if let roster = skate.rosterStats {
@@ -27,6 +27,7 @@ struct ContentView: View {
                         if let team = skate.teamAssignment {
                             JerseyBadge(assignment: team)
                         }
+                        RsvpStatusBadge(status: skate.myRsvp)
                         RsvpActionArea(current: skate.myRsvp, onSelect: { store.setRsvp($0) }, isEditing: $isEditingRsvp)
                     }
 
@@ -43,7 +44,7 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal, 8)
-            .padding(.top, 4)
+            .padding(.top, -8)
             .padding(.bottom, 10)
         }
         // A new skate (or the phone re-pushing after a real edit elsewhere)

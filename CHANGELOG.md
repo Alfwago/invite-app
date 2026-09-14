@@ -3,6 +3,27 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-14 — watchOS: tighter header, RSVP badge moved down
+
+Another live-feedback pass: pull everything up so the night name sits
+closer to the system time, and move the colored RSVP status pill from
+right after the header down to just above "Change RSVP".
+
+- `NightHeaderView`: wordmark down from 26pt to 18pt tall (level with
+  the time, not its own banner row), tighter internal spacing.
+- `ContentView`: outer stack spacing 8 → 6, top padding 4 → -8 (a
+  small negative pull, checked on-device against the actual system
+  time position so it tightens up without the logo colliding with or
+  going under it).
+- Reordered the post-RSVP branch: roster bars → jersey → **RSVP
+  status pill → Change RSVP** (previously the pill sat right under
+  the header, before roster/jersey).
+
+Verified the same way as the last two passes — real device data
+("Thursday Old Fashioneds"), plus a temporary header-hide to bring
+the reordered bottom section above the fold for a screenshot,
+reverted before committing.
+
 ## 2026-09-14 — watchOS: wordmark header, reordered post-RSVP layout
 
 Follow-up to the roster-status/Change-RSVP pass, requested after

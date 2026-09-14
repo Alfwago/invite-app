@@ -9,11 +9,14 @@ struct NightHeaderView: View {
     let startTime: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
+            // Sized to sit level with the system time in the top-right —
+            // not a full banner row — so the night name is the first real
+            // line of content, right under it.
             Image("obhLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 26)
+                .frame(height: 18)
 
             Text(nightName)
                 .font(.headline)
