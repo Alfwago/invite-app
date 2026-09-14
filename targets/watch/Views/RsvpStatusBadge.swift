@@ -13,7 +13,7 @@ struct RsvpStatusBadge: View {
             .lineLimit(1)
             .foregroundStyle(.black.opacity(0.85))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, 8)
             .background(status.color, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

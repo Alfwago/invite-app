@@ -19,7 +19,7 @@ struct RsvpButtonRow: View {
                         .minimumScaleFactor(0.8)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 6)
                 }
                 .buttonStyle(.plain)
                 .background(
