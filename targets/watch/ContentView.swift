@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Main watch screen: next skate's night/date/time, current RSVP status as
 /// the dominant color-coded element, a one-tap Yes/No/Maybe row, and the
-/// jersey color badge (or "Teams not set yet").
+/// jersey color badge (or "Teams not set yet") — fed by PhoneConnector.
 struct ContentView: View {
     @StateObject private var store = NextSkateStore()
 
@@ -14,8 +14,16 @@ struct ContentView: View {
                     RsvpStatusBadge(status: skate.myRsvp)
                     RsvpButtonRow(current: skate.myRsvp) { store.setRsvp($0) }
                     JerseyBadge(assignment: skate.teamAssignment)
-                } else {
+                    if let errorMessage = store.errorMessage {
+                        Text(errorMessage)
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                    }
+                } else if store.hasReceivedData {
                     NoSkateView()
+                } else {
+                    WaitingForPhoneView()
                 }
             }
             .padding(.horizontal, 8)

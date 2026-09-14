@@ -3,6 +3,46 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-13 — watchOS companion, step 3: WatchConnectivity
+
+Not yet device-tested with a live login — see note below. Builds on
+steps 1–2.
+
+- **Watch -> phone**: an RSVP tap sends `{type: "rsvp", requestId,
+  eventId, status}` to the phone over WCSession (`sendMessage` when
+  reachable, `transferUserInfo` as a queued fallback otherwise).
+  `targets/watch/PhoneConnector.swift` owns the watch-side WCSession.
+- **Phone side**: a new local Expo Module,
+  `modules/watch-connectivity/` (`ExpoWatchConnectivity`), holds the
+  WCSession replyHandler open, fires `onRsvpRequest` into JS, and
+  completes the reply only once JS calls back. JS
+  (`src/hooks/useWatchConnectivity.ts`, wired into `app/_layout.tsx`
+  alongside `useNotificationHandling`) performs the RSVP through
+  `api.submitRsvp` — the same function `useRsvp` calls, not a new
+  path — then replies success/failure. On success it invalidates the
+  same query keys `useRsvp` does, so the phone UI updates too.
+- **Phone -> watch**: whenever Home's next skate / RSVP / jersey
+  changes, `useWatchConnectivity` pushes a `WatchPayload` to the watch
+  via `updateApplicationContext` — delivered even if the watch app
+  isn't running. The watch also reads any cached context on
+  activation, so a cold launch shows real data immediately instead of
+  waiting for a fresh push.
+- Watch UI: taps apply optimistically, then roll back with a small
+  red error line if the phone reports failure. Added a "Waiting for
+  iPhone…" state, distinct from "no skate scheduled", for before the
+  first payload ever arrives.
+
+**Verified**: both the watch and main app schemes build clean
+(including the new native module and its CocoaPods integration via
+`pod install`); `tsc --noEmit` and the existing `npm test` suite pass.
+The watch app correctly shows "Waiting for iPhone…" on a fresh
+install rather than crashing. **Not verified**: the live tap ->
+phone -> submitRsvp -> watch-update round trip, which needs a logged-in
+session — this sandbox has no touch-simulation tool (no `idb`, no
+accessibility access for UI scripting) to drive the login screen or
+tap the watch's Yes/No/Maybe row, so that needs your own device test
+(`npx expo start`, connect the dev client, log in, pair Watch app).
+
 ## 2026-09-13 — watchOS companion, step 2: main watch screen
 
 Not yet functional — RSVP taps update local state only, no phone sync yet

@@ -2,22 +2,55 @@ import Foundation
 
 /// Holds the watch's view of "my next skate" and applies RSVP taps.
 ///
-/// Step 2 (this file): taps update local state only, so the UI is fully
-/// testable before WatchConnectivity exists.
-/// Step 3 replaces the body of `setRsvp` with a message sent to the phone
-/// over WCSession, which calls the app's real `submitRsvp` (src/hooks/
-/// queries.ts) — the phone is the source of truth, not the watch. This
-/// view model's public surface (`nextSkate`, `setRsvp`) doesn't change, so
-/// the views built against it in step 2 don't either.
+/// Taps update local state immediately (optimistic — a wrist glance
+/// shouldn't wait on a network round trip), then go to the phone via
+/// PhoneConnector, which performs the real submitRsvp on the phone side.
+/// If that fails, the tap is rolled back and `errorMessage` is set.
 @MainActor
 final class NextSkateStore: ObservableObject {
     @Published private(set) var nextSkate: WatchNextSkate?
+    @Published private(set) var isPhoneReachable = false
+    @Published private(set) var errorMessage: String?
+    /// True once a payload has arrived from the phone (cached or live) —
+    /// distinguishes "hasn't synced yet" from "synced, nothing upcoming".
+    @Published private(set) var hasReceivedData = false
 
-    init(nextSkate: WatchNextSkate? = NextSkateStore.sample) {
+    private let connector: PhoneConnector
+    /// The status before an in-flight tap, restored if the phone reports
+    /// the RSVP couldn't be saved.
+    private var statusBeforeTap: WatchRsvpStatus?
+
+    init(connector: PhoneConnector = .shared, nextSkate: WatchNextSkate? = nil) {
+        self.connector = connector
         self.nextSkate = nextSkate
+
+        connector.onPayload = { [weak self] payload in
+            self?.hasReceivedData = true
+            self?.nextSkate = payload.nextSkate
+        }
+        connector.onReachabilityChange = { [weak self] reachable in
+            self?.isPhoneReachable = reachable
+        }
+        connector.onRsvpFailed = { [weak self] message in
+            guard let self else { return }
+            self.errorMessage = message
+            if let previous = self.statusBeforeTap {
+                self.applyLocally(previous)
+            }
+        }
+
+        connector.deliverCachedContextIfAny()
     }
 
     func setRsvp(_ status: WatchRsvpStatus) {
+        guard let skate = nextSkate else { return }
+        statusBeforeTap = skate.myRsvp
+        errorMessage = nil
+        applyLocally(status)
+        connector.sendRsvp(eventId: skate.eventId, status: status)
+    }
+
+    private func applyLocally(_ status: WatchRsvpStatus) {
         guard let skate = nextSkate else { return }
         nextSkate = WatchNextSkate(
             eventId: skate.eventId,
@@ -29,9 +62,8 @@ final class NextSkateStore: ObservableObject {
         )
     }
 
-    // Sample data for previews and for running the watch app standalone
-    // (no phone/WatchConnectivity yet) during steps 2. Step 3 replaces
-    // this default with `nil` and populates `nextSkate` from the phone.
+    // Sample data for previews and for exercising the UI without a phone
+    // connected (see #Preview blocks across targets/watch/Views/).
     static let sample = WatchNextSkate(
         eventId: 1,
         nightName: "Tuesday Night",

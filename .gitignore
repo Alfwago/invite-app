@@ -14,8 +14,11 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-ios/
-android/
+# Anchored to the repo root — unanchored "ios/"/"android/" would also
+# match modules/*/ios/, which is hand-written native module source, not
+# generated output.
+/ios/
+/android/
 
 # EAS local credentials (never commit — contains cert paths + passwords)
 credentials.json
