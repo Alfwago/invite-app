@@ -3,6 +3,56 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-14 — watchOS: roster status, "Change RSVP", OBH logo
+
+Requested after trying the app live: once the player has RSVP'd, show
+the skate's roster status (skaters/goalies filled, as bars); a
+"Change RSVP" button instead of the always-open Yes/No/Maybe row once
+already answered; the OBH puck logo somewhere on screen; scrolling
+explicitly embraced now that there's more to show.
+
+- `WatchRosterStats` (new shared model, `targets/_shared/
+  WatchModels.swift`) mirrors the slice of `RosterStats`
+  (src/api/types.ts) the watch needs: skaters, goalies, capacity,
+  goalies_needed, skater/goalie spots open, is_full.
+- `RosterStatusView` + `RosterFillBar`
+  (`targets/watch/Views/`): a Skaters bar and a Goalies bar, toned
+  green/amber/red by the *same* logic as the phone's roster tiles
+  (`src/roster.ts`'s `rosterHealth`, split into its two independent
+  halves and ported to Swift in `WatchDisplay.swift` — the phone
+  tones Skaters and Goalies separately, not with one shared value).
+  Shown once `myRsvp != .noResponse`, since it isn't specific to the
+  player before that.
+- `RsvpActionArea` replaces the always-visible `RsvpButtonRow` on the
+  main screen: before a response, the row is immediately tappable;
+  after, it collapses to "Change RSVP" (tap to reveal the row again)
+  — mirrors `RsvpControls.tsx`'s locked/editing pattern on the phone.
+- `NightHeaderView` now leads with the OBH puck logo (`assets/
+  icon.png`, added to the watch target via `images:` in
+  `expo-target.config.js`) next to the night name.
+- `useWatchConnectivity.ts`: `watchPayloadFromHome` now also sends
+  `rosterStats`, built the same null-key-omitting way as the rest of
+  the payload (WCSession's application context doesn't accept
+  NSNull).
+- Loosened the tight, no-scroll-required spacing from the earlier
+  layout pass — there's now more content than fits on the smallest
+  watch, and that's fine; a `Divider` separates RSVP/jersey from
+  roster.
+
+**Verified live**, not just build-verified — Metro was still
+connected to a real logged-in session from testing step 3, so this
+landed on real data: watch received a live push for "Thursday Old
+Fashioneds" (RSVP already YES, team Black) and correctly showed
+"Change RSVP" instead of the picker, matching the phone's own
+"GOING" / "You're on Black" state exactly. Confirmed the roster bars
+against the *same* live numbers the phone showed (8/21 skaters,
+amber; 1/2 goalies, red) by temporarily reordering them above the
+fold for a screenshot (reverted after) — real ScrollView clipping,
+not a rendering bug, is why they don't fit in a single unscrolled
+screenshot otherwise. Also temporarily forced the editing state to
+confirm the revealed Yes/No/Maybe row highlights the current
+selection correctly (reverted after).
+
 ## 2026-09-13 — watchOS companion, step 4: complication
 
 Not yet visually confirmed on a watch face — see note below. Builds on

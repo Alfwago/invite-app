@@ -12,6 +12,11 @@ module.exports = (config) => ({
     // expo-notifications plugin, assets/icon.png).
     $accent: "#e6b422",
   },
+  // The "OBH INVITES" puck logo, small in the header (NightHeaderView) —
+  // same source as the app icon (assets/icon.png).
+  images: {
+    obhLogo: "../../assets/icon.png",
+  },
   // WidgetKit, to call WidgetCenter.shared.reloadAllTimelines() after
   // writing fresh data for the complication (step 4) to pick up.
   frameworks: ["WidgetKit"],

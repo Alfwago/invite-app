@@ -32,6 +32,36 @@ public struct WatchTeamAssignment: Codable, Sendable, Equatable {
     }
 }
 
+/// The slice of `RosterStats` (src/api/types.ts) the watch shows once the
+/// player has RSVP'd — not before, since it isn't specific to them yet.
+public struct WatchRosterStats: Codable, Sendable, Equatable {
+    public let skaters: Int
+    public let goalies: Int
+    public let capacity: Int?
+    public let goaliesNeeded: Int?
+    public let skaterSpotsOpen: Int?
+    public let goalieSpotsOpen: Int?
+    public let isFull: Bool
+
+    public init(
+        skaters: Int,
+        goalies: Int,
+        capacity: Int?,
+        goaliesNeeded: Int?,
+        skaterSpotsOpen: Int?,
+        goalieSpotsOpen: Int?,
+        isFull: Bool
+    ) {
+        self.skaters = skaters
+        self.goalies = goalies
+        self.capacity = capacity
+        self.goaliesNeeded = goaliesNeeded
+        self.skaterSpotsOpen = skaterSpotsOpen
+        self.goalieSpotsOpen = goalieSpotsOpen
+        self.isFull = isFull
+    }
+}
+
 /// The slice of `EventSummary` (src/api/types.ts) the watch face needs for
 /// the viewer's next skate.
 public struct WatchNextSkate: Codable, Sendable, Equatable {
@@ -41,6 +71,7 @@ public struct WatchNextSkate: Codable, Sendable, Equatable {
     public let startTime: String? // HH:MM:SS, nil = no time set
     public let myRsvp: WatchRsvpStatus
     public let teamAssignment: WatchTeamAssignment?
+    public let rosterStats: WatchRosterStats?
 
     public init(
         eventId: Int,
@@ -48,7 +79,8 @@ public struct WatchNextSkate: Codable, Sendable, Equatable {
         date: String,
         startTime: String?,
         myRsvp: WatchRsvpStatus,
-        teamAssignment: WatchTeamAssignment?
+        teamAssignment: WatchTeamAssignment?,
+        rosterStats: WatchRosterStats? = nil
     ) {
         self.eventId = eventId
         self.nightName = nightName
@@ -56,6 +88,7 @@ public struct WatchNextSkate: Codable, Sendable, Equatable {
         self.startTime = startTime
         self.myRsvp = myRsvp
         self.teamAssignment = teamAssignment
+        self.rosterStats = rosterStats
     }
 
     /// Sample data — SwiftUI previews (watch app views) and the
@@ -66,7 +99,11 @@ public struct WatchNextSkate: Codable, Sendable, Equatable {
         date: "2026-09-15",
         startTime: "21:00:00",
         myRsvp: .yes,
-        teamAssignment: WatchTeamAssignment(team: "Gold", jersey: "Wear your gold jersey.")
+        teamAssignment: WatchTeamAssignment(team: "Gold", jersey: "Wear your gold jersey."),
+        rosterStats: WatchRosterStats(
+            skaters: 12, goalies: 1, capacity: 16, goaliesNeeded: 2,
+            skaterSpotsOpen: 4, goalieSpotsOpen: 1, isFull: false
+        )
     )
 }
 

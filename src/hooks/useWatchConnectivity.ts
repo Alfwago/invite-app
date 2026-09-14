@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import * as api from "@/src/api/endpoints";
-import type { HomeData } from "@/src/api/types";
+import type { HomeData, RosterStats } from "@/src/api/types";
 import {
   addRsvpRequestListener,
   respondToRsvpRequest,
@@ -89,6 +89,25 @@ function watchPayloadFromHome(data: HomeData): Record<string, unknown> {
       jersey: data.team_assignment.jersey,
     };
   }
+  // Roster status is shown on the watch once the player has responded —
+  // still sent unconditionally here so it's already on the watch the
+  // moment they tap, no second push needed.
+  if (skate.roster) nextSkate.rosterStats = rosterStatsPayload(skate.roster);
 
   return { nextSkate, updatedAt: new Date().toISOString() };
+}
+
+function rosterStatsPayload(roster: RosterStats): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    skaters: roster.skaters,
+    goalies: roster.goalies,
+    isFull: roster.is_full,
+  };
+  // Omit null-valued keys, not send `null` — see the nextSkate comment
+  // above; WCSession's context doesn't accept NSNull.
+  if (roster.capacity != null) out.capacity = roster.capacity;
+  if (roster.goalies_needed != null) out.goaliesNeeded = roster.goalies_needed;
+  if (roster.skater_spots_open != null) out.skaterSpotsOpen = roster.skater_spots_open;
+  if (roster.goalie_spots_open != null) out.goalieSpotsOpen = roster.goalie_spots_open;
+  return out;
 }

@@ -47,6 +47,48 @@ extension WatchRsvpStatus {
     }
 }
 
+extension WatchRosterStats {
+    /// Mirrors src/roster.ts's `Health` — green/amber/red read on a roster
+    /// stat, reused by both bars below.
+    enum Health {
+        case good, caution, bad
+
+        var color: Color {
+            switch self {
+            case .good: return Color(red: 0x33 / 255, green: 0xd1 / 255, blue: 0x7a / 255) // colors.green
+            case .caution: return Color(red: 0xf0 / 255, green: 0xa6 / 255, blue: 0x3a / 255) // colors.amber
+            case .bad: return Color(red: 0xff / 255, green: 0x5a / 255, blue: 0x5f / 255) // colors.red
+            }
+        }
+    }
+
+    /// Mirrors src/roster.ts's `rosterHealth`, split into its two
+    /// independent halves — the phone tones the Skaters and Goalies tiles
+    /// separately, not with one shared value.
+    var skaterTone: Health {
+        if isFull { return .good }
+        if let skaterSpotsOpen, skaterSpotsOpen > 0 { return .caution }
+        return .good
+    }
+
+    var goalieTone: Health {
+        (goalieSpotsOpen ?? 0) > 0 ? .bad : .good
+    }
+
+    /// Mirrors src/roster.ts's `fillPct` — nil when capacity is unknown.
+    var skaterFillPct: Double? {
+        guard let capacity, capacity > 0 else { return nil }
+        return Double(skaters) / Double(capacity) * 100
+    }
+
+    /// No phone equivalent (the website/app only bar the skaters fill) —
+    /// added here since the watch shows a Goalies bar too.
+    var goalieFillPct: Double? {
+        guard let goaliesNeeded, goaliesNeeded > 0 else { return nil }
+        return Double(goalies) / Double(goaliesNeeded) * 100
+    }
+}
+
 extension WatchTeamAssignment {
     /// Gold ≈ league gold; Black ≈ a light neutral gray so it reads on a
     /// black watch face — same reasoning as TeamAssignmentCard.tsx.

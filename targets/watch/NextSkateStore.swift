@@ -63,7 +63,8 @@ final class NextSkateStore: ObservableObject {
             date: skate.date,
             startTime: skate.startTime,
             myRsvp: status,
-            teamAssignment: skate.teamAssignment
+            teamAssignment: skate.teamAssignment,
+            rosterStats: skate.rosterStats
         ))
     }
 

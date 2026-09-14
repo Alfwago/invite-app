@@ -1,22 +1,33 @@
 import SwiftUI
 
-/// Night name + date/time of the next skate — top of the main screen.
+/// OBH logo + night name + date/time of the next skate — top of the main
+/// screen.
 struct NightHeaderView: View {
     let nightName: String
     let date: String
     let startTime: String?
 
     var body: some View {
-        VStack(spacing: 2) {
-            Text(nightName)
-                .font(.headline)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Text(WatchDateFormatting.dateAndTime(date: date, startTime: startTime))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        HStack(spacing: 6) {
+            Image("obhLogo")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 22, height: 22)
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(nightName)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(WatchDateFormatting.dateAndTime(date: date, startTime: startTime))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
-        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
