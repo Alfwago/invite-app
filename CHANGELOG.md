@@ -3,6 +3,37 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-14 — watchOS: app icon, complication roster ring
+
+- **Watch app icon**: the `watch` target had never had one — added via
+  `icon:` in `expo-target.config.js`, same source as the main iOS app
+  icon (`assets/icon.png`, the puck/"OBH INVITES" mark), not the
+  wordmark used in the header (illegible at icon sizes). This is the
+  target's icon, not the complication's — the step-4 attempt to give
+  the *complication* an icon failed with "did not have any applicable
+  content"; that error turned out to be specific to widget-extension
+  targets (which don't use a full multi-size AppIcon set the way an
+  `application`-type target like `watch` does), not a problem with the
+  source image or icon config in general — confirmed by this one
+  succeeding cleanly with the identical mechanism.
+- **Complication ring**: the circular complication (`accessoryCircular`)
+  now wraps its RSVP-icon + jersey-letter content in a `Gauge` styled
+  `.accessoryCircularCapacity` — a colored ring around the edge showing
+  roster fullness (skaters filled / capacity, the same number the
+  phone's own FillBar and the watch app's "Skaters" bar use), toned
+  the same green/amber/red as everywhere else roster health shows up.
+
+Verified: the icon builds correctly as a proper watchOS AppIcon set
+(single 1024×1024 "universal" image, confirmed in the generated
+Contents.json) and the app still launches and runs normally. The ring
+can't be added to a watch face in this sandbox (no touch input), so
+its rendering was verified with a temporary harness in the watch
+app's own ContentView — an exact copy of the complication's circular
+view fed three synthetic states (38% orange, 100% green "roster
+full", 0% red) — confirmed the ring fills proportionally and tints
+correctly, screenshotted, then reverted (`git diff` clean on that
+file before committing).
+
 ## 2026-09-14 — watchOS: RSVP refuses to submit when unreachable
 
 Fixes the top finding from today's advisory-board review (Amy and

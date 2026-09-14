@@ -49,9 +49,23 @@ struct NextSkateComplicationView: View {
         }
     }
 
+    // Ring around the circular complication: roster fullness (skaters
+    // filled / capacity — the same number the phone's own single FillBar
+    // and the watch app's "Skaters" bar use), toned the same green/amber/
+    // red as everywhere else roster health shows up.
+    private var rosterFraction: Double {
+        guard let pct = entry.skate?.rosterStats?.skaterFillPct else { return 0 }
+        return min(max(pct / 100, 0), 1)
+    }
+
+    private var rosterTint: Color {
+        entry.skate?.rosterStats?.skaterTone.color ?? .gray
+    }
+
     private var circular: some View {
-        ZStack {
-            AccessoryWidgetBackground()
+        Gauge(value: rosterFraction) {
+            EmptyView()
+        } currentValueLabel: {
             VStack(spacing: 1) {
                 Image(systemName: entry.skate?.myRsvp.symbolName ?? "calendar")
                     .font(.title3)
@@ -62,8 +76,10 @@ struct NextSkateComplicationView: View {
                         .foregroundStyle(entry.skate?.teamAssignment?.teamColor ?? .secondary)
                 }
             }
+            .widgetAccentable()
         }
-        .widgetAccentable()
+        .gaugeStyle(.accessoryCircularCapacity)
+        .tint(rosterTint)
     }
 
     private var rectangular: some View {

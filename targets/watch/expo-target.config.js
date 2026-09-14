@@ -3,6 +3,10 @@ module.exports = (config) => ({
   type: "watch",
   name: "OBH Invites Watch",
   displayName: "OBH Invites",
+  // Home Screen / Settings / Notification Center icon — same source as
+  // the main iOS app icon, not the wordmark (which has "INVITES" text
+  // that's illegible at icon sizes; see NightHeaderView for that one).
+  icon: "../../assets/icon.png",
   // watchOS 10 brought the vertical-paging TabView / redesigned navigation
   // this UI is built around (see step 2); the only device this runs on is
   // the developer's own, so there's no back-compat reason to go lower.
