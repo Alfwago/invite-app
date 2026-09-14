@@ -3,6 +3,35 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-14 — watchOS: wordmark header, reordered post-RSVP layout
+
+Follow-up to the roster-status/Change-RSVP pass, requested after
+seeing it live: swap the app-icon graphic for the actual header
+wordmark, use the unused top-left corner (the system time owns the
+top-right) instead of a small inline icon, and reorder the
+post-RSVP screen to lead with the roster bars.
+
+- `NightHeaderView`: the wordmark (`assets/brand/wordmark.png` — the
+  same image `app/(tabs)/index.tsx` uses for the phone Home screen
+  header, not `assets/icon.png`) now sits alone at 26pt height in the
+  top-left, with the night name/date below it — previously a 22pt
+  icon inline with the night name.
+- `expo-target.config.js`: `images.obhLogo` source updated to match.
+- Reordered the post-RSVP screen in `ContentView.swift`: status badge
+  → **roster status bars** → jersey badge (only if a team's been
+  assigned) → Change RSVP. Previously: badge → Change RSVP → jersey
+  (always, with a "Teams not set yet" placeholder) → roster.
+- `JerseyBadge` simplified to take a required (non-optional)
+  assignment — the "show nothing when not available" behavior now
+  lives at the call site (`if let team = skate.teamAssignment`)
+  instead of a placeholder-text branch inside the view.
+
+Verified on the simulator with the same live "Thursday Old
+Fashioneds" data as before. Confirmed the reordered roster → jersey →
+Change RSVP block by temporarily hiding the header/badge to bring it
+above the fold for a screenshot (reverted after, `git diff` clean
+before committing).
+
 ## 2026-09-14 — watchOS: roster status, "Change RSVP", OBH logo
 
 Requested after trying the app live: once the player has RSVP'd, show

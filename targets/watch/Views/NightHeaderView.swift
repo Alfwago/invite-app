@@ -1,31 +1,29 @@
 import SwiftUI
 
-/// OBH logo + night name + date/time of the next skate — top of the main
-/// screen.
+/// Top of the main screen: the OBH wordmark in the otherwise-unused
+/// top-left corner (the system time already owns the top-right), then the
+/// night name + date/time below, full width.
 struct NightHeaderView: View {
     let nightName: String
     let date: String
     let startTime: String?
 
     var body: some View {
-        HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 3) {
             Image("obhLogo")
                 .resizable()
-                .scaledToFill()
-                .frame(width: 22, height: 22)
-                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .scaledToFit()
+                .frame(height: 26)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(nightName)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Text(WatchDateFormatting.dateAndTime(date: date, startTime: startTime))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
+            Text(nightName)
+                .font(.headline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(WatchDateFormatting.dateAndTime(date: date, startTime: startTime))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

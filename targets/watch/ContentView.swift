@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// Main watch screen: OBH logo + next skate's night/date/time, current
-/// RSVP status as the dominant color-coded element, a one-tap Yes/No/Maybe
-/// row (a "Change RSVP" button once already answered), the jersey color
-/// badge (or "Teams not set yet"), and — once the player has RSVP'd —
-/// roster status bars. Fed by PhoneConnector; scrolls once content
-/// overflows a single screen.
+/// Main watch screen: OBH wordmark + next skate's night/date/time, current
+/// RSVP status as the dominant color-coded element, then either:
+///  - not yet responded: the Yes/No/Maybe row, immediately tappable; or
+///  - already responded: roster status bars, the jersey badge (only when
+///    a team's been assigned — nothing shown otherwise), then a
+///    "Change RSVP" button (tap to reveal the row again).
+/// Fed by PhoneConnector; scrolls once content overflows a single screen.
 struct ContentView: View {
     @StateObject private var store = NextSkateStore()
     @State private var isEditingRsvp = false
@@ -16,12 +17,17 @@ struct ContentView: View {
                 if let skate = store.nextSkate {
                     NightHeaderView(nightName: skate.nightName, date: skate.date, startTime: skate.startTime)
                     RsvpStatusBadge(status: skate.myRsvp)
-                    RsvpActionArea(current: skate.myRsvp, onSelect: { store.setRsvp($0) }, isEditing: $isEditingRsvp)
-                    JerseyBadge(assignment: skate.teamAssignment)
 
-                    if skate.myRsvp != .noResponse, let roster = skate.rosterStats {
-                        Divider()
-                        RosterStatusView(roster: roster)
+                    if skate.myRsvp == .noResponse {
+                        RsvpButtonRow(current: skate.myRsvp) { store.setRsvp($0) }
+                    } else {
+                        if let roster = skate.rosterStats {
+                            RosterStatusView(roster: roster)
+                        }
+                        if let team = skate.teamAssignment {
+                            JerseyBadge(assignment: team)
+                        }
+                        RsvpActionArea(current: skate.myRsvp, onSelect: { store.setRsvp($0) }, isEditing: $isEditingRsvp)
                     }
 
                     if let errorMessage = store.errorMessage {
