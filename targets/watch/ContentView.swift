@@ -17,6 +17,15 @@ struct ContentView: View {
                 if let skate = store.nextSkate {
                     NightHeaderView(nightName: skate.nightName, date: skate.date, startTime: skate.startTime)
 
+                    // Ambient, before any tap — not just an error after one
+                    // fails. setRsvp() already refuses to submit while this
+                    // is true, so the user should know why before trying.
+                    if !store.isPhoneReachable {
+                        Text("iPhone not connected")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
                     if skate.myRsvp == .noResponse {
                         RsvpStatusBadge(status: skate.myRsvp)
                         RsvpButtonRow(current: skate.myRsvp) { store.setRsvp($0) }

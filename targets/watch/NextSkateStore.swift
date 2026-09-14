@@ -3,10 +3,13 @@ import WidgetKit
 
 /// Holds the watch's view of "my next skate" and applies RSVP taps.
 ///
-/// Taps update local state immediately (optimistic — a wrist glance
-/// shouldn't wait on a network round trip), then go to the phone via
-/// PhoneConnector, which performs the real submitRsvp on the phone side.
-/// If that fails, the tap is rolled back and `errorMessage` is set.
+/// A tap only proceeds if the phone is reachable right now — see
+/// `setRsvp`. When it is, local state updates immediately (optimistic — a
+/// wrist glance shouldn't wait on a network round trip), then goes to the
+/// phone via PhoneConnector, which performs the real submitRsvp on the
+/// phone side. If that fails, the tap is rolled back and `errorMessage`
+/// is set. There's no queued/offline path — an unreachable phone means
+/// the tap is refused up front, not silently uncertain later.
 ///
 /// Every real change to `nextSkate` is also written to WatchSharedStorage
 /// and triggers a complication reload (step 4), so the watch face stays
@@ -49,6 +52,15 @@ final class NextSkateStore: ObservableObject {
 
     func setRsvp(_ status: WatchRsvpStatus) {
         guard let skate = nextSkate else { return }
+        // Checked here, before touching anything, so an unreachable phone
+        // never shows an optimistic update that's about to be reverted —
+        // it just never happens. (PhoneConnector re-checks live reachability
+        // itself before sending; this is a fast, ambient pre-check, not the
+        // sole guard — see its doc comment for why there's no queued path.)
+        guard isPhoneReachable else {
+            errorMessage = "Can't reach iPhone — try again when nearby."
+            return
+        }
         statusBeforeTap = skate.myRsvp
         errorMessage = nil
         applyLocally(status)

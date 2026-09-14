@@ -138,11 +138,11 @@ private class SessionDelegateProxy: NSObject, WCSessionDelegate {
     module?.handleRsvpMessage(message, replyHandler: replyHandler)
   }
 
-  // transferUserInfo fallback (used when the watch sends a tap while the
-  // phone isn't reachable) has no reply handler — best-effort, applied the
-  // same way a live message would be, but with no way to tell the watch
-  // whether it succeeded.
-  func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-    module?.handleRsvpMessage(userInfo) { _ in }
-  }
+  // No didReceiveUserInfo handler — deliberately. The watch used to fall
+  // back to transferUserInfo when unreachable, queuing the tap for later
+  // delivery, but that path has no reply channel: a real failure had no
+  // way back to the watch, so the optimistic tap just stood, silently
+  // wrong. The watch now refuses to submit at all when unreachable
+  // (PhoneConnector.sendRsvp), so sendMessage — which always replies — is
+  // the only RSVP delivery path.
 }

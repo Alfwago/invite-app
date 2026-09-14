@@ -3,6 +3,56 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-14 — watchOS: RSVP refuses to submit when unreachable
+
+Fixes the top finding from today's advisory-board review (Amy and
+Logan independently found the same bug from the UX and architecture
+angles — see `BoardMeetingNotes.md`): when the phone wasn't reachable
+at tap time, the watch fell back to `transferUserInfo`, which has no
+reply channel. A real failure (event locked, roster full, server
+error) had no way back to the watch, so the optimistic tap just stood
+— the watch could show a confirmed "Yes" that was never saved, with
+no self-correction.
+
+Decision (discussed with the developer): rather than making the
+watch information-only, or trying to hand off to the phone app
+(watchOS has no way to force-launch the phone app — Handoff only
+places a tappable icon on the phone, doesn't fix reachability, and
+still requires a second manual tap), keep one-tap RSVP but make it
+live-only:
+
+- `PhoneConnector.sendRsvp`: removed the `transferUserInfo` fallback
+  entirely. `sendMessage` (which always replies) is now the only
+  delivery path; unreachable means an immediate, honest
+  "Can't reach iPhone — try again when nearby." — never silence.
+- `NextSkateStore.setRsvp`: checks `isPhoneReachable` *before*
+  touching anything, so an unreachable phone never shows an
+  optimistic update that's about to be reverted — it just never
+  happens.
+- `ContentView`: surfaces `isPhoneReachable` ambiently (a small
+  "iPhone not connected" line near the RSVP controls) — this was
+  already tracked and published, per Amy's finding, just never shown.
+  Now the user knows before tapping, not just after a failed one.
+- `ExpoWatchConnectivityModule.swift` (phone side): removed the now-
+  dead `didReceiveUserInfo` handler that used to receive the queued
+  fallback with a discarded reply closure.
+
+**Verified live, with one honest caveat.** Confirmed the reachable
+happy path still works correctly against real data (a different live
+event this time — "Tuesday Titans," roster full 20/20 skaters + 2/2
+goalies, first time the "Roster full" green state was seen live).
+Tried to verify the unreachable path by shutting down the phone
+simulator entirely (confirmed via watchOS's own system disconnected
+icon) — but `WCSession.isReachable`, read directly by the watch app
+on a fresh activation, still reported `true`. This looks like a
+known limitation of simulator-to-simulator WatchConnectivity (no real
+Bluetooth/proximity, so "reachability" isn't faithfully modeled)
+rather than a bug in this code — the guard is a straightforward
+`session.isReachable` check, the same property the *old* code already
+read at the same call site, just with a different (correct) else
+branch now. Could not confirm the "iPhone not connected" indicator or
+the tap-refusal live; that needs a real device.
+
 ## 2026-09-14 — watchOS: tighter header, RSVP badge moved down
 
 Another live-feedback pass: pull everything up so the night name sits

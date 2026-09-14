@@ -38,9 +38,17 @@ final class PhoneConnector: NSObject {
         apply(context)
     }
 
+    /// Live-only, by design: `sendMessage` is the sole delivery path
+    /// because it's the only one with a reply. An earlier version fell
+    /// back to `transferUserInfo` when unreachable — queued for delivery
+    /// next time the phone woke — but that path has no reply channel, so
+    /// a real failure (event locked, roster full, server error) had no
+    /// way back to the watch and the optimistic tap just stood, silently
+    /// wrong. Refusing to queue means every tap is either confirmed or
+    /// visibly failed, never uncertain.
     func sendRsvp(eventId: Int, status: WatchRsvpStatus) {
-        guard let session, WCSession.isSupported() else {
-            onRsvpFailed?("Watch Connectivity isn't supported.")
+        guard let session, WCSession.isSupported(), session.isReachable else {
+            onRsvpFailed?("Can't reach iPhone — try again when nearby.")
             return
         }
         let message: [String: Any] = [
@@ -49,14 +57,6 @@ final class PhoneConnector: NSObject {
             "eventId": eventId,
             "status": status.rawValue,
         ]
-
-        guard session.isReachable else {
-            // Phone app isn't foregrounded — queue for delivery next time
-            // it wakes, rather than failing the tap outright. There's no
-            // reply for this path, so the optimistic UI state stands.
-            session.transferUserInfo(message)
-            return
-        }
 
         session.sendMessage(message, replyHandler: { [weak self] reply in
             let success = reply["success"] as? Bool ?? false
