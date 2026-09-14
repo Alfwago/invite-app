@@ -18,7 +18,8 @@
       "associatedDomains": [
         "applinks:invites.falcon83.com",
         "applinks:test-invites.falcon83.com"
-      ]
+      ],
+      "appleTeamId": "8977MZW8RA"
     },
     "android": {
       "package": "com.falcon83.obhinvites",
@@ -68,7 +69,8 @@
         {
           "color": "#e6b422"
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true

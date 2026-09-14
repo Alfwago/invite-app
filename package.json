@@ -12,6 +12,7 @@
     "test": "node --test --experimental-strip-types \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/slider": "5.0.1",
     "@tanstack/react-query": "^5.90.0",

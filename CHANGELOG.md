@@ -3,6 +3,27 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-13 — watchOS companion, step 1: target scaffold (in progress)
+
+Not yet functional — this is the Xcode plumbing only, done first so later
+steps build on a working target.
+
+- Added a `watch` Xcode target (`OBH Invites Watch`) via the
+  `@bacons/apple-targets` Expo config plugin, so `expo prebuild --clean`
+  regenerates it instead of losing it. Source lives in `targets/watch/`
+  (committed); the generated `ios/` project is unaffected in git, as before.
+- `targets/_shared/WatchModels.swift`: Swift mirrors of `RsvpStatus`,
+  `TeamAssignment`, and the next-skate slice of `EventSummary`
+  (`src/api/types.ts`), linked into the main app, watch app, and (later)
+  complication target via the plugin's `_shared` convention.
+- Placeholder watch screen only, to prove the target builds and links the
+  shared types. Verified: watch scheme builds clean, main app scheme still
+  builds clean (embeds the watch app), both launch on a paired iPhone
+  16e + Apple Watch Series 11 (46mm) simulator pair.
+- Installed the `apple-targets` agent skill (`.agents/skills/`,
+  `skills-lock.json`) — per-target Swift reference docs for the
+  WatchConnectivity and WidgetKit complication work in later steps.
+
 ## 2026-09-13 — Team Generator: Lock Teams (branch work, not merged)
 
 Paired with `invite-server` `0.24.0` (server released and live on prod;
