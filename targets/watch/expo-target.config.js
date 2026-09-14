@@ -12,4 +12,13 @@ module.exports = (config) => ({
     // expo-notifications plugin, assets/icon.png).
     $accent: "#e6b422",
   },
+  // WidgetKit, to call WidgetCenter.shared.reloadAllTimelines() after
+  // writing fresh data for the complication (step 4) to pick up.
+  frameworks: ["WidgetKit"],
+  // Shared with targets/watch-widget only (see its expo-target.config.js
+  // and targets/_shared/WatchSharedStorage.swift) — App Groups don't cross
+  // devices, so this has nothing to do with the phone.
+  entitlements: {
+    "com.apple.security.application-groups": ["group.com.falcon83.obhinvites.watch"],
+  },
 });

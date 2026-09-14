@@ -57,6 +57,17 @@ public struct WatchNextSkate: Codable, Sendable, Equatable {
         self.myRsvp = myRsvp
         self.teamAssignment = teamAssignment
     }
+
+    /// Sample data — SwiftUI previews (watch app views) and the
+    /// complication's placeholder/gallery snapshot (step 4), never real.
+    public static let preview = WatchNextSkate(
+        eventId: 1,
+        nightName: "Tuesday Night",
+        date: "2026-09-15",
+        startTime: "21:00:00",
+        myRsvp: .yes,
+        teamAssignment: WatchTeamAssignment(team: "Gold", jersey: "Wear your gold jersey.")
+    )
 }
 
 /// Top-level payload the phone pushes to the watch (WatchConnectivity

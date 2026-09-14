@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 /// Holds the watch's view of "my next skate" and applies RSVP taps.
 ///
@@ -6,6 +7,10 @@ import Foundation
 /// shouldn't wait on a network round trip), then go to the phone via
 /// PhoneConnector, which performs the real submitRsvp on the phone side.
 /// If that fails, the tap is rolled back and `errorMessage` is set.
+///
+/// Every real change to `nextSkate` is also written to WatchSharedStorage
+/// and triggers a complication reload (step 4), so the watch face stays
+/// in sync with whatever this screen is showing.
 @MainActor
 final class NextSkateStore: ObservableObject {
     @Published private(set) var nextSkate: WatchNextSkate?
@@ -26,7 +31,7 @@ final class NextSkateStore: ObservableObject {
 
         connector.onPayload = { [weak self] payload in
             self?.hasReceivedData = true
-            self?.nextSkate = payload.nextSkate
+            self?.update(payload.nextSkate)
         }
         connector.onReachabilityChange = { [weak self] reachable in
             self?.isPhoneReachable = reachable
@@ -52,24 +57,22 @@ final class NextSkateStore: ObservableObject {
 
     private func applyLocally(_ status: WatchRsvpStatus) {
         guard let skate = nextSkate else { return }
-        nextSkate = WatchNextSkate(
+        update(WatchNextSkate(
             eventId: skate.eventId,
             nightName: skate.nightName,
             date: skate.date,
             startTime: skate.startTime,
             myRsvp: status,
             teamAssignment: skate.teamAssignment
-        )
+        ))
     }
 
-    // Sample data for previews and for exercising the UI without a phone
-    // connected (see #Preview blocks across targets/watch/Views/).
-    static let sample = WatchNextSkate(
-        eventId: 1,
-        nightName: "Tuesday Night",
-        date: "2026-09-15",
-        startTime: "21:00:00",
-        myRsvp: .noResponse,
-        teamAssignment: WatchTeamAssignment(team: "Gold", jersey: "Wear your gold jersey.")
-    )
+    /// The one place `nextSkate` actually changes for a real (non-preview)
+    /// update — keeps the complication in sync with whatever this causes
+    /// the main screen to show.
+    private func update(_ skate: WatchNextSkate?) {
+        nextSkate = skate
+        WatchSharedStorage.save(WatchPayload(nextSkate: skate))
+        WidgetCenter.shared.reloadAllTimelines()
+    }
 }

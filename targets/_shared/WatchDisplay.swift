@@ -32,6 +32,19 @@ extension WatchRsvpStatus {
         case .noResponse: return "No Response"
         }
     }
+
+    /// SF Symbol used by the complication (step 4) — system-tinted on
+    /// accented/vibrant watch faces, full `color` above only shows through
+    /// on faces that render complications in full color.
+    var symbolName: String {
+        switch self {
+        case .yes: return "checkmark.circle.fill"
+        case .no: return "xmark.circle.fill"
+        case .maybe: return "questionmark.circle.fill"
+        case .waitlist: return "list.number"
+        case .noResponse: return "circle.dashed"
+        }
+    }
 }
 
 extension WatchTeamAssignment {
@@ -56,6 +69,13 @@ enum WatchDateFormatting {
             return dateText
         }
         return "\(dateText) · \(displayTimeFormatter.string(from: time))"
+    }
+
+    /// "2026-09-15" -> "Tue" — the compact form the inline complication
+    /// (step 4) uses; there's no room there for a full night name.
+    static func shortWeekday(date: String) -> String? {
+        guard let day = isoDateFormatter.date(from: date) else { return nil }
+        return shortWeekdayFormatter.string(from: day)
     }
 
     // Date-only formatters are pinned to UTC so parsing/formatting a bare
@@ -86,6 +106,13 @@ enum WatchDateFormatting {
     private static let displayTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "h:mm a"
+        return f
+    }()
+
+    private static let shortWeekdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE"
+        f.timeZone = TimeZone(identifier: "UTC")
         return f
     }()
 }

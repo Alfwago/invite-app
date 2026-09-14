@@ -3,6 +3,52 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-13 — watchOS companion, step 4: complication
+
+Not yet visually confirmed on a watch face — see note below. Builds on
+steps 1–3.
+
+- New target `targets/watch-widget/` (`OBH Invites Complication`,
+  `type: "watch-widget"`) — a WidgetKit extension embedded in the
+  watch app, supporting all four accessory families: circular,
+  rectangular, inline, corner. Shows the RSVP status icon/color and
+  jersey team letter/name; a neutral "No Skate Scheduled" state when
+  there's nothing upcoming.
+- `targets/_shared/WatchSharedStorage.swift`: App Group
+  (`group.com.falcon83.obhinvites.watch`) UserDefaults read/write for
+  the `WatchPayload` — shared between the watch app and the
+  complication only (App Groups don't cross devices, so this has
+  nothing to do with the phone). `NextSkateStore` now writes through
+  it and calls `WidgetCenter.shared.reloadAllTimelines()` on every
+  real change (a live payload, or a tap's optimistic update/rollback).
+- Added `symbolName` (SF Symbol per RSVP status) and `shortWeekday`
+  to the shared `WatchDisplay.swift` helpers, and moved the one
+  sample/preview `WatchNextSkate` from the watch app into
+  `WatchModels.swift` as `.preview` so both the watch UI's previews
+  and the complication's placeholder/gallery snapshot use the same
+  one.
+- **A real bug caught and fixed**: the complication's default bundle
+  identifier (`com.falcon83.obhinvites.watch-widget`, a sibling of the
+  watch app) doesn't nest under the watch app's own bundle id
+  (`com.falcon83.obhinvites.watch`) the way an embedded extension
+  must — the simulator refused to install with "Mismatched bundle
+  IDs" until it was set explicitly to
+  `com.falcon83.obhinvites.watch.widget`.
+
+**Verified**: all three schemes (main app, watch app, complication)
+build clean; the complication installs as a properly embedded
+extension (confirmed via the simulator's app-group container listing)
+and the watch app itself shows no regression. Wrote a standalone
+Swift check (outside the Xcode project, compiled with plain `swiftc`)
+that round-trips a `WatchPayload` — including the nil-`nextSkate`
+case — through the exact `WatchSharedStorage` code the app uses: pass.
+**Not verified**: what the complication actually looks like pinned to
+a watch face. That requires either Xcode's Canvas or manually adding
+it to a face in the Simulator (long-press the face → Edit → swipe to
+complications → tap a slot → "OBH Invites"), both of which need
+interactive/GUI access this sandbox doesn't have — same category of
+gap as steps 2's tap-gesture and 3's login round trip.
+
 ## 2026-09-13 — watchOS companion, step 3: WatchConnectivity
 
 Not yet device-tested with a live login — see note below. Builds on
