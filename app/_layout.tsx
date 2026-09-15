@@ -16,6 +16,7 @@ import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
 import { Loading } from "@/src/components/ui";
 import { keys } from "@/src/hooks/queries";
+import { useWatchConnectivity } from "@/src/hooks/useWatchConnectivity";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
 import { colors } from "@/src/theme";
 
@@ -127,6 +128,7 @@ function RootNavigator() {
   const router = useRouter();
 
   useNotificationHandling();
+  useWatchConnectivity();
 
   useEffect(() => {
     if (!ready) return;

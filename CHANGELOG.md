@@ -28,6 +28,318 @@ in this session — see PICKUP_NOTES-equivalent conversation notes.
   opens the existing `/app` APK page; iOS has no button yet (no live store
   URL to link to).
 
+## 2026-09-14 — watchOS: app icon, complication roster ring
+
+- **Watch app icon**: the `watch` target had never had one — added via
+  `icon:` in `expo-target.config.js`, same source as the main iOS app
+  icon (`assets/icon.png`, the puck/"OBH INVITES" mark), not the
+  wordmark used in the header (illegible at icon sizes). This is the
+  target's icon, not the complication's — the step-4 attempt to give
+  the *complication* an icon failed with "did not have any applicable
+  content"; that error turned out to be specific to widget-extension
+  targets (which don't use a full multi-size AppIcon set the way an
+  `application`-type target like `watch` does), not a problem with the
+  source image or icon config in general — confirmed by this one
+  succeeding cleanly with the identical mechanism.
+- **Complication ring**: the circular complication (`accessoryCircular`)
+  now wraps its RSVP-icon + jersey-letter content in a `Gauge` styled
+  `.accessoryCircularCapacity` — a colored ring around the edge showing
+  roster fullness (skaters filled / capacity, the same number the
+  phone's own FillBar and the watch app's "Skaters" bar use), toned
+  the same green/amber/red as everywhere else roster health shows up.
+
+Verified: the icon builds correctly as a proper watchOS AppIcon set
+(single 1024×1024 "universal" image, confirmed in the generated
+Contents.json) and the app still launches and runs normally. The ring
+can't be added to a watch face in this sandbox (no touch input), so
+its rendering was verified with a temporary harness in the watch
+app's own ContentView — an exact copy of the complication's circular
+view fed three synthetic states (38% orange, 100% green "roster
+full", 0% red) — confirmed the ring fills proportionally and tints
+correctly, screenshotted, then reverted (`git diff` clean on that
+file before committing).
+
+## 2026-09-14 — watchOS: RSVP refuses to submit when unreachable
+
+Fixes the top finding from today's advisory-board review (Amy and
+Logan independently found the same bug from the UX and architecture
+angles — see `BoardMeetingNotes.md`): when the phone wasn't reachable
+at tap time, the watch fell back to `transferUserInfo`, which has no
+reply channel. A real failure (event locked, roster full, server
+error) had no way back to the watch, so the optimistic tap just stood
+— the watch could show a confirmed "Yes" that was never saved, with
+no self-correction.
+
+Decision (discussed with the developer): rather than making the
+watch information-only, or trying to hand off to the phone app
+(watchOS has no way to force-launch the phone app — Handoff only
+places a tappable icon on the phone, doesn't fix reachability, and
+still requires a second manual tap), keep one-tap RSVP but make it
+live-only:
+
+- `PhoneConnector.sendRsvp`: removed the `transferUserInfo` fallback
+  entirely. `sendMessage` (which always replies) is now the only
+  delivery path; unreachable means an immediate, honest
+  "Can't reach iPhone — try again when nearby." — never silence.
+- `NextSkateStore.setRsvp`: checks `isPhoneReachable` *before*
+  touching anything, so an unreachable phone never shows an
+  optimistic update that's about to be reverted — it just never
+  happens.
+- `ContentView`: surfaces `isPhoneReachable` ambiently (a small
+  "iPhone not connected" line near the RSVP controls) — this was
+  already tracked and published, per Amy's finding, just never shown.
+  Now the user knows before tapping, not just after a failed one.
+- `ExpoWatchConnectivityModule.swift` (phone side): removed the now-
+  dead `didReceiveUserInfo` handler that used to receive the queued
+  fallback with a discarded reply closure.
+
+**Verified live, with one honest caveat.** Confirmed the reachable
+happy path still works correctly against real data (a different live
+event this time — "Tuesday Titans," roster full 20/20 skaters + 2/2
+goalies, first time the "Roster full" green state was seen live).
+Tried to verify the unreachable path by shutting down the phone
+simulator entirely (confirmed via watchOS's own system disconnected
+icon) — but `WCSession.isReachable`, read directly by the watch app
+on a fresh activation, still reported `true`. This looks like a
+known limitation of simulator-to-simulator WatchConnectivity (no real
+Bluetooth/proximity, so "reachability" isn't faithfully modeled)
+rather than a bug in this code — the guard is a straightforward
+`session.isReachable` check, the same property the *old* code already
+read at the same call site, just with a different (correct) else
+branch now. Could not confirm the "iPhone not connected" indicator or
+the tap-refusal live; that needs a real device.
+
+## 2026-09-14 — watchOS: tighter header, RSVP badge moved down
+
+Another live-feedback pass: pull everything up so the night name sits
+closer to the system time, and move the colored RSVP status pill from
+right after the header down to just above "Change RSVP".
+
+- `NightHeaderView`: wordmark down from 26pt to 18pt tall (level with
+  the time, not its own banner row), tighter internal spacing.
+- `ContentView`: outer stack spacing 8 → 6, top padding 4 → -8 (a
+  small negative pull, checked on-device against the actual system
+  time position so it tightens up without the logo colliding with or
+  going under it).
+- Reordered the post-RSVP branch: roster bars → jersey → **RSVP
+  status pill → Change RSVP** (previously the pill sat right under
+  the header, before roster/jersey).
+
+Verified the same way as the last two passes — real device data
+("Thursday Old Fashioneds"), plus a temporary header-hide to bring
+the reordered bottom section above the fold for a screenshot,
+reverted before committing.
+
+## 2026-09-14 — watchOS: wordmark header, reordered post-RSVP layout
+
+Follow-up to the roster-status/Change-RSVP pass, requested after
+seeing it live: swap the app-icon graphic for the actual header
+wordmark, use the unused top-left corner (the system time owns the
+top-right) instead of a small inline icon, and reorder the
+post-RSVP screen to lead with the roster bars.
+
+- `NightHeaderView`: the wordmark (`assets/brand/wordmark.png` — the
+  same image `app/(tabs)/index.tsx` uses for the phone Home screen
+  header, not `assets/icon.png`) now sits alone at 26pt height in the
+  top-left, with the night name/date below it — previously a 22pt
+  icon inline with the night name.
+- `expo-target.config.js`: `images.obhLogo` source updated to match.
+- Reordered the post-RSVP screen in `ContentView.swift`: status badge
+  → **roster status bars** → jersey badge (only if a team's been
+  assigned) → Change RSVP. Previously: badge → Change RSVP → jersey
+  (always, with a "Teams not set yet" placeholder) → roster.
+- `JerseyBadge` simplified to take a required (non-optional)
+  assignment — the "show nothing when not available" behavior now
+  lives at the call site (`if let team = skate.teamAssignment`)
+  instead of a placeholder-text branch inside the view.
+
+Verified on the simulator with the same live "Thursday Old
+Fashioneds" data as before. Confirmed the reordered roster → jersey →
+Change RSVP block by temporarily hiding the header/badge to bring it
+above the fold for a screenshot (reverted after, `git diff` clean
+before committing).
+
+## 2026-09-14 — watchOS: roster status, "Change RSVP", OBH logo
+
+Requested after trying the app live: once the player has RSVP'd, show
+the skate's roster status (skaters/goalies filled, as bars); a
+"Change RSVP" button instead of the always-open Yes/No/Maybe row once
+already answered; the OBH puck logo somewhere on screen; scrolling
+explicitly embraced now that there's more to show.
+
+- `WatchRosterStats` (new shared model, `targets/_shared/
+  WatchModels.swift`) mirrors the slice of `RosterStats`
+  (src/api/types.ts) the watch needs: skaters, goalies, capacity,
+  goalies_needed, skater/goalie spots open, is_full.
+- `RosterStatusView` + `RosterFillBar`
+  (`targets/watch/Views/`): a Skaters bar and a Goalies bar, toned
+  green/amber/red by the *same* logic as the phone's roster tiles
+  (`src/roster.ts`'s `rosterHealth`, split into its two independent
+  halves and ported to Swift in `WatchDisplay.swift` — the phone
+  tones Skaters and Goalies separately, not with one shared value).
+  Shown once `myRsvp != .noResponse`, since it isn't specific to the
+  player before that.
+- `RsvpActionArea` replaces the always-visible `RsvpButtonRow` on the
+  main screen: before a response, the row is immediately tappable;
+  after, it collapses to "Change RSVP" (tap to reveal the row again)
+  — mirrors `RsvpControls.tsx`'s locked/editing pattern on the phone.
+- `NightHeaderView` now leads with the OBH puck logo (`assets/
+  icon.png`, added to the watch target via `images:` in
+  `expo-target.config.js`) next to the night name.
+- `useWatchConnectivity.ts`: `watchPayloadFromHome` now also sends
+  `rosterStats`, built the same null-key-omitting way as the rest of
+  the payload (WCSession's application context doesn't accept
+  NSNull).
+- Loosened the tight, no-scroll-required spacing from the earlier
+  layout pass — there's now more content than fits on the smallest
+  watch, and that's fine; a `Divider` separates RSVP/jersey from
+  roster.
+
+**Verified live**, not just build-verified — Metro was still
+connected to a real logged-in session from testing step 3, so this
+landed on real data: watch received a live push for "Thursday Old
+Fashioneds" (RSVP already YES, team Black) and correctly showed
+"Change RSVP" instead of the picker, matching the phone's own
+"GOING" / "You're on Black" state exactly. Confirmed the roster bars
+against the *same* live numbers the phone showed (8/21 skaters,
+amber; 1/2 goalies, red) by temporarily reordering them above the
+fold for a screenshot (reverted after) — real ScrollView clipping,
+not a rendering bug, is why they don't fit in a single unscrolled
+screenshot otherwise. Also temporarily forced the editing state to
+confirm the revealed Yes/No/Maybe row highlights the current
+selection correctly (reverted after).
+
+## 2026-09-13 — watchOS companion, step 4: complication
+
+Not yet visually confirmed on a watch face — see note below. Builds on
+steps 1–3.
+
+- New target `targets/watch-widget/` (`OBH Invites Complication`,
+  `type: "watch-widget"`) — a WidgetKit extension embedded in the
+  watch app, supporting all four accessory families: circular,
+  rectangular, inline, corner. Shows the RSVP status icon/color and
+  jersey team letter/name; a neutral "No Skate Scheduled" state when
+  there's nothing upcoming.
+- `targets/_shared/WatchSharedStorage.swift`: App Group
+  (`group.com.falcon83.obhinvites.watch`) UserDefaults read/write for
+  the `WatchPayload` — shared between the watch app and the
+  complication only (App Groups don't cross devices, so this has
+  nothing to do with the phone). `NextSkateStore` now writes through
+  it and calls `WidgetCenter.shared.reloadAllTimelines()` on every
+  real change (a live payload, or a tap's optimistic update/rollback).
+- Added `symbolName` (SF Symbol per RSVP status) and `shortWeekday`
+  to the shared `WatchDisplay.swift` helpers, and moved the one
+  sample/preview `WatchNextSkate` from the watch app into
+  `WatchModels.swift` as `.preview` so both the watch UI's previews
+  and the complication's placeholder/gallery snapshot use the same
+  one.
+- **A real bug caught and fixed**: the complication's default bundle
+  identifier (`com.falcon83.obhinvites.watch-widget`, a sibling of the
+  watch app) doesn't nest under the watch app's own bundle id
+  (`com.falcon83.obhinvites.watch`) the way an embedded extension
+  must — the simulator refused to install with "Mismatched bundle
+  IDs" until it was set explicitly to
+  `com.falcon83.obhinvites.watch.widget`.
+
+**Verified**: all three schemes (main app, watch app, complication)
+build clean; the complication installs as a properly embedded
+extension (confirmed via the simulator's app-group container listing)
+and the watch app itself shows no regression. Wrote a standalone
+Swift check (outside the Xcode project, compiled with plain `swiftc`)
+that round-trips a `WatchPayload` — including the nil-`nextSkate`
+case — through the exact `WatchSharedStorage` code the app uses: pass.
+**Not verified**: what the complication actually looks like pinned to
+a watch face. That requires either Xcode's Canvas or manually adding
+it to a face in the Simulator (long-press the face → Edit → swipe to
+complications → tap a slot → "OBH Invites"), both of which need
+interactive/GUI access this sandbox doesn't have — same category of
+gap as steps 2's tap-gesture and 3's login round trip.
+
+## 2026-09-13 — watchOS companion, step 3: WatchConnectivity
+
+Not yet device-tested with a live login — see note below. Builds on
+steps 1–2.
+
+- **Watch -> phone**: an RSVP tap sends `{type: "rsvp", requestId,
+  eventId, status}` to the phone over WCSession (`sendMessage` when
+  reachable, `transferUserInfo` as a queued fallback otherwise).
+  `targets/watch/PhoneConnector.swift` owns the watch-side WCSession.
+- **Phone side**: a new local Expo Module,
+  `modules/watch-connectivity/` (`ExpoWatchConnectivity`), holds the
+  WCSession replyHandler open, fires `onRsvpRequest` into JS, and
+  completes the reply only once JS calls back. JS
+  (`src/hooks/useWatchConnectivity.ts`, wired into `app/_layout.tsx`
+  alongside `useNotificationHandling`) performs the RSVP through
+  `api.submitRsvp` — the same function `useRsvp` calls, not a new
+  path — then replies success/failure. On success it invalidates the
+  same query keys `useRsvp` does, so the phone UI updates too.
+- **Phone -> watch**: whenever Home's next skate / RSVP / jersey
+  changes, `useWatchConnectivity` pushes a `WatchPayload` to the watch
+  via `updateApplicationContext` — delivered even if the watch app
+  isn't running. The watch also reads any cached context on
+  activation, so a cold launch shows real data immediately instead of
+  waiting for a fresh push.
+- Watch UI: taps apply optimistically, then roll back with a small
+  red error line if the phone reports failure. Added a "Waiting for
+  iPhone…" state, distinct from "no skate scheduled", for before the
+  first payload ever arrives.
+
+**Verified**: both the watch and main app schemes build clean
+(including the new native module and its CocoaPods integration via
+`pod install`); `tsc --noEmit` and the existing `npm test` suite pass.
+The watch app correctly shows "Waiting for iPhone…" on a fresh
+install rather than crashing. **Not verified**: the live tap ->
+phone -> submitRsvp -> watch-update round trip, which needs a logged-in
+session — this sandbox has no touch-simulation tool (no `idb`, no
+accessibility access for UI scripting) to drive the login screen or
+tap the watch's Yes/No/Maybe row, so that needs your own device test
+(`npx expo start`, connect the dev client, log in, pair Watch app).
+
+## 2026-09-13 — watchOS companion, step 2: main watch screen
+
+Not yet functional — RSVP taps update local state only, no phone sync yet
+(that's step 3). Builds on step 1's target scaffold.
+
+- Main screen (`targets/watch/ContentView.swift` + `Views/`): night name +
+  date/time, current RSVP status as the dominant color-coded element
+  (green Yes / red No / amber Maybe / gray No Response — matches the
+  selected-choice colors in `RsvpControls.tsx`, not the muted roster-badge
+  convention), a one-tap Yes/No/Maybe row, and a jersey color badge
+  ("You're on Gold — wear your gold jersey") or "Teams not set yet".
+- `targets/_shared/WatchDisplay.swift`: SwiftUI color/label/date-formatting
+  helpers on the step-1 shared model types, reused as-is by the
+  complication in step 4.
+- `targets/watch/NextSkateStore.swift`: the view model RSVP taps go
+  through. Its public surface won't change in step 3 — only the body of
+  `setRsvp` does, swapping the local-only update for a WatchConnectivity
+  round-trip to the phone's real `submitRsvp`.
+- Verified on the simulator: built both the watch and main app schemes
+  clean, then ran all four RSVP colors plus the Gold/Black/no-team jersey
+  states and the no-next-skate state by swapping the sample data and
+  reinstalling — screenshotted each on the paired Apple Watch Series 11
+  (46mm) simulator.
+
+## 2026-09-13 — watchOS companion, step 1: target scaffold (in progress)
+
+Not yet functional — this is the Xcode plumbing only, done first so later
+steps build on a working target.
+
+- Added a `watch` Xcode target (`OBH Invites Watch`) via the
+  `@bacons/apple-targets` Expo config plugin, so `expo prebuild --clean`
+  regenerates it instead of losing it. Source lives in `targets/watch/`
+  (committed); the generated `ios/` project is unaffected in git, as before.
+- `targets/_shared/WatchModels.swift`: Swift mirrors of `RsvpStatus`,
+  `TeamAssignment`, and the next-skate slice of `EventSummary`
+  (`src/api/types.ts`), linked into the main app, watch app, and (later)
+  complication target via the plugin's `_shared` convention.
+- Placeholder watch screen only, to prove the target builds and links the
+  shared types. Verified: watch scheme builds clean, main app scheme still
+  builds clean (embeds the watch app), both launch on a paired iPhone
+  16e + Apple Watch Series 11 (46mm) simulator pair.
+- Installed the `apple-targets` agent skill (`.agents/skills/`,
+  `skills-lock.json`) — per-target Swift reference docs for the
+  WatchConnectivity and WidgetKit complication work in later steps.
+
 ## 2026-09-13 — Team Generator: Lock Teams (branch work, not merged)
 
 Paired with `invite-server` `0.24.0` (server released and live on prod;

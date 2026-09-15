@@ -1,0 +1,13 @@
+{
+  "name": "expo-watch-connectivity",
+  "version": "0.1.0",
+  "description": "Bridges WatchConnectivity between the watch app and the phone's real submitRsvp path.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "UNLICENSED",
+  "author": "jvmalone",
+  "homepage": "https://github.com/alfwago/invite-app",
+  "peerDependencies": {
+    "expo": "*"
+  }
+}
