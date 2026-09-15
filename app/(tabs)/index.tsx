@@ -20,6 +20,7 @@ import { AppFooter } from "@/src/components/AppFooter";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
+import { UpdateBanner } from "@/src/components/UpdateBanner";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useHome, useInbox, usePolls } from "@/src/hooks/queries";
@@ -73,7 +74,8 @@ export default function HomeScreen() {
     );
   }
 
-  const { notices, next_skate, nights, custom_events, team_assignment } = query.data;
+  const { notices, next_skate, nights, custom_events, team_assignment, latest_app_version } =
+    query.data;
 
   return (
     <ScrollView
@@ -156,6 +158,8 @@ export default function HomeScreen() {
         <DirectorToolsCard />
 
         <Button label="Sign out" variant="secondary" onPress={confirmSignOut} style={styles.signOut} />
+
+        <UpdateBanner latestVersion={latest_app_version} />
 
         <AppFooter />
       </View>

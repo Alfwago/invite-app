@@ -25,6 +25,7 @@ import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import {
   useLockTeamGeneratorState,
   usePublishTeams,
+  useResetJerseys,
   useSaveTeamHistory,
   useTeamEvents,
   useTeamGeneratorState,
@@ -68,6 +69,7 @@ export default function TeamGeneratorScreen() {
   const generatorState = useTeamGeneratorState(eventId);
   const lockMutation = useLockTeamGeneratorState(eventId ?? 0);
   const unlockMutation = useUnlockTeamGeneratorState(eventId ?? 0);
+  const resetJerseysMutation = useResetJerseys(eventId ?? 0);
   const isLocked = !!generatorState.data?.locked;
 
   const [presentOnly, setPresentOnly] = useState(false);
@@ -79,6 +81,12 @@ export default function TeamGeneratorScreen() {
   const [blackGoalie, setBlackGoalie] = useState<BalanceResult["blackGoalie"]>(null);
   const [note, setNote] = useState("");
   const [pick, setPick] = useState<null | { mode: "pair" | "split"; first: string | null }>(null);
+
+  // {id: name} — see TeamGeneratorSnapshot.pairNames. A ref, not state: it's
+  // a display fallback only, never read to decide what to render on its own
+  // (nameOf reads it inline), so mutating it shouldn't itself trigger a
+  // re-render.
+  const pairNameCache = useRef<Record<string, string>>({});
 
   // Lock Teams — see TeamGeneratorState on the server. Restoring a locked
   // draft happens once per event, as soon as both the roster and the lock
@@ -99,6 +107,7 @@ export default function TeamGeneratorScreen() {
     const restoredPairs = snap.pairs ?? [];
     const restoredSplits = snap.splits ?? [];
     const restoredPresentOnly = !!snap.presentOnly;
+    Object.assign(pairNameCache.current, snap.pairNames || {});
 
     setLocks(restoredAssignment);
     setPairs(restoredPairs);
@@ -140,6 +149,7 @@ export default function TeamGeneratorScreen() {
       pairs: restoredPairs,
       splits: restoredSplits,
       presentOnly: restoredPresentOnly,
+      pairNames: snap.pairNames || {},
     });
   }, [eventId, generatorState.data, roster.data]);
 
@@ -148,7 +158,13 @@ export default function TeamGeneratorScreen() {
   useEffect(() => {
     if (!isLocked || eventId == null) return;
     if (restoredForEvent.current !== eventId) return;
-    const snap: TeamGeneratorSnapshot = { assignment, pairs, splits, presentOnly };
+    const snap: TeamGeneratorSnapshot = {
+      assignment,
+      pairs,
+      splits,
+      presentOnly,
+      pairNames: { ...pairNameCache.current },
+    };
     const json = JSON.stringify(snap);
     if (json === lastSavedSnapshotJson.current) return;
     lastSavedSnapshotJson.current = json;
@@ -288,7 +304,14 @@ export default function TeamGeneratorScreen() {
     setPick(null);
   }
 
-  const nameOf = (k: string) => players.find((p) => K(p.id) === k)?.name ?? "(removed)";
+  const nameOf = (k: string) => {
+    const p = players.find((pl) => K(pl.id) === k);
+    if (p) {
+      pairNameCache.current[k] = p.name;
+      return p.name;
+    }
+    return pairNameCache.current[k] ?? "(removed)";
+  };
 
   const splitBody = (): SaveTeamsBody => ({
     goldPlayers: gold.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
@@ -318,7 +341,13 @@ export default function TeamGeneratorScreen() {
     // Pin every currently-placed player — the same manual 🔒 already
     // available per-player, applied to everyone at once.
     setLocks(assignment);
-    const snap: TeamGeneratorSnapshot = { assignment, pairs, splits, presentOnly };
+    const snap: TeamGeneratorSnapshot = {
+      assignment,
+      pairs,
+      splits,
+      presentOnly,
+      pairNames: { ...pairNameCache.current },
+    };
     try {
       await lockMutation.mutateAsync(snap);
       lastSavedSnapshotJson.current = JSON.stringify(snap);
@@ -334,8 +363,15 @@ export default function TeamGeneratorScreen() {
       if (data?.locked) {
         const snap = (data.state || {}) as TeamGeneratorSnapshot;
         setLocks((snap.assignment ?? {}) as Record<string, Team>);
+        Object.assign(pairNameCache.current, snap.pairNames || {});
       }
-      lastSavedSnapshotJson.current = JSON.stringify({ assignment, pairs, splits, presentOnly });
+      lastSavedSnapshotJson.current = JSON.stringify({
+        assignment,
+        pairs,
+        splits,
+        presentOnly,
+        pairNames: { ...pairNameCache.current },
+      });
     } catch {
       // best-effort UI sync only — the server already locked it during publish
     }
@@ -389,6 +425,36 @@ export default function TeamGeneratorScreen() {
               await syncLockStateAfterPublish();
             } catch (e) {
               Alert.alert("Couldn't push", e instanceof ApiError ? e.detail : "Try again.");
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function onResetJerseys() {
+    if (!eventId) return;
+    Alert.alert(
+      "Reset jerseys?",
+      "Players who already saw their Gold/Black assignment will stop seeing it — the card just " +
+        "disappears next time they open the app or refresh. No notification is sent. This doesn't " +
+        "touch your locked teams or pairs/splits in the generator; you can push again anytime.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const res = await resetJerseysMutation.mutateAsync();
+              Alert.alert(
+                res.cleared ? "Jerseys reset" : "Nothing to reset",
+                res.cleared
+                  ? "Players no longer see a team assignment for this event."
+                  : "Nothing was published for this event.",
+              );
+            } catch (e) {
+              Alert.alert("Couldn't reset jerseys", e instanceof ApiError ? e.detail : "Try again.");
             }
           },
         },
@@ -603,6 +669,15 @@ export default function TeamGeneratorScreen() {
                         loading={publish.isPending}
                         style={styles.wideBtn}
                       />
+                      {generatorState.data?.published_at ? (
+                        <Button
+                          label="Reset jerseys"
+                          variant="secondary"
+                          onPress={onResetJerseys}
+                          loading={resetJerseysMutation.isPending}
+                          style={styles.wideBtn}
+                        />
+                      ) : null}
                       <Button
                         label="Save to history"
                         variant="secondary"

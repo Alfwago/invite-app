@@ -413,6 +413,9 @@ export interface HomeData {
   nights: HomeNight[];
   custom_events: EventSummary[];
   team_assignment: TeamAssignment | null; // for the viewer's NEXT skate only
+  /** Newest version submitted to the App/Play Store — see
+   *  SiteConfiguration.latest_app_version. "" when nothing's configured. */
+  latest_app_version: string;
 }
 
 export interface MessageReaction {
@@ -659,6 +662,12 @@ export interface TeamGeneratorSnapshot {
   pairs: [string, string][];
   splits: [string, string][];
   presentOnly: boolean;
+  /** {id: name} captured whenever an id last resolved against the live
+   *  roster — a display fallback for when an id no longer resolves (e.g. a
+   *  walk-on edited via delete+re-add mints a new id), so a pair/split chip
+   *  shows the player's last-known name instead of "(removed)". Optional:
+   *  older snapshots predate this field. */
+  pairNames?: Record<string, string>;
 }
 
 /** GET/POST/DELETE /api/teams/events/<id>/generator-state/ — the director's
@@ -669,6 +678,10 @@ export interface TeamGeneratorState {
   locked_by: string;
   locked_at: string | null;
   updated_at: string | null;
+  /** Independent of `locked` — reflects publish state (the player-facing
+   *  "you're on Gold/Black" card), not the Lock Teams draft. Drives whether
+   *  to show "Reset jerseys" at all. */
+  published_at: string | null;
 }
 
 // ---- Player approval queue (director) ------------------------------

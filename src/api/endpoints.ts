@@ -570,6 +570,13 @@ export function unlockTeamGeneratorState(eventId: number): Promise<void> {
   return apiFetch(`/api/teams/events/${eventId}/generator-state/`, { method: "DELETE" });
 }
 
+/** "Reset jerseys" — un-publish the event's team split so the player-facing
+ *  "you're on Gold/Black" card disappears. Distinct from unlockTeamGeneratorState:
+ *  this never touches the Lock Teams draft, only what players currently see. */
+export function resetJerseys(eventId: number): Promise<{ cleared: boolean }> {
+  return apiFetch(`/api/teams/events/${eventId}/reset-jerseys/`, { method: "POST" });
+}
+
 // ---- Player approval queue (director) -----------------------------
 
 export async function fetchApprovals(signal?: AbortSignal): Promise<PendingApproval[]> {

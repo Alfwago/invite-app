@@ -3,6 +3,31 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-15 — Reset jerseys, pair-name fix, update nudge
+
+Paired with `invite-server` `0.25.0` (server released and live on prod).
+Verified live against the test stack's API (login, lock, publish,
+reset-jerseys, draft-event visibility); not run through a simulator/device
+in this session — see PICKUP_NOTES-equivalent conversation notes.
+
+- **Reset jerseys**: a new button next to "Push to players" in the Team
+  Generator un-publishes the event's split (players stop seeing the "You're
+  on Gold/Black" card) without touching the Lock Teams draft. Only shown
+  once something's actually published; a confirmation explains it's silent
+  to players and doesn't affect the locked teams/pairs/splits.
+- **Pair/split names no longer show "(removed)"**: a `{id: name}` cache is
+  captured whenever an id resolves against the live roster (pair/split
+  creation, and every render) and carried through the Lock Teams snapshot,
+  so a walk-on's id changing (delete + re-add) no longer orphans the chip's
+  display name.
+- **"Update available" banner** on Home, below Sign Out: a dismissible,
+  blue-toned nudge shown when the server's `latest_app_version`
+  (`SiteConfiguration`, relayed via `/api/home/`) is newer than the
+  installed build. Dismissal is per-version (stored in `expo-secure-store`,
+  no new dependency), so a later bump shows it again. Android's button
+  opens the existing `/app` APK page; iOS has no button yet (no live store
+  URL to link to).
+
 ## 2026-09-13 — Team Generator: Lock Teams (branch work, not merged)
 
 Paired with `invite-server` `0.24.0` (server released and live on prod;

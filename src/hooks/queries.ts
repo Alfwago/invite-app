@@ -25,6 +25,7 @@ import type {
   RatingPatch,
   SaveTeamsBody,
   TeamGeneratorSnapshot,
+  TeamGeneratorState,
   RosterAction,
   RsvpBody,
 } from "@/src/api/types";
@@ -564,13 +565,38 @@ export function useUnlockTeamGeneratorState(eventId: number) {
   return useMutation({
     mutationFn: () => api.unlockTeamGeneratorState(eventId),
     onSuccess: () =>
-      qc.setQueryData(keys.teamGeneratorState(eventId), {
-        locked: false,
-        state: {},
-        locked_by: "",
-        locked_at: null,
-        updated_at: null,
-      }),
+      // Merge, don't replace: published_at reflects publish state, which is
+      // independent of the lock draft and untouched by unlocking it — see
+      // TeamGeneratorState.published_at.
+      qc.setQueryData(
+        keys.teamGeneratorState(eventId),
+        (prev: TeamGeneratorState | undefined) => ({
+          ...(prev ?? { published_at: null }),
+          locked: false,
+          state: {},
+          locked_by: "",
+          locked_at: null,
+          updated_at: null,
+        }),
+      ),
+  });
+}
+
+export function useResetJerseys(eventId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.resetJerseys(eventId),
+    onSuccess: () => {
+      // So the button hides immediately rather than waiting for the next
+      // generator-state refetch.
+      qc.setQueryData(
+        keys.teamGeneratorState(eventId),
+        (prev: TeamGeneratorState | undefined) =>
+          prev ? { ...prev, published_at: null } : prev,
+      );
+      qc.invalidateQueries({ queryKey: keys.event(eventId) }); // team_assignment
+      qc.invalidateQueries({ queryKey: keys.home });
+    },
   });
 }
 
