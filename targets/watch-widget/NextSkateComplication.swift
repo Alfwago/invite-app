@@ -59,7 +59,7 @@ struct NextSkateComplicationView: View {
     }
 
     private var rosterTint: Color {
-        entry.skate?.rosterStats?.skaterTone.color ?? .gray
+        entry.skate?.rosterStats?.overallHealth.color ?? .gray
     }
 
     private var circular: some View {
@@ -100,6 +100,14 @@ struct NextSkateComplicationView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+
+                // Same roster-fullness bar as the circular ring — shown
+                // once rosterStats exists (i.e. once the player's RSVP'd).
+                if skate.rosterStats != nil {
+                    Gauge(value: rosterFraction) { EmptyView() }
+                        .gaugeStyle(.accessoryLinearCapacity)
+                        .tint(rosterTint)
+                }
             } else {
                 Text("No Skate Scheduled")
                     .font(.headline)
@@ -128,7 +136,17 @@ struct NextSkateComplicationView: View {
         Image(systemName: entry.skate?.myRsvp.symbolName ?? "calendar")
             .foregroundStyle(entry.skate?.myRsvp.color ?? .secondary)
             .widgetLabel {
-                Text(entry.skate?.myRsvp.label ?? "No skate")
+                // Same roster-fullness bar as the other families, curved
+                // around the corner — once rosterStats exists (RSVP'd),
+                // that's more useful there than repeating the RSVP label
+                // the icon already shows.
+                if entry.skate?.rosterStats != nil {
+                    Gauge(value: rosterFraction) { EmptyView() }
+                        .gaugeStyle(.accessoryLinearCapacity)
+                        .tint(rosterTint)
+                } else {
+                    Text(entry.skate?.myRsvp.label ?? "No skate")
+                }
             }
     }
 }
@@ -170,4 +188,11 @@ struct NextSkateComplication: Widget {
     NextSkateComplication()
 } timeline: {
     NextSkateEntry(date: .now, skate: .preview)
+}
+
+#Preview("Corner", as: .accessoryCorner) {
+    NextSkateComplication()
+} timeline: {
+    NextSkateEntry(date: .now, skate: .preview)
+    NextSkateEntry(date: .now, skate: nil)
 }

@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Roster status for the skate — skaters and goalies, each a fill bar
-/// colored the same green/amber/red as the phone's roster tiles (see
-/// src/roster.ts). Shown once the player has RSVP'd; before that it isn't
-/// specific to them yet, so the main screen stays focused on the RSVP
-/// itself.
+/// Roster status for the skate — skaters and goalies, each its own fill
+/// bar. Skaters reads its own fill (`skaterTone`); Goalies is red while
+/// 1-or-fewer are in, then once covered rides along with the Skaters
+/// bar's color instead of going flat green (`goalieTone`) — see
+/// `WatchRosterStats` in WatchDisplay.swift. Shown once the player has
+/// RSVP'd; before that it isn't specific to them yet, so the main screen
+/// stays focused on the RSVP itself.
 struct RosterStatusView: View {
     let roster: WatchRosterStats
 

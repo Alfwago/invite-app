@@ -2,7 +2,7 @@
   "expo": {
     "name": "OBH Invites",
     "slug": "jvmalone",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "scheme": "obhinvites",
     "userInterfaceStyle": "automatic",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.falcon83.obhinvites",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -56,6 +56,8 @@
         "./plugins/withIosDevTeam",
         "8977MZW8RA"
       ],
+      "./plugins/withSceneDelegate",
+      "./plugins/withPodsDeploymentTarget",
       "expo-router",
       "expo-secure-store",
       [
@@ -70,7 +72,8 @@
           "color": "#e6b422"
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "./plugins/withWatchDeviceFamily"
     ],
     "experiments": {
       "typedRoutes": true

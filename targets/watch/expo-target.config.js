@@ -4,8 +4,7 @@ module.exports = (config) => ({
   name: "OBH Invites Watch",
   displayName: "OBH Invites",
   // Home Screen / Settings / Notification Center icon — same source as
-  // the main iOS app icon, not the wordmark (which has "INVITES" text
-  // that's illegible at icon sizes; see NightHeaderView for that one).
+  // the main iOS app icon.
   icon: "../../assets/icon.png",
   // watchOS 10 brought the vertical-paging TabView / redesigned navigation
   // this UI is built around (see step 2); the only device this runs on is
@@ -15,11 +14,6 @@ module.exports = (config) => ({
     // Matches the app-icon / push accent color used elsewhere (app.json
     // expo-notifications plugin, assets/icon.png).
     $accent: "#e6b422",
-  },
-  // The same wordmark the phone app's Home screen header uses
-  // (app/(tabs)/index.tsx), not the app icon — see NightHeaderView.
-  images: {
-    obhLogo: "../../assets/brand/wordmark.png",
   },
   // WidgetKit, to call WidgetCenter.shared.reloadAllTimelines() after
   // writing fresh data for the complication (step 4) to pick up.

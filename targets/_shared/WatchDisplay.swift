@@ -62,18 +62,30 @@ extension WatchRosterStats {
         }
     }
 
-    /// Mirrors src/roster.ts's `rosterHealth`, split into its two
-    /// independent halves — the phone tones the Skaters and Goalies tiles
-    /// separately, not with one shared value.
+    /// Skaters bar tone — its own fill only, independent of goalie status:
+    /// green once full, amber while skater spots remain, green otherwise.
     var skaterTone: Health {
         if isFull { return .good }
         if let skaterSpotsOpen, skaterSpotsOpen > 0 { return .caution }
         return .good
     }
 
+    /// Goalies bar tone: red while 1-or-fewer goalies are in (still short).
+    /// Once goalies are covered, goalie status stops being its own concern
+    /// and the bar just rides along with the Skaters bar's color instead
+    /// of going flat green.
     var goalieTone: Health {
-        (goalieSpotsOpen ?? 0) > 0 ? .bad : .good
+        if let goalieSpotsOpen, goalieSpotsOpen > 0 { return .bad }
+        return skaterTone
     }
+
+    /// Mirrors src/roster.ts's `rosterHealth` exactly — the one combined
+    /// read the complication's ring uses, matching the phone's own single
+    /// FillBar. Identical to `goalieTone` (goalie shortage always wins,
+    /// otherwise it's the Skaters bar's own tone) — named separately here
+    /// since the two bars above and the single-color complication ring are
+    /// conceptually different call sites.
+    var overallHealth: Health { goalieTone }
 
     /// Mirrors src/roster.ts's `fillPct` — nil when capacity is unknown.
     var skaterFillPct: Double? {
