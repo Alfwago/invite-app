@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.falcon83.obhinvites",
-      "buildNumber": "3",
+      "buildNumber": "20",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
