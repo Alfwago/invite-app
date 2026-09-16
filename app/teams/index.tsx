@@ -18,6 +18,7 @@ import type {
   SaveTeamsBody,
   TeamEvent,
   TeamGeneratorSnapshot,
+  TeamGeneratorState,
   TeamRosterPlayer,
 } from "@/src/api/types";
 import { Dropdown } from "@/src/components/Dropdown";
@@ -95,63 +96,96 @@ export default function TeamGeneratorScreen() {
   const restoredForEvent = useRef<number | null>(null);
   const lastSavedSnapshotJson = useRef<string | null>(null);
 
+  // Shared by the initial-load effect below and the explicit Refresh button
+  // (onRefresh) — pulling the server's locked draft onto the screen. Takes
+  // the generator-state/roster data as arguments rather than reading the
+  // reactive query objects, so a manual refresh can apply the just-fetched
+  // result immediately instead of waiting a render for `.data` to update
+  // (which risks the effect re-firing on stale cached data first — see
+  // onRefresh).
+  const applyLockedState = useCallback(
+    (data: TeamGeneratorState, rosterData: TeamRosterPlayer[]) => {
+      const snap = (data.state || {}) as TeamGeneratorSnapshot;
+      const restoredAssignment = (snap.assignment ?? {}) as Record<string, Team>;
+      const restoredPairs = snap.pairs ?? [];
+      const restoredSplits = snap.splits ?? [];
+      const restoredPresentOnly = !!snap.presentOnly;
+      Object.assign(pairNameCache.current, snap.pairNames || {});
+
+      setLocks(restoredAssignment);
+      setPairs(restoredPairs);
+      setSplits(restoredSplits);
+      setPresentOnly(restoredPresentOnly);
+
+      // Re-run the balancer directly (not runBalance(), whose memoized inputs
+      // haven't picked up the state just set above yet) so gold/black/goalies
+      // come out exactly as they were when locked.
+      const tgPlayers: TGPlayer[] = rosterData.map((r) => ({
+        id: r.id,
+        name: r.name,
+        is_goalie: r.is_goalie,
+        present: r.present,
+        ratings: {
+          hockey_sense: r.rating_hockey_sense,
+          skating: r.rating_skating,
+          defense: r.rating_defense,
+          offense: r.rating_offense,
+          goalie: r.rating_goalie,
+        },
+        locked: restoredAssignment[K(r.id)] ?? null,
+      }));
+      const result = autoBalance({
+        players: tgPlayers,
+        pairs: restoredPairs,
+        splits: restoredSplits,
+        presentOnly: restoredPresentOnly,
+        shuffle: true,
+      });
+      const nextAssignment: Record<string, Team> = {};
+      result.gold.forEach((p) => (nextAssignment[K(p.id)] = "Gold"));
+      result.black.forEach((p) => (nextAssignment[K(p.id)] = "Black"));
+      setAssignment(nextAssignment);
+      setGoldGoalie(result.goldGoalie);
+      setBlackGoalie(result.blackGoalie);
+      lastSavedSnapshotJson.current = JSON.stringify({
+        assignment: nextAssignment,
+        pairs: restoredPairs,
+        splits: restoredSplits,
+        presentOnly: restoredPresentOnly,
+        pairNames: snap.pairNames || {},
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     if (eventId == null) return;
     if (restoredForEvent.current === eventId) return;
     if (!generatorState.data || !roster.data) return;
     restoredForEvent.current = eventId;
     if (!generatorState.data.locked) return;
+    applyLockedState(generatorState.data, roster.data);
+  }, [eventId, generatorState.data, roster.data, applyLockedState]);
 
-    const snap = (generatorState.data.state || {}) as TeamGeneratorSnapshot;
-    const restoredAssignment = (snap.assignment ?? {}) as Record<string, Team>;
-    const restoredPairs = snap.pairs ?? [];
-    const restoredSplits = snap.splits ?? [];
-    const restoredPresentOnly = !!snap.presentOnly;
-    Object.assign(pairNameCache.current, snap.pairNames || {});
-
-    setLocks(restoredAssignment);
-    setPairs(restoredPairs);
-    setSplits(restoredSplits);
-    setPresentOnly(restoredPresentOnly);
-
-    // Re-run the balancer directly (not runBalance(), whose memoized inputs
-    // haven't picked up the state just set above yet) so gold/black/goalies
-    // come out exactly as they were when locked.
-    const tgPlayers: TGPlayer[] = roster.data.map((r) => ({
-      id: r.id,
-      name: r.name,
-      is_goalie: r.is_goalie,
-      present: r.present,
-      ratings: {
-        hockey_sense: r.rating_hockey_sense,
-        skating: r.rating_skating,
-        defense: r.rating_defense,
-        offense: r.rating_offense,
-        goalie: r.rating_goalie,
-      },
-      locked: restoredAssignment[K(r.id)] ?? null,
-    }));
-    const result = autoBalance({
-      players: tgPlayers,
-      pairs: restoredPairs,
-      splits: restoredSplits,
-      presentOnly: restoredPresentOnly,
-      shuffle: true,
-    });
-    const nextAssignment: Record<string, Team> = {};
-    result.gold.forEach((p) => (nextAssignment[K(p.id)] = "Gold"));
-    result.black.forEach((p) => (nextAssignment[K(p.id)] = "Black"));
-    setAssignment(nextAssignment);
-    setGoldGoalie(result.goldGoalie);
-    setBlackGoalie(result.blackGoalie);
-    lastSavedSnapshotJson.current = JSON.stringify({
-      assignment: nextAssignment,
-      pairs: restoredPairs,
-      splits: restoredSplits,
-      presentOnly: restoredPresentOnly,
-      pairNames: snap.pairNames || {},
-    });
-  }, [eventId, generatorState.data, roster.data]);
+  // Explicit "Refresh" — unlike the roster-only refetch this used to be, a
+  // director expects this to also pick up a lock/publish made elsewhere
+  // (the website, or another device) since this screen was opened. Awaits
+  // the refetch results directly rather than resetting restoredForEvent and
+  // letting the effect above re-fire: React Query keeps the previous
+  // `.data` around while a refetch is in flight, so clearing the guard
+  // first would risk the effect reapplying stale cached data a render
+  // before the fresh result lands. If the server reports unlocked, local
+  // (possibly unsaved) edits are left alone — only a locked/published
+  // server state overwrites the screen, same as the initial-load behavior.
+  async function onRefresh() {
+    const [rosterResult, genResult] = await Promise.all([
+      roster.refetch(),
+      generatorState.refetch(),
+    ]);
+    if (genResult.data?.locked && rosterResult.data) {
+      applyLockedState(genResult.data, rosterResult.data);
+    }
+  }
 
   // Once locked, every further edit (move, pair/split, swap, re-balance)
   // re-saves so nothing done after the initial lock is lost either.
@@ -573,7 +607,7 @@ export default function TeamGeneratorScreen() {
                       if (balanced) runBalance(next);
                     }}
                   />
-                  <BarBtn label="Refresh" grid onPress={() => roster.refetch()} />
+                  <BarBtn label="Refresh" grid onPress={onRefresh} />
                   {balanced ? (
                     <>
                       <BarBtn label="Swap teams" grid onPress={swapTeams} />

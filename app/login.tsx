@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -23,6 +24,7 @@ const WORDMARK = require("@/assets/brand/wordmark.png");
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -149,6 +151,14 @@ export default function LoginScreen() {
             <Text style={styles.forgotText}>
               {resetOpen ? "Never mind" : "Forgot password?"}
             </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/signup")}
+            hitSlop={8}
+            style={styles.forgotRow}
+          >
+            <Text style={styles.forgotText}>New here? Create an account</Text>
           </Pressable>
 
           {resetOpen ? (

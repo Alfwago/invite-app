@@ -132,7 +132,7 @@ function RootNavigator() {
 
   useEffect(() => {
     if (!ready) return;
-    const inAuthScreen = segments[0] === "login";
+    const inAuthScreen = segments[0] === "login" || segments[0] === "signup";
     if (!token && !inAuthScreen) {
       router.replace("/login");
     } else if (token && inAuthScreen) {
@@ -151,6 +151,7 @@ function RootNavigator() {
       }}
     >
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="signup" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="event/[id]/index" options={{ title: "Event" }} />
       <Stack.Screen name="event/[id]/manage" options={{ title: "Manage event" }} />

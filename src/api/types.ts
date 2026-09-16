@@ -26,6 +26,24 @@ export interface Night {
   } | null;
 }
 
+/** GET /api/auth/signup/directors/ — the signup screen's approving-director picker. */
+export interface SignupDirector {
+  id: number;
+  name: string;
+}
+
+/** POST /api/auth/signup/ — mirrors the website's OpenSignupForm fields exactly. */
+export interface SignupBody {
+  username: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  skill_assessment: "A" | "B" | "C" | "D";
+  director_id: number;
+}
+
 export interface Me {
   id: number;
   username: string;

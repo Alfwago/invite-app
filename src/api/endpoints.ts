@@ -42,6 +42,8 @@ import type {
   RosterAction,
   RsvpBody,
   SendInvitesResult,
+  SignupBody,
+  SignupDirector,
 } from "./types";
 
 // ---- Auth -----------------------------------------------------------------
@@ -63,6 +65,28 @@ export function requestPasswordResetAnon(email: string): Promise<{ sent: boolean
   return apiFetch("/api/auth/password-reset/", {
     method: "POST",
     body: { email },
+    anonymous: true,
+  });
+}
+
+/** The signup screen's approving-director picker — same candidates as the
+ *  website's signup dropdown. */
+export async function fetchSignupDirectors(): Promise<SignupDirector[]> {
+  const data = await apiFetch<{ directors: SignupDirector[] }>("/api/auth/signup/directors/", {
+    anonymous: true,
+  });
+  return data.directors;
+}
+
+/** Create a new account pending director approval + email verification —
+ *  mirrors the website's signup form field-for-field. Doesn't sign the
+ *  caller in: matches the website, where a new account can't do anything
+ *  until both gates clear (see AuthContext / /api/me/ director_approved,
+ *  email_verified). */
+export function signup(body: SignupBody): Promise<{ created: boolean }> {
+  return apiFetch("/api/auth/signup/", {
+    method: "POST",
+    body,
     anonymous: true,
   });
 }
