@@ -17,6 +17,10 @@ test("compareVersions: missing segments count as 0", () => {
 test("compareVersions: unparseable input is treated as equal, not a crash", () => {
   assert.equal(compareVersions("abc", "1.2.0"), 0);
   assert.equal(compareVersions("", "1.2.0"), 0);
+  assert.equal(compareVersions("1.2.0", ""), 0);
+  // Number("") === 0 in JS, not NaN — a trailing/empty segment (from a
+  // literal "" or a trailing ".") must not be silently read as "0".
+  assert.equal(compareVersions("1.2.", "1.2.0"), 0);
 });
 
 test("isNewerVersion: true only when latest is strictly newer", () => {

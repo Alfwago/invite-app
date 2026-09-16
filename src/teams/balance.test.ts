@@ -104,6 +104,30 @@ test("split players end up apart", () => {
   assert.notEqual(g1, g2);
 });
 
+test("an unresolvable split doesn't unbalance team sizes (regression: extra player on one team)", () => {
+  // P1+P2 paired (a unit) land together on Gold; P3, unpaired, lands on
+  // Gold too. P1 is split from P3, but P1 can't move (would break the
+  // pairing with P2), so P3 is the only candidate mover — and every Black
+  // player is individually locked, so none of them can swap back. The old
+  // behaviour moved P3 to Black anyway (Gold 2, Black 4); the fix leaves
+  // the split unresolved instead (Gold 3, Black 3).
+  const players = [
+    mk(1, 5),
+    mk(2, 5),
+    mk(3, 5),
+    mk(4, 3, { locked: "Black" }),
+    mk(5, 3, { locked: "Black" }),
+    mk(6, 3, { locked: "Black" }),
+  ];
+  const r = run({ players, pairs: [[1, 2]], splits: [[1, 3]] });
+  assert.equal(r.gold.length, 3);
+  assert.equal(r.black.length, 3);
+  assert.deepEqual(
+    r.gold.map((p) => p.id).sort(),
+    [1, 2, 3],
+  );
+});
+
 test("goalie team preference is honoured; overflow goalie skates out", () => {
   const players: TGPlayer[] = [
     { id: 10, name: "G1", is_goalie: true, present: true, ratings: { ...flat, goalie: 2 } },

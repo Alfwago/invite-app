@@ -3,6 +3,44 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-15 (later) — Team Generator sync/balance fixes, signup
+
+Paired with `invite-server` `0.27.0` (server released and live on prod).
+Version bumped to 1.3.0 (`app.json`) — `eas.json` has `appVersionSource:
+"remote"` and `autoIncrement: true` on the production build profile, so EAS
+manages the actual build number at `eas build` time; this bump is just for
+the version string itself.
+
+- **Team Generator "Refresh" now actually refreshes the lock state**: it
+  used to only re-fetch the roster, so a team lock/publish made on the
+  website (or another device) while the screen was open never showed up
+  until you left and came back. It now re-fetches both and re-applies a
+  locked draft if the server reports one — local edits are left alone if
+  the server isn't locked.
+- **Pair/split balance fix**, matching the server: when a "keep apart"
+  fix-up had no safe player to swap back, it used to move the player anyway
+  and leave one team a player heavier. It now leaves that split unresolved
+  instead. Same fix, same reasoning, as the website's Team Generator — see
+  `src/teams/balance.ts`.
+- **Signup screen** (`app/signup.tsx`), reachable from "New here? Create an
+  account" on the login screen — mirrors the website's signup form
+  field-for-field (director picker, phone, self skill assessment) against
+  the new `POST /api/auth/signup/` / `GET /api/auth/signup/directors/`.
+  Doesn't sign the new account in — matches the website, where a pending
+  account can't do anything until it's both verified and director-approved.
+- **Fixed a real bug in `version.ts`** (added last session, never actually
+  exercised until today — see below): `compareVersions("", "1.2.0")`
+  returned `-1` instead of `0`, because `Number("")` is `0` in JavaScript,
+  not `NaN`, so the "unparseable input" guard missed an empty segment.
+  Doesn't affect the Update banner in practice (`isNewerVersion` already
+  short-circuits on blank input before calling this), but the function's
+  own contract was wrong.
+- Found the sandbox's Node version (20.19) can't run this project's own
+  `npm test` (`node --test --experimental-strip-types`) — `npx tsx --test`
+  works as a drop-in substitute and is how everything here was actually
+  verified (17/17 `version.test.ts`, 12/12 `balance.test.ts`). Worth
+  switching the `test` script to `tsx` if this comes up again.
+
 ## 2026-09-15 — Reset jerseys, pair-name fix, update nudge
 
 Paired with `invite-server` `0.25.0` (server released and live on prod).

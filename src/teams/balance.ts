@@ -229,6 +229,12 @@ export function autoBalance(input: BalanceInput): BalanceResult {
   units.filter((u) => u.members.length <= 1).forEach(placeUnit);
 
   // --- Splits: separate any "keep apart" pair still on one team ----------
+  // If no safe swap partner exists on the destination team, the move
+  // doesn't happen at all — an uneven headcount reads as a worse bug than
+  // a "keep apart" pair that's still together. A prior version fell back
+  // to a one-way move here ("sizes drift by one on each side, rare in
+  // practice") — that's the extra-player-on-one-team report this avoids.
+  // Mirrors the website's obh_teams autoBalance — keep both in sync.
   for (const [aId, bId] of splitEdges) {
     const aInGold = gold.some((p) => sid(p.id) === aId);
     const aInBlack = black.some((p) => sid(p.id) === aId);
@@ -257,22 +263,22 @@ export function autoBalance(input: BalanceInput): BalanceResult {
     if (mover == null) continue;
 
     const moverIdx = fromTeam.findIndex((p) => sid(p.id) === mover);
-    const [moved] = fromTeam.splice(moverIdx, 1);
-    toTeam.push(moved);
-
+    const moved = fromTeam[moverIdx];
     const moverRating = ratingFor(moved);
     const swap = toTeam
       .filter((p) => sid(p.id) !== mover && canMove(sid(p.id)) && !createsNewSplit(sid(p.id), fromTeam))
       .sort(
         (x, y) => Math.abs(ratingFor(x) - moverRating) - Math.abs(ratingFor(y) - moverRating),
       )[0];
-    if (swap) {
-      toTeam.splice(
-        toTeam.findIndex((p) => sid(p.id) === swap.id),
-        1,
-      );
-      fromTeam.push(swap);
-    }
+    if (!swap) continue; // no safe swap — leave this split unresolved rather than unbalancing team sizes.
+
+    fromTeam.splice(moverIdx, 1);
+    toTeam.push(moved);
+    toTeam.splice(
+      toTeam.findIndex((p) => sid(p.id) === swap.id),
+      1,
+    );
+    fromTeam.push(swap);
   }
 
   if (doShuffle) {
