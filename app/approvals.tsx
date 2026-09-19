@@ -3,7 +3,14 @@ import { Stack } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { useApprovals, useApprovePlayer } from "@/src/hooks/queries";
+import {
+  useApprovals,
+  useApprovePlayer,
+  useDecideNameChange,
+  useDecideUsernameChange,
+  useNameChangeApprovals,
+  useUsernameChangeApprovals,
+} from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
 
 export default function ApprovalsScreen() {
@@ -11,10 +18,19 @@ export default function ApprovalsScreen() {
   const approve = useApprovePlayer();
   const pending = query.data ?? [];
 
+  const nameQuery = useNameChangeApprovals();
+  const decideName = useDecideNameChange();
+  const pendingNames = nameQuery.data ?? [];
+
+  const usernameQuery = useUsernameChangeApprovals();
+  const decideUsername = useDecideUsernameChange();
+  const pendingUsernames = usernameQuery.data ?? [];
+
   return (
     <>
       <Stack.Screen options={{ title: "Player approvals" }} />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <Text style={styles.sectionHeading}>New accounts</Text>
         {query.isLoading ? (
           <Loading label="Loading…" />
         ) : query.isError ? (
@@ -50,6 +66,108 @@ export default function ApprovalsScreen() {
             </Card>
           ))
         )}
+
+        <Text style={styles.sectionHeading}>Name changes</Text>
+        {nameQuery.isLoading ? (
+          <Loading label="Loading…" />
+        ) : nameQuery.isError ? (
+          <ErrorState
+            message={nameQuery.error instanceof ApiError ? nameQuery.error.detail : "Couldn't load."}
+            onRetry={() => nameQuery.refetch()}
+          />
+        ) : pendingNames.length === 0 ? (
+          <Text style={styles.empty}>No name changes waiting for approval.</Text>
+        ) : (
+          pendingNames.map((r) => (
+            <Card key={r.id}>
+              <Text style={styles.name}>{r.name}</Text>
+              <Text style={styles.meta}>
+                {r.current_first_name} {r.current_last_name} → {r.proposed_first_name}{" "}
+                {r.proposed_last_name}
+              </Text>
+              <View style={styles.row}>
+                <Button
+                  label="Approve"
+                  onPress={() =>
+                    decideName.mutate(
+                      { requestId: r.id, decision: "APPROVED" },
+                      {
+                        onError: (e) =>
+                          Alert.alert(
+                            "Couldn't approve",
+                            e instanceof ApiError ? e.detail : "Try again.",
+                          ),
+                      },
+                    )
+                  }
+                  loading={decideName.isPending}
+                />
+                <Button
+                  label="Decline"
+                  variant="secondary"
+                  onPress={() =>
+                    decideName.mutate(
+                      { requestId: r.id, decision: "DECLINED" },
+                      {
+                        onError: (e) =>
+                          Alert.alert(
+                            "Couldn't decline",
+                            e instanceof ApiError ? e.detail : "Try again.",
+                          ),
+                      },
+                    )
+                  }
+                  loading={decideName.isPending}
+                />
+              </View>
+            </Card>
+          ))
+        )}
+
+        <Text style={styles.sectionHeading}>Username changes</Text>
+        {usernameQuery.isLoading ? (
+          <Loading label="Loading…" />
+        ) : usernameQuery.isError ? (
+          <ErrorState
+            message={
+              usernameQuery.error instanceof ApiError ? usernameQuery.error.detail : "Couldn't load."
+            }
+            onRetry={() => usernameQuery.refetch()}
+          />
+        ) : pendingUsernames.length === 0 ? (
+          <Text style={styles.empty}>No username changes waiting for approval.</Text>
+        ) : (
+          pendingUsernames.map((r) => (
+            <Card key={r.id}>
+              <Text style={styles.name}>{r.name}</Text>
+              <Text style={styles.meta}>
+                {r.current_username} → {r.proposed_username}
+              </Text>
+              <View style={styles.row}>
+                {(["APPROVED", "DECLINED"] as const).map((decision) => (
+                  <Button
+                    key={decision}
+                    label={decision === "APPROVED" ? "Approve" : "Decline"}
+                    variant={decision === "APPROVED" ? undefined : "secondary"}
+                    onPress={() =>
+                      decideUsername.mutate(
+                        { requestId: r.id, decision },
+                        {
+                          onError: (e) =>
+                            Alert.alert(
+                              decision === "APPROVED" ? "Couldn't approve" : "Couldn't decline",
+                              e instanceof ApiError ? e.detail : "Try again.",
+                            ),
+                        },
+                      )
+                    }
+                    loading={decideUsername.isPending}
+                  />
+                ))}
+              </View>
+            </Card>
+          ))
+        )}
       </ScrollView>
     </>
   );
@@ -59,6 +177,12 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md },
   empty: { color: colors.textMuted, textAlign: "center", padding: spacing.xl },
+  sectionHeading: {
+    color: colors.gold,
+    fontSize: font.md,
+    fontWeight: "800",
+    marginTop: spacing.sm,
+  },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
   name: { color: colors.text, fontSize: font.base, fontWeight: "700" },
   meta: { color: colors.textMuted, fontSize: font.sm },

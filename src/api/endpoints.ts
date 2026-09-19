@@ -26,6 +26,8 @@ import type {
   PollResults,
   PollSummary,
   PendingApproval,
+  PendingNameChangeApproval,
+  PendingUsernameChangeApproval,
   Poll,
   PlayerDetail,
   PlayersResponse,
@@ -97,6 +99,28 @@ export function fetchMe(signal?: AbortSignal): Promise<Me> {
 
 export function updateMe(patch: ProfilePatch): Promise<Me> {
   return apiFetch("/api/me/", { method: "PATCH", body: patch });
+}
+
+/** Names are locked — propose a change instead of setting it directly; it
+ *  takes effect only once the caller's approving director approves it. */
+export function requestNameChange(firstName: string, lastName: string): Promise<Me & { created: boolean }> {
+  return apiFetch("/api/me/name-change/", {
+    method: "POST",
+    body: { first_name: firstName, last_name: lastName },
+  });
+}
+
+export function cancelNameChange(): Promise<Me> {
+  return apiFetch("/api/me/name-change/", { method: "DELETE" });
+}
+
+/** Same approval-gated flow as names — takes effect only once approved. */
+export function requestUsernameChange(username: string): Promise<Me & { created: boolean }> {
+  return apiFetch("/api/me/username-change/", { method: "POST", body: { username } });
+}
+
+export function cancelUsernameChange(): Promise<Me> {
+  return apiFetch("/api/me/username-change/", { method: "DELETE" });
 }
 
 export function requestPasswordReset(): Promise<{ sent: boolean }> {
@@ -616,6 +640,29 @@ export async function approvePlayer(profileId: number): Promise<PendingApproval[
   return data.pending;
 }
 
+// ---- Name-change approval queue (director) -------------------------
+
+export async function fetchNameChangeApprovals(
+  signal?: AbortSignal,
+): Promise<PendingNameChangeApproval[]> {
+  const data = await apiFetch<{ pending: PendingNameChangeApproval[] }>(
+    "/api/approvals/name-changes/",
+    { signal },
+  );
+  return data.pending;
+}
+
+export async function decideNameChange(
+  requestId: number,
+  decision: "APPROVED" | "DECLINED",
+): Promise<PendingNameChangeApproval[]> {
+  const data = await apiFetch<{ pending: PendingNameChangeApproval[] }>(
+    `/api/approvals/name-changes/${requestId}/`,
+    { method: "POST", body: { decision } },
+  );
+  return data.pending;
+}
+
 // ---- Polls (player) ----------------------------------------------
 
 export async function fetchPolls(signal?: AbortSignal): Promise<Poll[]> {
@@ -714,4 +761,27 @@ export function updatePoll(
 
 export function deletePoll(id: number): Promise<void> {
   return apiFetch(`/api/director/polls/${id}/`, { method: "DELETE" });
+}
+
+// ---- Username-change approval queue (director) ---------------------
+
+export async function fetchUsernameChangeApprovals(
+  signal?: AbortSignal,
+): Promise<PendingUsernameChangeApproval[]> {
+  const data = await apiFetch<{ pending: PendingUsernameChangeApproval[] }>(
+    "/api/approvals/username-changes/",
+    { signal },
+  );
+  return data.pending;
+}
+
+export async function decideUsernameChange(
+  requestId: number,
+  decision: "APPROVED" | "DECLINED",
+): Promise<PendingUsernameChangeApproval[]> {
+  const data = await apiFetch<{ pending: PendingUsernameChangeApproval[] }>(
+    `/api/approvals/username-changes/${requestId}/`,
+    { method: "POST", body: { decision } },
+  );
+  return data.pending;
 }

@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
-import type { PlayerType, ProfilePatch } from "@/src/api/types";
+import type { Me, PlayerType, ProfilePatch } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
@@ -60,6 +60,8 @@ export default function ProfileScreen() {
         ) : null}
       </Card>
 
+      <LockedIdentityCard me={me} onChanged={refreshMe} />
+
       <Card>
         <Text style={styles.heading}>Player metrics</Text>
         <View style={styles.tiles}>
@@ -100,8 +102,6 @@ export default function ProfileScreen() {
       ) : (
         <Card>
           <Text style={styles.heading}>Profile</Text>
-          <ReadRow k="First name" v={me.first_name || "—"} />
-          <ReadRow k="Last name" v={me.last_name || "—"} />
           <ReadRow k="Email" v={me.email} />
           <ReadRow k="OBH starting year" v={me.join_year != null ? String(me.join_year) : "—"} />
           <ReadRow k="Phone" v={me.phone_number || "—"} />
@@ -136,8 +136,6 @@ function EditProfileCard({
   onDone: () => void | Promise<void>;
   onCancel: () => void;
 }) {
-  const [first, setFirst] = useState(me.first_name);
-  const [last, setLast] = useState(me.last_name);
   const [email, setEmail] = useState(me.email);
   const [year, setYear] = useState(me.join_year != null ? String(me.join_year) : "");
   const [phone, setPhone] = useState(me.phone_number);
@@ -172,8 +170,6 @@ function EditProfileCard({
       return;
     }
     save.mutate({
-      first_name: first.trim(),
-      last_name: last.trim(),
       email: email.trim(),
       join_year: year.trim() ? Number(year) : null,
       phone_number: phone.trim(),
@@ -188,12 +184,6 @@ function EditProfileCard({
     <Card>
       <Text style={styles.heading}>Edit profile</Text>
 
-      <Field label="First name">
-        <TextInput style={styles.input} value={first} onChangeText={setFirst} />
-      </Field>
-      <Field label="Last name">
-        <TextInput style={styles.input} value={last} onChangeText={setLast} />
-      </Field>
       <Field label="Email">
         <TextInput
           style={styles.input}
@@ -257,6 +247,144 @@ function EditProfileCard({
       <Button label="Save changes" onPress={submit} loading={save.isPending} />
       <Button label="Cancel" variant="secondary" onPress={onCancel} disabled={save.isPending} />
     </Card>
+  );
+}
+
+// Name + username are locked: shown greyed out, and "Request … change"
+// unlocks the field(s) in place. Saving files a request for the approving
+// director — nothing changes until it's approved.
+function LockedIdentityCard({ me, onChanged }: { me: Me; onChanged: () => void | Promise<void> }) {
+  return (
+    <Card>
+      <Text style={styles.heading}>Name & username</Text>
+      <LockedField
+        label="Name"
+        current={[me.first_name, me.last_name]}
+        placeholders={["First name", "Last name"]}
+        pending={
+          me.pending_name_change
+            ? `${me.pending_name_change.first_name} ${me.pending_name_change.last_name}`
+            : null
+        }
+        requestLabel="Request name change"
+        onSubmit={(v) => api.requestNameChange(v[0].trim(), v[1].trim())}
+        onCancelPending={() => api.cancelNameChange()}
+        onChanged={onChanged}
+      />
+      <LockedField
+        label="Username"
+        current={[me.username]}
+        placeholders={["Username"]}
+        pending={me.pending_username_change ? me.pending_username_change.username : null}
+        requestLabel="Request username change"
+        autoCapitalize="none"
+        maxLength={20}
+        onSubmit={(v) => api.requestUsernameChange(v[0].trim())}
+        onCancelPending={() => api.cancelUsernameChange()}
+        onChanged={onChanged}
+      />
+      <Text style={styles.hint}>Your director reviews name and username changes before they take effect.</Text>
+    </Card>
+  );
+}
+
+function LockedField({
+  label,
+  current,
+  placeholders,
+  pending,
+  requestLabel,
+  autoCapitalize,
+  maxLength,
+  onSubmit,
+  onCancelPending,
+  onChanged,
+}: {
+  label: string;
+  current: string[];
+  placeholders: string[];
+  pending: string | null;
+  requestLabel: string;
+  autoCapitalize?: "none" | "words";
+  maxLength?: number;
+  onSubmit: (values: string[]) => Promise<unknown>;
+  onCancelPending: () => Promise<unknown>;
+  onChanged: () => void | Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [values, setValues] = useState(current);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useMutation({
+    mutationFn: () => onSubmit(values),
+    onSuccess: async () => {
+      setEditing(false);
+      await onChanged();
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.detail : "Couldn't submit."),
+  });
+  const cancelPending = useMutation({
+    mutationFn: () => onCancelPending(),
+    onSuccess: () => onChanged(),
+    onError: (e) =>
+      Alert.alert("Couldn't cancel", e instanceof ApiError ? e.detail : "Try again later."),
+  });
+
+  function startEditing() {
+    setValues(current);
+    setError(null);
+    setEditing(true);
+  }
+
+  return (
+    <View style={styles.lockedField}>
+      <Text style={styles.lockedLabel}>{label}</Text>
+      {pending ? (
+        <>
+          <View style={styles.lockedRow}>
+            <Text style={[styles.lockedValue, styles.lockedGrey]}>{pending}</Text>
+            <Pressable onPress={() => cancelPending.mutate()} disabled={cancelPending.isPending} hitSlop={6}>
+              <Text style={styles.smallBtnText}>Cancel request</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.hint}>Pending director approval</Text>
+        </>
+      ) : editing ? (
+        <>
+          <View style={styles.lockedRow}>
+            {values.map((v, i) => (
+              <TextInput
+                key={i}
+                style={[styles.input, styles.lockedInput]}
+                value={v}
+                placeholder={placeholders[i]}
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize={autoCapitalize ?? "words"}
+                autoCorrect={false}
+                maxLength={maxLength}
+                onChangeText={(t) => setValues((prev) => prev.map((x, n) => (n === i ? t : x)))}
+              />
+            ))}
+          </View>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <View style={styles.lockedRow}>
+            <Pressable style={styles.smallBtn} onPress={() => submit.mutate()} disabled={submit.isPending}>
+              <Text style={styles.smallBtnText}>{submit.isPending ? "Saving…" : "Save"}</Text>
+            </Pressable>
+            <Pressable onPress={() => setEditing(false)} disabled={submit.isPending} hitSlop={6}>
+              <Text style={styles.hint}>Cancel</Text>
+            </Pressable>
+          </View>
+        </>
+      ) : (
+        <View style={styles.lockedRow}>
+          <Text style={[styles.lockedValue, styles.lockedGrey]}>{current.join(" ") || "—"}</Text>
+          <Pressable style={styles.smallBtn} onPress={startEditing}>
+            <Text style={styles.smallBtnText}>{requestLabel}</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -476,4 +604,24 @@ const styles = StyleSheet.create({
   chipTextOn: { color: colors.gold },
 
   error: { color: colors.red, fontWeight: "600" },
+  lockedField: { gap: spacing.xs },
+  lockedLabel: {
+    color: colors.textMuted,
+    fontSize: font.xs,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  lockedRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
+  lockedValue: { flexGrow: 1, flexShrink: 1, fontSize: font.base },
+  lockedGrey: { color: colors.textMuted, opacity: 0.7 },
+  lockedInput: { flexGrow: 1, flexBasis: 120 },
+  smallBtn: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+  },
+  smallBtnText: { color: colors.gold, fontSize: font.xs, fontWeight: "700" },
 });

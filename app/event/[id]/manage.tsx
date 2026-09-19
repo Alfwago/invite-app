@@ -29,6 +29,7 @@ import type {
 import { ClockField, DateField, DateTimeField, NumberField } from "@/src/components/pickers";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { useRolePicker } from "@/src/components/RolePicker";
+import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
@@ -867,10 +868,11 @@ function RosterCard({ event }: { event: EventDetail }) {
   const [walkOnGoalie, setWalkOnGoalie] = useState(false);
   const [walkOnRating, setWalkOnRating] = useState("");
   const [editWalkOn, setEditWalkOn] = useState<DayPlayer | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const { pick, modal } = useRolePicker();
 
   const going = event.players.filter((p) => p.status === "YES");
-  const busy = roster.isPending;
+  const busy = roster.isPending || bulkBusy;
 
   // is_goalie_skater comes from the candidates endpoint, not EventDetail.waitlist.
   const gsWaitlist = new Set(
@@ -879,6 +881,53 @@ function RosterCard({ event }: { event: EventDetail }) {
 
   function act(body: RosterAction) {
     roster.mutate(body, { onError: (e) => Alert.alert("Roster update failed", errText(e)) });
+  }
+
+  // "Select all" for Present/Paid: one on/off toggle per column — on when
+  // every eligible row is already set, off otherwise, and flips them all the
+  // other way on press (never a half-select). `pays` excludes goalies/
+  // directors/beer-or-whiskey guys from Paid, same as their row hides $.
+  const presentEligible = [
+    ...going.map((p) => ({ player_id: p.player_id, present: p.present })),
+    ...event.day_players.map((dp) => ({ day_player_id: dp.id, present: dp.present })),
+  ];
+  const paidEligible = [
+    ...going.filter((p) => p.pays).map((p) => ({ player_id: p.player_id, paid: p.paid })),
+    ...event.day_players.filter((dp) => dp.pays).map((dp) => ({ day_player_id: dp.id, paid: dp.paid })),
+  ];
+  const presentAllOn = presentEligible.length > 0 && presentEligible.every((t) => t.present);
+  const paidAllOn = paidEligible.length > 0 && paidEligible.every((t) => t.paid);
+
+  async function toggleAllPresent() {
+    const desired = !presentAllOn;
+    setBulkBusy(true);
+    try {
+      for (const { present, ...target } of presentEligible) {
+        if (present !== desired) {
+          await roster.mutateAsync({ action: "set_present", present: desired, ...target });
+        }
+      }
+    } catch (e) {
+      Alert.alert("Couldn't update everyone's present status", errText(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function toggleAllPaid() {
+    const desired = !paidAllOn;
+    setBulkBusy(true);
+    try {
+      for (const { paid, ...target } of paidEligible) {
+        if (paid !== desired) {
+          await roster.mutateAsync({ action: "set_paid", paid: desired, ...target });
+        }
+      }
+    } catch (e) {
+      Alert.alert("Couldn't update everyone's paid status", errText(e));
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   async function promote(w: WaitlistEntry) {
@@ -922,6 +971,22 @@ function RosterCard({ event }: { event: EventDetail }) {
       <Text style={styles.heading}>Roster</Text>
 
       <Text style={styles.subhead}>Going ({going.length})</Text>
+      {presentEligible.length > 0 || paidEligible.length > 0 ? (
+        <View style={styles.bulkRow}>
+          {presentEligible.length > 0 ? (
+            <Pressable onPress={toggleAllPresent} disabled={busy} hitSlop={6}>
+              <Text style={styles.linkText}>
+                {presentAllOn ? "Deselect all present" : "Select all present"}
+              </Text>
+            </Pressable>
+          ) : null}
+          {paidEligible.length > 0 ? (
+            <Pressable onPress={toggleAllPaid} disabled={busy} hitSlop={6}>
+              <Text style={styles.linkText}>{paidAllOn ? "Deselect all paid" : "Select all paid"}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {going.length === 0 ? (
         <Text style={styles.muted}>Nobody yet.</Text>
       ) : (
@@ -932,6 +997,7 @@ function RosterCard({ event }: { event: EventDetail }) {
             isGoalie={p.is_goalie}
             isDirector={p.is_director}
             isAssistantDirector={p.is_assistant_director}
+            team={p.team}
             pays={p.pays}
             present={p.present}
             paid={p.paid}
@@ -1156,6 +1222,7 @@ function RosterAdminRow({
   isGoalie,
   isDirector,
   isAssistantDirector,
+  team,
   pays = true,
   walkOn,
   ratingPpv,
@@ -1181,6 +1248,7 @@ function RosterAdminRow({
   isGoalie: boolean;
   isDirector?: boolean;
   isAssistantDirector?: boolean;
+  team?: "Gold" | "Black" | null;
   pays?: boolean;
   walkOn?: boolean;
   ratingPpv?: string | null;
@@ -1214,6 +1282,9 @@ function RosterAdminRow({
           <Text style={styles.goldTag}>{goldTag}</Text>
         ) : walkOn ? (
           <Text style={styles.roleTag}>walk-on</Text>
+        ) : null}
+        {team ? (
+          <Ionicons name="shirt" size={15} color={TEAM_TINT[team]} accessibilityLabel={`${team} Team`} />
         ) : null}
         {walkOn && ratingPpv != null ? (
           <Text style={styles.dpRating}>
@@ -1702,6 +1773,13 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: font.lg, fontWeight: "800" },
   meta: { color: colors.textMuted, fontSize: font.sm },
   badgeRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
+  bulkRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    flexWrap: "wrap",
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
   heading: { color: colors.gold, fontSize: font.md, fontWeight: "800" },
   subhead: {
     color: colors.textMuted,

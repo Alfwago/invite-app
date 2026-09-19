@@ -65,6 +65,10 @@ export interface Me {
   skill_assessment: string;
   join_year: number | null;
   metrics: MeMetrics;
+  /** Names are locked — this is the caller's own pending request (any
+   * director), or null. See POST/DELETE /api/me/name-change/. */
+  pending_name_change: PendingNameChange | null;
+  pending_username_change: PendingUsernameChange | null;
   /** Only present on GET /api/me/, not on the PATCH response. */
   profile_choices?: {
     player_type: ProfileChoice[];
@@ -73,6 +77,21 @@ export interface Me {
   };
   /** Only present on the PATCH /api/me/ response. */
   email_reverification_sent?: boolean;
+}
+
+export interface PendingUsernameChange {
+  id: number;
+  username: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface PendingNameChange {
+  id: number;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+  expires_at: string;
 }
 
 export type PlayerType = "non_playing" | "skater" | "goalie" | "goalie_skater";
@@ -94,8 +113,6 @@ export interface MeMetrics {
 }
 
 export interface ProfilePatch {
-  first_name?: string;
-  last_name?: string;
   email?: string;
   join_year?: number | null;
   phone_number?: string;
@@ -172,6 +189,8 @@ export interface RosterEntry {
   present: boolean;
   paid: boolean;
   added_by_director: boolean;
+  /** Gold/Black once a director publishes teams; null before (or for players not on a side). */
+  team: "Gold" | "Black" | null;
 }
 
 export interface DayPlayer {
@@ -711,6 +730,28 @@ export interface PendingApproval {
   email: string;
   sponsor: string;
   account_ready: boolean;
+}
+
+export interface PendingUsernameChangeApproval {
+  id: number;
+  user_id: number;
+  name: string;
+  current_username: string;
+  proposed_username: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface PendingNameChangeApproval {
+  id: number;
+  user_id: number;
+  name: string;
+  current_first_name: string;
+  current_last_name: string;
+  proposed_first_name: string;
+  proposed_last_name: string;
+  created_at: string;
+  expires_at: string;
 }
 
 // ---- Polls (player) ------------------------------------------------

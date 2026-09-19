@@ -3,6 +3,30 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
+## 2026-09-18 — watchOS: "no skate" complication, jersey icons, profile locks
+
+- **Watch complication, no-skate state**: with nothing scheduled it used to
+  show an empty roster ring (reads as "0% full") behind a generic calendar.
+  It now shows a hockey figure (`figure.hockey`) in a muted tone on every
+  family: circular "No skate", rectangular "No Skate / Nothing scheduled",
+  inline "No skate scheduled", corner icon + label. The watch app's own
+  `NoSkateView` gets the same icon.
+- **Stale skate guard**: the complication now treats a skate whose date has
+  passed as "no skate" (`WatchDateFormatting.isPast`) and, while a skate is
+  showing, reloads itself at the next local midnight so it flips without the
+  phone having to push anything. NOT compiled or run yet: written on the Pi
+  (no Swift toolchain), so build it in Xcode first. Steps: `WATCH_SIMULATOR.md`.
+- **Roster jersey icons**: the event roster (player view and director manage
+  rows) shows a Gold/Black shirt icon per player once teams are published,
+  from the new `team` field on `/api/events/<id>/` roster entries.
+- **Approval-gated profile changes**: name and username are locked on My
+  Profile (greyed out, "Request … change" unlocks the field, Save files a
+  request for the approving director); directors decide on the Approvals
+  screen. `PATCH /api/me/` no longer accepts first_name/last_name.
+- **Select all present/paid** toggle on the director's roster.
+- Paired with `invite-server` migrations 0083/0084 and the server changes for
+  the attendance %, team field and name/username requests.
+
 ## 2026-09-15 (later) — Team Generator sync/balance fixes, signup
 
 Paired with `invite-server` `0.27.0` (server released and live on prod).
