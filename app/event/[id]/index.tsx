@@ -8,7 +8,7 @@ import type { DayPlayer, EventDetail, RosterEntry, RsvpStatus } from "@/src/api/
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { PenaltyBoxCard } from "@/src/components/PenaltyBoxCard";
 import { RsvpControls } from "@/src/components/RsvpControls";
-import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
+import { TEAM_TINT, TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
 import {
   Badge,
   Button,
@@ -317,6 +317,14 @@ function PlayerLine({ entry }: { entry: RosterEntry }) {
             {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
           </Text>
           <RoleTag entry={entry} />
+          {entry.team ? (
+            <Ionicons
+              name="shirt"
+              size={15}
+              color={TEAM_TINT[entry.team]}
+              accessibilityLabel={`${entry.team} Team`}
+            />
+          ) : null}
           {entry.is_beer_guy ? (
             <Ionicons name="beer" size={15} color={colors.green} />
           ) : null}

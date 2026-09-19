@@ -6,7 +6,7 @@ import { Card } from "@/src/components/ui";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 // Gold ≈ league gold; Black ≈ a light neutral grey so it reads on the black bg.
-const TEAM_TINT: Record<TeamAssignment["team"], string> = {
+export const TEAM_TINT: Record<TeamAssignment["team"], string> = {
   Gold: colors.gold,
   Black: "#c9ced3",
 };

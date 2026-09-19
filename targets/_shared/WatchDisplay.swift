@@ -125,6 +125,29 @@ enum WatchDateFormatting {
         return "\(dateText) · \(displayTimeFormatter.string(from: time))"
     }
 
+    /// True once `date` ("YYYY-MM-DD", the skate's local calendar day) is
+    /// before today. The complication uses it to stop showing a skate that
+    /// has already happened when the phone hasn't pushed a newer one yet.
+    /// ISO dates compare correctly as plain strings.
+    static func isPast(date: String, now: Date = .now) -> Bool {
+        let today = todayFormatter.string(from: now)
+        return date < today
+    }
+
+    /// Start of the next local day — when the current skate should stop
+    /// counting as current, so the complication can schedule a refresh.
+    static func nextLocalMidnight(after now: Date = .now) -> Date {
+        let cal = Calendar.current
+        return cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now)) ?? now.addingTimeInterval(86_400)
+    }
+
+    private static let todayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     /// "2026-09-15" -> "Tue" — the compact form the inline complication
     /// (step 4) uses; there's no room there for a full night name.
     static func shortWeekday(date: String) -> String? {

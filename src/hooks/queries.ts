@@ -43,6 +43,8 @@ export const keys = {
   teamHistory: (id: number) => ["team-history", id] as const,
   teamGeneratorState: (id: number) => ["team-generator-state", id] as const,
   approvals: ["approvals"] as const,
+  nameChangeApprovals: ["name-change-approvals"] as const,
+  usernameChangeApprovals: ["username-change-approvals"] as const,
   polls: ["polls"] as const,
   inbox: ["inbox"] as const,
   managePolls: ["polls", "manage"] as const,
@@ -614,6 +616,38 @@ export function useApprovePlayer() {
   return useMutation({
     mutationFn: (profileId: number) => api.approvePlayer(profileId),
     onSuccess: (pending) => qc.setQueryData(keys.approvals, pending),
+  });
+}
+
+export function useNameChangeApprovals() {
+  return useQuery({
+    queryKey: keys.nameChangeApprovals,
+    queryFn: ({ signal }) => api.fetchNameChangeApprovals(signal),
+  });
+}
+
+export function useDecideNameChange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { requestId: number; decision: "APPROVED" | "DECLINED" }) =>
+      api.decideNameChange(vars.requestId, vars.decision),
+    onSuccess: (pending) => qc.setQueryData(keys.nameChangeApprovals, pending),
+  });
+}
+
+export function useUsernameChangeApprovals() {
+  return useQuery({
+    queryKey: keys.usernameChangeApprovals,
+    queryFn: ({ signal }) => api.fetchUsernameChangeApprovals(signal),
+  });
+}
+
+export function useDecideUsernameChange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { requestId: number; decision: "APPROVED" | "DECLINED" }) =>
+      api.decideUsernameChange(vars.requestId, vars.decision),
+    onSuccess: (pending) => qc.setQueryData(keys.usernameChangeApprovals, pending),
   });
 }
 

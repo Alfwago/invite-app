@@ -5,6 +5,9 @@ import SwiftUI
 struct NoSkateView: View {
     var body: some View {
         VStack(spacing: 4) {
+            Image(systemName: "figure.hockey")
+                .font(.title2)
+                .foregroundStyle(.secondary)
             Text("No Skate Scheduled")
                 .font(.headline)
                 .multilineTextAlignment(.center)
