@@ -1,5 +1,7 @@
 # Trying the watch app + complication in Xcode
 
+> **Quickest route:** `npm run ios:test` builds and installs the phone app + watch app + complication in paired simulators with one command; `npm run ios:test -- --archive-check` runs the pre-archive checks. See `.claude/skills/ios-watch-test/SKILL.md`. The manual steps below are the fallback.
+
 Mac only (Xcode needed). The `ios/` folder is generated and git-ignored, so you
 build it fresh from the repo.
 
