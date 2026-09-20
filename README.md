@@ -21,8 +21,7 @@ cp .env.example .env.local     # then edit EXPO_PUBLIC_API_URL if needed
 npx expo start
 ```
 
-Press `i` for the iOS simulator, `a` for Android, or scan the QR code with the
-**Expo Go** app on a physical phone.
+**Expo Go does not work for this app** (native watch module + watch targets). To test on iOS with the watch companion use `npm run ios:test` (see `.claude/skills/ios-watch-test/SKILL.md`). `npx expo start` / `a` is still fine for Android.
 
 `npx expo install --fix` matters: the versions in `package.json` are best-guess
 pins for Expo SDK 53. Let the CLI correct them for whatever SDK actually installs.
