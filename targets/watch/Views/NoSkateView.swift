@@ -7,8 +7,8 @@ struct NoSkateView: View {
         VStack(spacing: 4) {
             Image(systemName: "figure.hockey")
                 .font(.title2)
-                .foregroundStyle(.secondary)
-            Text("No Skate Scheduled")
+                .foregroundStyle(WatchBrand.gold)
+            Text("No OBH Skate Scheduled")
                 .font(.headline)
                 .multilineTextAlignment(.center)
             Text("Check back after the next invite goes out.")
