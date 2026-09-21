@@ -1,5 +1,9 @@
 import ExpoModulesCore
 import WatchConnectivity
+import os
+
+// View with: xcrun simctl spawn <phone-udid> log show --last 10m --info --predicate 'subsystem == "com.falcon83.obhinvites"'
+private let watchLog = Logger(subsystem: "com.falcon83.obhinvites", category: "watch")
 
 /// Bridges the phone side of WatchConnectivity into JS.
 ///
@@ -15,6 +19,10 @@ import WatchConnectivity
 /// if the watch app isn't currently running.
 public class ExpoWatchConnectivityModule: Module {
   private var pendingReplies: [String: ([String: Any]) -> Void] = [:]
+  /// Latest snapshot from JS, kept so it can be (re)sent once the session is
+  /// activated and the watch app is installed — a push that arrives earlier
+  /// than that used to be dropped for good.
+  private var latestContext: [String: Any]?
   private let pendingRepliesLock = NSLock()
 
   public func definition() -> ModuleDefinition {
@@ -41,10 +49,11 @@ public class ExpoWatchConnectivityModule: Module {
     // caches the latest context and hands it to the watch on next
     // launch/wake (unlike sendMessage, which needs both sides live).
     Function("updateApplicationContext") { (payload: [String: Any]) in
-      guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+      guard WCSession.isSupported() else { return }
       let sanitized = Self.stripNulls(payload)
       DispatchQueue.main.async {
-        try? WCSession.default.updateApplicationContext(sanitized)
+        self.latestContext = sanitized
+        self.pushLatestContext()
       }
     }
 
@@ -87,6 +96,30 @@ public class ExpoWatchConnectivityModule: Module {
     handler?(reply)
   }
 
+  /// Sends the latest snapshot if the session is ready; otherwise logs why
+  /// not and waits — the delegate calls this again on activation and when the
+  /// watch's state changes (app installed, pairing).
+  fileprivate func pushLatestContext() {
+    DispatchQueue.main.async {
+      guard let context = self.latestContext else { return }
+      let session = WCSession.default
+      guard session.activationState == .activated else {
+        watchLog.info("push deferred: session not activated (state \(session.activationState.rawValue))")
+        return
+      }
+      guard session.isPaired, session.isWatchAppInstalled else {
+        watchLog.info("push deferred: isPaired=\(session.isPaired) isWatchAppInstalled=\(session.isWatchAppInstalled)")
+        return
+      }
+      do {
+        try session.updateApplicationContext(context)
+        watchLog.info("pushed context, keys: \(context.keys.sorted().joined(separator: ","), privacy: .public)")
+      } catch {
+        watchLog.error("updateApplicationContext failed: \(error.localizedDescription, privacy: .public)")
+      }
+    }
+  }
+
   fileprivate func notifyReachability(_ reachable: Bool) {
     sendEvent("onReachabilityChange", ["reachable": reachable])
   }
@@ -119,7 +152,14 @@ private class SessionDelegateProxy: NSObject, WCSessionDelegate {
   func session(
     _ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?
   ) {
+    watchLog.info("phone session activated: state=\(activationState.rawValue) paired=\(session.isPaired) watchAppInstalled=\(session.isWatchAppInstalled) reachable=\(session.isReachable)")
     module?.notifyReachability(session.isReachable)
+    module?.pushLatestContext()
+  }
+
+  func sessionWatchStateDidChange(_ session: WCSession) {
+    watchLog.info("watch state changed: paired=\(session.isPaired) watchAppInstalled=\(session.isWatchAppInstalled)")
+    module?.pushLatestContext()
   }
 
   func sessionDidBecomeInactive(_ session: WCSession) {}

@@ -45,6 +45,13 @@ npm run ios:test -- --archive-check    # pre-archive safety checks (no build)
 
 ## Troubleshooting
 
+- **Watch stuck on "Waiting for iPhone…" after the phone is logged in**: read the sync logs on both simulators (both sides log under subsystem `com.falcon83.obhinvites`):
+  ```sh
+  xcrun simctl spawn <PHONE-UDID> log show --last 10m --info --predicate 'subsystem == "com.falcon83.obhinvites"'
+  xcrun simctl spawn <WATCH-UDID> log show --last 10m --info --predicate 'subsystem == "com.falcon83.obhinvites"'
+  ```
+  Phone should log `phone session activated: … watchAppInstalled=true` then `pushed context, keys: nextSkate,updatedAt`; watch should log `didReceiveApplicationContext` then `received phone context`. `push deferred: … isWatchAppInstalled=false` = the watch app isn't installed as this phone's companion (reinstall the phone app so the embedded watch app comes with it). `couldn't decode phone context` shows the decode error. Past causes fixed: pushes dropped when the session wasn't ready yet, and the watch rejecting the phone's fractional-second ISO date (`toISOString()`).
+
 - **Phone shows the Expo dev launcher ("Development Build", "No development servers found", "Enter URL manually"), watch stuck on "Waiting for iPhone…"**: a Debug build replaced the Release one. Cause: `expo run:ios` / `npm run ios` / `expo start` + `i` build and install a Debug app *before* failing with "Can't determine id of Simulator app". Never run those here; use only `npm run ios:test`. Restore with `npm run ios:test -- --skip-prebuild --skip-build --solo` (reinstalls the existing Release build). The watch only leaves "Waiting for iPhone" once the phone app is logged in and running JS.
 - **`--dev` leaves a Debug build, which shows the Expo launcher**, not the app: tap "Enter URL manually" and enter `http://localhost:8090` (the script also tries a deep link). It also replaces any Release build in `ios/build`, so a later `--skip-build` has nothing to install and says so. Use `--dev` only for hot reload; use the default Release run for pre-archive testing.
 - **Look at the simulator without Simulator.app**: `xcrun simctl io <UDID> screenshot ~/Desktop/phone.png` (phone) and the watch UDID for the watch, then `open` them.
