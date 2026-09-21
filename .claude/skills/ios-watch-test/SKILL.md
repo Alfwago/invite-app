@@ -58,7 +58,7 @@ npm run ios:test -- --archive-check    # pre-archive safety checks (no build)
 
 - **Red "Could not connect to development server" screen = you're looking at the wrong simulator.** This script only installs *Release* builds, which never contact a dev server; that error means an old Debug build on some other booted iPhone. The script prints `>>> TEST ON: <iPhone> + <Watch> <<<` and warns about other booted simulators; use `--solo` to shut the others down. Check a device with `APP=$(xcrun simctl get_app_container <UDID> com.falcon83.obhinvites app); ls "$APP" | grep main.jsbundle` (Release has it, Debug doesn't).
 - It reuses an existing paired iPhone+Watch (preferring `OBH-Test` ones) rather than always making a new pair.
-- On Xcode 27 the watch app usually doesn't arrive on its own after the phone install; the script detects that and installs it directly (expected, not an error).
+- **New watch code not showing up**: the script now always reinstalls the embedded watch app (an old version treated "watch app already present" as done, leaving a stale watch app running after a rebuild). To confirm what's on the watch: `W=$(xcrun simctl get_app_container <WATCH-UDID> com.falcon83.obhinvites.watch app); grep -c "some new string" "$W"/*`. Also remember the no-skate screen only appears for an account with no upcoming skate; the canvas preview in `NoSkateView.swift` shows it regardless.
 
 - `xcode-select -p` must print `/Applications/Xcode.app/Contents/Developer` (else `sudo xcode-select -s …`).
 - No simulator runtimes: Xcode > Settings > Components, download iOS and watchOS.
