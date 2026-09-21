@@ -288,7 +288,7 @@ const hasApp = (udid, id) => (sh("xcrun", ["simctl", "listapps", udid]).out || "
 function install(pair, productsDir) {
   step("Install");
   const app = findApp(productsDir, APP_ID);
-  if (!app) die(`Built app (${APP_ID}) not found in ${productsDir}`);
+  if (!app) die(`Built app (${APP_ID}) not found in ${productsDir}`, "There is no build of that kind on disk yet. Re-run without --skip-build (a --dev run only leaves a Debug build; a normal run leaves a Release one).");
   shOrDie("xcrun", ["simctl", "install", pair.phone.udid, app], "Installing the iPhone app");
   log(`iPhone app installed: ${path.basename(app)}`);
   // Installing the phone app normally installs the embedded watch app on the paired watch, after a delay.
@@ -305,9 +305,16 @@ function launch(o, pair) {
   step("Launch");
   sh("xcrun", ["simctl", "terminate", pair.phone.udid, APP_ID]);
   sh("xcrun", ["simctl", "terminate", pair.watch.udid, WATCH_ID]);
-  if (o.dev) shOrDie("xcrun", ["simctl", "spawn", pair.phone.udid, "defaults", "write", APP_ID, "RCT_jsLocation", `localhost:${o.port}`], "Pointing the app at Metro");
-  else sh("xcrun", ["simctl", "spawn", pair.phone.udid, "defaults", "delete", APP_ID, "RCT_jsLocation"]);
+  sh("xcrun", ["simctl", "spawn", pair.phone.udid, "defaults", "delete", APP_ID, "RCT_jsLocation"]);
   shOrDie("xcrun", ["simctl", "launch", pair.phone.udid, APP_ID], "Launching the iPhone app");
+  if (o.dev) {
+    // A Debug build of this app opens the Expo dev *launcher* ("No development servers found"),
+    // not the app, until it's told where Metro is. Best-effort deep link; the URL below is the manual fallback.
+    const url = `http://localhost:${o.port}`;
+    sleep(3);
+    sh("xcrun", ["simctl", "openurl", pair.phone.udid, `exp+jvmalone://expo-development-client/?url=${encodeURIComponent(url)}`]);
+    log(`Dev mode: if the phone shows the launcher ("No development servers found"), tap "Enter URL manually" and enter ${url}`);
+  }
   if (!sh("xcrun", ["simctl", "launch", pair.watch.udid, WATCH_ID]).ok) log("(Watch app didn't auto-launch; open it from the watch simulator.)");
 }
 
@@ -369,7 +376,7 @@ Usage: node scripts/ios-watch-test.mjs [options]     (or: npm run ios:test -- [o
   --api <url>       Server baked into the build (default ${TEST_API})
   --prod            Same as --api ${PROD_API}
   --iphone <name>   Prefer an existing simulator pair whose iPhone name contains this
-  --dev             Debug build + start Metro for hot reload (uses --port, default 8090; not 8081)
+  --dev             Debug build + Metro for hot reload (--port, default 8090). The phone opens the Expo launcher: tap "Enter URL manually" and enter http://localhost:8090. NOT for pre-archive testing
   --archive-check   Only run the pre-archive safety checks
 `;
 
