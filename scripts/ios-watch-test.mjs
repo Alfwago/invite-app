@@ -154,6 +154,20 @@ export function scanInfoPlist(text) {
   return { build: get("CFBundleVersion"), version: get("CFBundleShortVersionString") };
 }
 
+/**
+ * The phone app's real version/build. Older prebuild templates write literals
+ * into Info.plist; newer ones write "$(MARKETING_VERSION)" / "$(CURRENT_PROJECT_VERSION)"
+ * and keep the numbers in the target's build settings. Resolve either way. If the
+ * phone target's configs disagree (e.g. Debug vs Release) the values come back joined
+ * with "/", which won't equal anything, so the caller flags it.
+ */
+export function resolvePhoneVersion(plist, cfgs, appId) {
+  const phone = cfgs.filter((c) => c.bundleId === appId);
+  const pick = (literal, key) =>
+    /^\$\(/.test(literal || "") ? [...new Set(phone.map((c) => c[key]).filter(Boolean))].join("/") || null : literal;
+  return { version: pick(plist.version, "version"), build: pick(plist.build, "build") };
+}
+
 // ------------------------------------------------------------------- helpers
 
 const log = (m = "") => console.log(m);
@@ -346,8 +360,8 @@ function archiveCheck() {
   log(`  --  app.json: version ${app.version}, iOS buildNumber ${app.ios?.buildNumber}`);
   if (!fs.existsSync(path.join(ROOT, PBXPROJ))) return die("ios/ isn't generated.", "Run: npm run ios:test  (or: npx expo prebuild --platform ios --clean)");
   const cfgs = scanPbxproj(read(PBXPROJ));
-  const phone = scanInfoPlist(read("ios/OBHInvites/Info.plist"));
-  log(`  --  phone app Info.plist: version ${phone.version}, build ${phone.build}  (from app.json)`);
+  const phone = resolvePhoneVersion(scanInfoPlist(read("ios/OBHInvites/Info.plist")), cfgs, APP_ID);
+  log(`  --  phone app (Info.plist / build settings): version ${phone.version}, build ${phone.build}`);
   flag(phone.version === app.version && phone.build === String(app.ios?.buildNumber),
     `Phone app matches app.json (${app.version} / ${app.ios?.buildNumber})`);
   const embedded = cfgs.filter((c) => c.bundleId !== APP_ID); // watch app + complication
