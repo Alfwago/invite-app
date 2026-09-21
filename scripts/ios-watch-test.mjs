@@ -283,7 +283,6 @@ function findApp(dir, bundleId) {
 }
 
 const sleep = (s) => sh("sleep", [String(s)]);
-const hasApp = (udid, id) => (sh("xcrun", ["simctl", "listapps", udid]).out || "").includes(id);
 
 function install(pair, productsDir) {
   step("Install");
@@ -291,14 +290,14 @@ function install(pair, productsDir) {
   if (!app) die(`Built app (${APP_ID}) not found in ${productsDir}`, "There is no build of that kind on disk yet. Re-run without --skip-build (a --dev run only leaves a Debug build; a normal run leaves a Release one).");
   shOrDie("xcrun", ["simctl", "install", pair.phone.udid, app], "Installing the iPhone app");
   log(`iPhone app installed: ${path.basename(app)}`);
-  // Installing the phone app normally installs the embedded watch app on the paired watch, after a delay.
-  for (let i = 0; i < 10 && !hasApp(pair.watch.udid, WATCH_ID); i++) sleep(3);
-  if (!hasApp(pair.watch.udid, WATCH_ID)) {
-    const embedded = findApp(path.join(app, "Watch"), WATCH_ID);
-    if (!embedded) die("The watch app isn't embedded in the phone app.", "Re-run without --skip-prebuild.");
-    shOrDie("xcrun", ["simctl", "install", pair.watch.udid, embedded], "Installing the watch app");
-    log("Watch app installed directly (it hadn't arrived on its own).");
-  } else log("Watch app present on the watch simulator.");
+  // Always install the embedded watch app ourselves. Installing the phone app
+  // is supposed to update the companion on the paired watch, but that's slow and
+  // unreliable, and "the watch app is already there" used to mean a STALE
+  // watch app kept running after a rebuild (new watch code never showed up).
+  const embedded = findApp(path.join(app, "Watch"), WATCH_ID);
+  if (!embedded) die("The watch app isn't embedded in the phone app.", "Re-run without --skip-prebuild.");
+  shOrDie("xcrun", ["simctl", "install", pair.watch.udid, embedded], "Installing the watch app");
+  log(`Watch app installed: ${path.basename(embedded)}`);
 }
 
 function launch(o, pair) {
