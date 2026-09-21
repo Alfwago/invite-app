@@ -35,7 +35,7 @@ const WATCH_NAME = "OBH-Test Watch";
 export function parseArgs(argv) {
   const o = {
     api: TEST_API, dev: false, port: 8090, skipPrebuild: false, skipBuild: false,
-    reset: false, archiveCheck: false, iphone: "", help: false,
+    reset: false, solo: false, archiveCheck: false, iphone: "", help: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -46,6 +46,7 @@ export function parseArgs(argv) {
     else if (a === "--skip-prebuild") o.skipPrebuild = true;
     else if (a === "--skip-build") o.skipBuild = true;
     else if (a === "--reset") o.reset = true;
+    else if (a === "--solo") o.solo = true;
     else if (a === "--archive-check") o.archiveCheck = true;
     else if (a === "--iphone") o.iphone = argv[++i];
     else if (a === "--help" || a === "-h") o.help = true;
@@ -215,6 +216,18 @@ function ensurePair(o) {
     const r = sh("xcrun", ["simctl", "bootstatus", d.udid, "-b"]);
     if (!r.ok) die(`Couldn't boot ${d.name}`, r.err || r.out);
   }
+  // Other booted simulators are how you end up staring at the wrong device (an
+  // old Debug build on a different iPhone looks exactly like this app failing).
+  const others = Object.values(simctlJson("devices").devices).flat()
+    .filter((d) => d.state === "Booted" && d.udid !== pair.phone.udid && d.udid !== pair.watch.udid);
+  if (others.length && o.solo) {
+    for (const d of others) sh("xcrun", ["simctl", "shutdown", d.udid]);
+    log(`Shut down other simulators: ${others.map((d) => d.name).join(", ")}`);
+  } else if (others.length) {
+    log(`\n!! Other simulators are also booted: ${others.map((d) => d.name).join(", ")}`);
+    log("   Make sure you're looking at the one below, or re-run with --solo to shut the others down.");
+  }
+  log(`\n>>> TEST ON: "${pair.phone.name}" + "${pair.watch.name}" <<<`);
   // Best effort only: on Xcode 27 Simulator.app may not be registered. Booted sims still work.
   if (!sh("open", ["-a", "Simulator"]).ok) log("(Could not open Simulator.app - fine, the simulators are booted; view them from Xcode.)");
   return pair;
@@ -352,6 +365,7 @@ Usage: node scripts/ios-watch-test.mjs [options]     (or: npm run ios:test -- [o
   --skip-prebuild   Reuse ios/ (use when only JS/Swift changed - much faster)
   --skip-build      Just reinstall + relaunch the last build
   --reset           Erase both simulators first (clears logins/app data)
+  --solo            Shut down every other booted simulator (so only the tested pair is running)
   --api <url>       Server baked into the build (default ${TEST_API})
   --prod            Same as --api ${PROD_API}
   --iphone <name>   Prefer an existing simulator pair whose iPhone name contains this
