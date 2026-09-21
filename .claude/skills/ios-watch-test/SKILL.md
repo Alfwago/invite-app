@@ -45,6 +45,9 @@ npm run ios:test -- --archive-check    # pre-archive safety checks (no build)
 
 ## Troubleshooting
 
+- **Phone shows the Expo dev launcher ("Development Build", "No development servers found", "Enter URL manually"), watch stuck on "Waiting for iPhone…"**: a Debug build replaced the Release one. Cause: `expo run:ios` / `npm run ios` / `expo start` + `i` build and install a Debug app *before* failing with "Can't determine id of Simulator app". Never run those here; use only `npm run ios:test`. Restore with `npm run ios:test -- --skip-prebuild --skip-build --solo` (reinstalls the existing Release build). The watch only leaves "Waiting for iPhone" once the phone app is logged in and running JS.
+- **Look at the simulator without Simulator.app**: `xcrun simctl io <UDID> screenshot ~/Desktop/phone.png` (phone) and the watch UDID for the watch, then `open` them.
+
 - **Red "Could not connect to development server" screen = you're looking at the wrong simulator.** This script only installs *Release* builds, which never contact a dev server; that error means an old Debug build on some other booted iPhone. The script prints `>>> TEST ON: <iPhone> + <Watch> <<<` and warns about other booted simulators; use `--solo` to shut the others down. Check a device with `APP=$(xcrun simctl get_app_container <UDID> com.falcon83.obhinvites app); ls "$APP" | grep main.jsbundle` (Release has it, Debug doesn't).
 - It reuses an existing paired iPhone+Watch (preferring `OBH-Test` ones) rather than always making a new pair.
 - On Xcode 27 the watch app usually doesn't arrive on its own after the phone install; the script detects that and installs it directly (expected, not an error).
