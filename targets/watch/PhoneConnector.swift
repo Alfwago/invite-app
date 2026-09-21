@@ -1,5 +1,9 @@
 import Foundation
 import WatchConnectivity
+import os
+
+// View with: xcrun simctl spawn <watch-udid> log show --last 10m --info --predicate 'subsystem == "com.falcon83.obhinvites"'
+private let watchLog = Logger(subsystem: "com.falcon83.obhinvites", category: "watch")
 
 /// Bridges the watch app to the phone over WatchConnectivity. Owns the
 /// WCSession; NextSkateStore is the only consumer, wired through closures
@@ -70,12 +74,28 @@ final class PhoneConnector: NSObject {
 
     private func apply(_ context: [String: Any]) {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        guard
-            let data = try? JSONSerialization.data(withJSONObject: context),
-            let payload = try? decoder.decode(WatchPayload.self, from: data)
-        else { return }
-        onPayload?(payload)
+        // The phone's JS sends `new Date().toISOString()` — fractional seconds
+        // ("...:00.123Z"), which the stock `.iso8601` strategy rejects, leaving
+        // the watch on "Waiting for iPhone" with no error. Accept both forms.
+        decoder.dateDecodingStrategy = .custom { dateDecoder in
+            let text = try dateDecoder.singleValueContainer().decode(String.self)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: text) { return date }
+            formatter.formatOptions = [.withInternetDateTime]
+            if let date = formatter.date(from: text) { return date }
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: dateDecoder.codingPath, debugDescription: "Bad ISO-8601 date: \(text)")
+            )
+        }
+        do {
+            let data = try JSONSerialization.data(withJSONObject: context)
+            let payload = try decoder.decode(WatchPayload.self, from: data)
+            watchLog.info("received phone context, nextSkate: \(payload.nextSkate == nil ? "none" : "present", privacy: .public)")
+            onPayload?(payload)
+        } catch {
+            watchLog.error("couldn't decode phone context (keys: \(context.keys.sorted().joined(separator: ","), privacy: .public)): \(String(describing: error), privacy: .public)")
+        }
     }
 }
 
@@ -83,6 +103,7 @@ extension PhoneConnector: WCSessionDelegate {
     nonisolated func session(
         _ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?
     ) {
+        watchLog.info("watch session activated: state=\(activationState.rawValue) reachable=\(session.isReachable) cachedContextKeys=\(session.receivedApplicationContext.keys.sorted().joined(separator: ","), privacy: .public)")
         Task { @MainActor in
             self.onReachabilityChange?(session.isReachable)
             self.deliverCachedContextIfAny()
@@ -94,6 +115,7 @@ extension PhoneConnector: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        watchLog.info("didReceiveApplicationContext, keys: \(applicationContext.keys.sorted().joined(separator: ","), privacy: .public)")
         Task { @MainActor in self.apply(applicationContext) }
     }
 }
