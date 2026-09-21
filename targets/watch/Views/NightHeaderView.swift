@@ -11,7 +11,6 @@ struct NightHeaderView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(nightName)
                 .font(.headline)
-                .foregroundStyle(WatchBrand.gold)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(WatchDateFormatting.dateAndTime(date: date, startTime: startTime))

@@ -13,11 +13,6 @@
 
 import SwiftUI
 
-/// League gold (`colors.gold` in src/theme.ts) — the black-and-gold brand color.
-enum WatchBrand {
-    static let gold = Color(red: 0xd4 / 255, green: 0xaf / 255, blue: 0x37 / 255)
-}
-
 extension WatchRsvpStatus {
     var color: Color {
         switch self {
@@ -111,7 +106,7 @@ extension WatchTeamAssignment {
     /// black watch face — same reasoning as TeamAssignmentCard.tsx.
     var teamColor: Color {
         team == "Gold"
-            ? WatchBrand.gold
+            ? Color(red: 0xd4 / 255, green: 0xaf / 255, blue: 0x37 / 255) // colors.gold
             : Color(red: 0xc9 / 255, green: 0xce / 255, blue: 0xd3 / 255) // TEAM_TINT.Black
     }
 }
