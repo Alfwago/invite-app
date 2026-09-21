@@ -322,7 +322,7 @@ function checklist(o) {
   log(`
 ================ What to check ================
 1. iPhone: the login screen appears. Log in with a TEST account${o.api === PROD_API ? " (this build is PRODUCTION - be careful)" : ""}.
-2. Watch: it shows the next skate, or the hockey-figure "No Skate Scheduled" screen.
+2. Watch: it shows the next skate, or the gold hockey-figure "No OBH Skate Scheduled" screen.
    (First sync needs the phone app logged in and open. Simulator reachability is flaky - retry once.)
 3. Complication: in the watch simulator long-press the face > Edit > swipe to Complications > tap a slot > "OBH Invites".
 4. Nothing crashed on launch. Logs: xcrun simctl spawn booted log stream --predicate 'process == "OBHInvites"'
