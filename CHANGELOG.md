@@ -3,7 +3,29 @@
 Dates are when the work was done, not released. The app has not shipped to a
 store yet.
 
-## 2026-09-18 — watchOS: "no skate" complication, jersey icons, profile locks
+## 2026-09-20 — 1.4.0: watch no-skate look + sync fix, jerseys, profile locks
+
+Version 1.4.0 (iOS build 3, Android versionCode 2). Needs `invite-server`
+0.28.0 on prod for the profile-change screens, roster jerseys and the
+attendance fix; the rest works against 0.27.0. Do not bump
+`SiteConfiguration.latest_app_version` until 1.4.0 is live in the App Store.
+
+- **Watch sync fix**: the phone dropped pushes made before the session/watch
+  app were ready (and swallowed errors), and the watch couldn't decode the
+  phone's fractional-second timestamp, so it sat on "Waiting for iPhone".
+  Pushes are now retried on activation / watch-state changes, the watch
+  accepts both date forms, and both sides log to `com.falcon83.obhinvites`.
+- **No-skate look**: gold hockey-figure icon and "No OBH Skate Scheduled" on
+  the watch app and every complication size (circular "No OBH / skate",
+  rectangular "No OBH Skate / Scheduled", inline, corner).
+- **iOS + watch test workflow**: `npm run ios:test` builds the phone app,
+  watch app and complication (Release, embedded JS, no Metro) and runs both
+  in paired simulators via xcodebuild/simctl; `--archive-check` guards the
+  submission (test-server URL from `.env.local`, version/build drift, watch
+  device family). See `.claude/skills/ios-watch-test/SKILL.md`.
+
+### Earlier in this release
+
 
 - **Watch complication, no-skate state**: with nothing scheduled it used to
   show an empty roster ring (reads as "0% full") behind a generic calendar.
