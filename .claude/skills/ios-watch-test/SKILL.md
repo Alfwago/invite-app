@@ -25,7 +25,7 @@ npm run ios:test -- --archive-check    # pre-archive safety checks (no build)
    - It builds **Release against the TEST server** by default, so you're testing what gets archived without touching prod data. `--prod` bakes in the production URL (only for a final look; use a throwaway account).
 3. **Check by eye** (the script prints this list):
    - iPhone: login screen appears, log in with a test account.
-   - Watch: next skate, or the hockey-figure "No Skate Scheduled" screen. The watch only gets data once the phone app is logged in and open.
+   - Watch: next skate, or the gold hockey-figure "No OBH Skate Scheduled" screen. The watch only gets data once the phone app is logged in and open.
    - Complication: watch simulator, long-press face > Edit > Complications > "OBH Invites".
 4. **Iterate**: change code, `npm run ios:test -- --skip-prebuild`. Re-run **without** `--skip-prebuild` after any change to `app.json`, `targets/*/expo-target.config.js`, plugins, or native modules.
 5. **Pre-archive**: `npm run ios:test -- --archive-check`. Fix every `!!` line first. Then in Xcode: open `ios/OBHInvites.xcworkspace` (the workspace), scheme **OBHInvites**, destination **Any iOS Device (arm64)**, Product > Archive, then Distribute App.

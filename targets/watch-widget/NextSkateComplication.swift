@@ -85,12 +85,14 @@ struct NextSkateComplicationView: View {
             VStack(spacing: 1) {
                 Image(systemName: Self.noSkateSymbol)
                     .font(.title3)
-                Text("No skate")
+                    .foregroundStyle(WatchBrand.gold)
+                Text("No OBH\nskate")
                     .font(.system(size: 8, weight: .semibold))
+                    .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.7)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .foregroundStyle(.secondary)
             }
-            .foregroundStyle(.secondary)
             .widgetAccentable()
         }
     }
@@ -154,14 +156,15 @@ struct NextSkateComplicationView: View {
                 HStack(spacing: 6) {
                     Image(systemName: Self.noSkateSymbol)
                         .font(.title2)
+                        .foregroundStyle(WatchBrand.gold)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("No Skate")
+                        Text("No OBH Skate")
                             .font(.headline)
-                        Text("Nothing scheduled")
+                        Text("Scheduled")
                             .font(.caption2)
                     }
+                    .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .widgetAccentable()
             }
@@ -178,14 +181,14 @@ struct NextSkateComplicationView: View {
                     Text("\(day): \(skate.myRsvp.label)")
                 }
             } else {
-                Label("No skate scheduled", systemImage: Self.noSkateSymbol)
+                Label("No OBH skate scheduled", systemImage: Self.noSkateSymbol)
             }
         }
     }
 
     private var corner: some View {
         Image(systemName: entry.skate?.myRsvp.symbolName ?? Self.noSkateSymbol)
-            .foregroundStyle(entry.skate?.myRsvp.color ?? .secondary)
+            .foregroundStyle(entry.skate?.myRsvp.color ?? WatchBrand.gold)
             .widgetLabel {
                 // Same roster-fullness bar as the other families, curved
                 // around the corner — once rosterStats exists (RSVP'd),
@@ -196,7 +199,7 @@ struct NextSkateComplicationView: View {
                         .gaugeStyle(.accessoryLinearCapacity)
                         .tint(rosterTint)
                 } else {
-                    Text(entry.skate?.myRsvp.label ?? "No skate")
+                    Text(entry.skate?.myRsvp.label ?? "No OBH skate")
                 }
             }
     }

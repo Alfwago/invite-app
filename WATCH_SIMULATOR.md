@@ -31,8 +31,8 @@ Product > Scheme > Manage Schemes > Autocreate Schemes Now.
 3. Pick each preview (Circular / Rectangular / Inline / Corner) and step through the
    timeline entries. Each one has a normal skate entry and a **no-skate** entry.
 
-The no-skate look is a hockey-figure icon: circular "No skate", rectangular
-"No Skate / Nothing scheduled", inline "No skate scheduled", corner icon + label.
+The no-skate look is a gold hockey-figure icon: circular "No OBH skate", rectangular
+"No OBH Skate / Scheduled", inline "No OBH skate scheduled", corner icon + "No OBH skate".
 
 The watch app's own no-skate screen previews from `targets/watch/Views/NoSkateView.swift`.
 
