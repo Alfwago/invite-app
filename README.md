@@ -26,6 +26,10 @@ npx expo start
 `npx expo install --fix` matters: the versions in `package.json` are best-guess
 pins for Expo SDK 53. Let the CLI correct them for whatever SDK actually installs.
 
+## Releasing
+
+The full release process (server, Android APK, iOS + watch) is in `RELEASING.md` in the `invite-server` repo. Day-to-day iOS + watch testing: `npm run ios:test` (see `.claude/skills/ios-watch-test/SKILL.md`).
+
 ## Which server does it talk to?
 
 Resolution order (see `src/api/client.ts`):
