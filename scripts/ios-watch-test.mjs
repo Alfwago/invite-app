@@ -364,14 +364,17 @@ function archiveCheck() {
   log(`  --  phone app (Info.plist / build settings): version ${phone.version}, build ${phone.build}`);
   flag(phone.version === app.version && phone.build === String(app.ios?.buildNumber),
     `Phone app matches app.json (${app.version} / ${app.ios?.buildNumber})`);
-  const embedded = cfgs.filter((c) => c.bundleId !== APP_ID); // watch app + complication
+  const embedded = cfgs.filter((c) => c.bundleId !== APP_ID); // watch app, complication, skate card
   flag(embedded.length > 0 && embedded.every((c) => c.version === phone.version && c.build === phone.build),
-    `Watch app + complication use the same version/build as the phone app: ${[...new Set(embedded.map((c) => `${c.version}/${c.build}`))].join(", ")}`);
+    `Watch app, complication + skate card use the same version/build as the phone app: ${[...new Set(embedded.map((c) => `${c.version}/${c.build}`))].join(", ")}`);
   const teams = [...new Set(cfgs.map((c) => c.team).filter(Boolean))];
   flag(teams.length === 1, `Signing team: ${teams.join(", ") || "none set"}`);
   const ids = [...new Set(cfgs.map((c) => c.bundleId))];
   flag(ids.includes(APP_ID) && ids.includes(WATCH_ID) && ids.includes(`${WATCH_ID}.widget`), `Bundle IDs nest correctly: ${ids.join(", ")}`);
-  const fam = [...new Set(embedded.map((c) => c.family))];
+  // Only the watch targets: phone-side extensions (the skate-card Live
+  // Activity widget) are correctly iPhone/iPad ("1,2").
+  const watchCfgs = embedded.filter((c) => c.bundleId === WATCH_ID || c.bundleId.startsWith(`${WATCH_ID}.`));
+  const fam = [...new Set(watchCfgs.map((c) => c.family))];
   flag(fam.length === 1 && fam[0] === "4", `Watch targets are Apple Watch only (TARGETED_DEVICE_FAMILY ${fam.join(", ")}; want 4)`);
   log("  --  Remember: App Store Connect needs the build number higher than your last upload (bump app.json ios.buildNumber, then re-prebuild).");
   log(bad ? `\n${bad} problem(s) - fix before archiving.` : `\nAll good. In Xcode: scheme "${SCHEME}", destination "Any iOS Device (arm64)", Product > Archive.`);
