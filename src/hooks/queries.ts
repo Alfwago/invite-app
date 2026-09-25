@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 
 import * as api from "@/src/api/endpoints";
+import { applyOptimisticRosterAction } from "@/src/rosterOptimistic";
 import type {
   BoardMessage,
   CreateNextEventBody,
@@ -315,9 +316,27 @@ export function useCandidates(id: number | string, enabled = true) {
 export function useRosterAction(id: number | string) {
   const qc = useQueryClient();
   const invalidate = useInvalidateEvent(id);
+  const mutationKey = ["roster-action", String(id)];
   return useMutation({
+    mutationKey,
     mutationFn: (body: RosterAction) => api.rosterAction(id, body),
+    onMutate: async (body) => {
+      const current = qc.getQueryData<EventDetail>(keys.event(id));
+      const next = current ? applyOptimisticRosterAction(current, body) : null;
+      if (!next) return { previous: undefined };
+      // Don't let an in-flight refetch land on top of the tick.
+      await qc.cancelQueries({ queryKey: keys.event(id), exact: true });
+      qc.setQueryData(keys.event(id), next);
+      return { previous: current };
+    },
+    onError: (_e, _body, ctx) => {
+      if (ctx?.previous) qc.setQueryData(keys.event(id), ctx.previous);
+      if (qc.isMutating({ mutationKey }) <= 1) invalidate();
+    },
     onSuccess: (fresh) => {
+      // Rapid taps: a reply for tap #1 would overwrite tap #2's optimistic
+      // tick, so only the last one in flight writes the server's copy.
+      if (qc.isMutating({ mutationKey }) > 1) return;
       invalidate(fresh);
       qc.invalidateQueries({ queryKey: ["event", String(id), "candidates"] });
     },

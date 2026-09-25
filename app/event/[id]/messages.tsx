@@ -3,11 +3,13 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { ApiError } from "@/src/api/client";
 import { ChatThread } from "@/src/components/chat/ChatThread";
 import { useEvent, useEventMessages, useEventThreadActions } from "@/src/hooks/queries";
+import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 export default function EventThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const event = useEvent(id);
   const thread = useEventMessages(id);
+  const pull = usePullToRefresh(thread.refetch);
   const actions = useEventThreadActions(id);
 
   const data = thread.data;
@@ -24,8 +26,8 @@ export default function EventThreadScreen() {
         loading={thread.isLoading}
         error={thread.isError}
         errorMessage={thread.error instanceof ApiError ? thread.error.detail : undefined}
-        refreshing={thread.isRefetching}
-        onRefresh={thread.refetch}
+        refreshing={pull.refreshing}
+        onRefresh={pull.onRefresh}
         onRetry={thread.refetch}
         sending={actions.post.isPending || actions.edit.isPending}
         emptyLabel="No messages on this skate yet"

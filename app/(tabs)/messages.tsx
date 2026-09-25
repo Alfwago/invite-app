@@ -15,6 +15,7 @@ import {
   useReactMessage,
 } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
+import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const MAIN = null;
 
@@ -24,6 +25,8 @@ export default function MessagesScreen() {
   const [board, setBoard] = useState<number | null>(MAIN);
 
   const messagesQuery = useMessages(board);
+
+  const pull = usePullToRefresh(messagesQuery.refetch);
   const post = usePostMessage(board);
   const edit = useEditMessage(board);
   const del = useDeleteMessage(board);
@@ -81,8 +84,8 @@ export default function MessagesScreen() {
         errorMessage={
           messagesQuery.error instanceof ApiError ? messagesQuery.error.detail : undefined
         }
-        refreshing={messagesQuery.isRefetching}
-        onRefresh={messagesQuery.refetch}
+        refreshing={pull.refreshing}
+        onRefresh={pull.onRefresh}
         onRetry={messagesQuery.refetch}
         sending={post.isPending || edit.isPending}
         emptyLabel="No messages"

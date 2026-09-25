@@ -156,6 +156,8 @@ export interface EventSummary {
   public_id: string;
   title: string;
   display_name: string;
+  /** Bundled night logo for the skate-day card ("Monday"); "" = default. */
+  logo_key?: string;
   date: string; // YYYY-MM-DD
   start_time: string | null; // HH:MM:SS
   location: string;
@@ -450,6 +452,9 @@ export interface HomeData {
   nights: HomeNight[];
   custom_events: EventSummary[];
   team_assignment: TeamAssignment | null; // for the viewer's NEXT skate only
+  /** Newest post on the next skate's night board from the last 24h, for the
+   *  skate-day card. null = none / not a member of that board. `at` = Unix seconds. */
+  next_skate_board_message?: { author: string; text: string; at: number } | null;
   /** Newest version submitted to the App/Play Store — see
    *  SiteConfiguration.latest_app_version. "" when nothing's configured. */
   latest_app_version: string;

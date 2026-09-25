@@ -8,11 +8,13 @@ import { EventCard } from "@/src/components/EventCard";
 import { EmptyState, ErrorState, Loading } from "@/src/components/ui";
 import { useEvents } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
+import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 export default function EventsScreen() {
   const { me } = useAuth();
   const [past, setPast] = useState(false);
   const query = useEvents(past);
+  const pull = usePullToRefresh(query.refetch);
 
   if (query.isLoading) return <Loading label="Loading events…" />;
   if (query.isError) {
@@ -34,8 +36,8 @@ export default function EventsScreen() {
       keyExtractor={(e) => String(e.id)}
       refreshControl={
         <RefreshControl
-          refreshing={query.isRefetching}
-          onRefresh={query.refetch}
+          refreshing={pull.refreshing}
+          onRefresh={pull.onRefresh}
           tintColor={colors.gold}
         />
       }

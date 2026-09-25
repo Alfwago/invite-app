@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import * as api from "@/src/api/endpoints";
+import { API_BASE } from "@/src/api/client";
+import { useAuth } from "@/src/auth/AuthContext";
 import type { HomeData, RosterStats } from "@/src/api/types";
 import {
   addRsvpRequestListener,
@@ -30,6 +32,7 @@ const RSVP_CHOICES: WatchRsvpStatus[] = ["YES", "NO", "MAYBE"];
 export function useWatchConnectivity() {
   const qc = useQueryClient();
   const home = useHome();
+  const { token } = useAuth();
 
   useEffect(() => {
     if (!watchConnectivitySupported) return;
@@ -58,13 +61,30 @@ export function useWatchConnectivity() {
   // the same payload doesn't re-push identical data to the watch.
   const lastSent = useRef<string | null>(null);
   useEffect(() => {
-    if (!watchConnectivitySupported || !home.data) return;
-    const payload = watchPayloadFromHome(home.data);
-    const serialized = JSON.stringify(payload);
+    if (!watchConnectivitySupported) return;
+    // Signed out: an empty context (no nextSkate, no credentials) — the
+    // watch drops its token and shows the no-skate state.
+    if (!token) {
+      if (lastSent.current !== null) {
+        lastSent.current = null;
+        updateWatchApplicationContext({ updatedAt: new Date().toISOString() });
+      }
+      return;
+    }
+    if (!home.data) return;
+    const payload = {
+      ...watchPayloadFromHome(home.data),
+      // Lets the watch fetch /api/home/ itself (targets/watch/HomeFetcher.swift),
+      // so it stays current while this app is closed.
+      apiUrl: API_BASE,
+      authToken: token,
+    };
+    // updatedAt changes every call — compare without it.
+    const serialized = JSON.stringify({ ...payload, updatedAt: undefined });
     if (serialized === lastSent.current) return;
     lastSent.current = serialized;
     updateWatchApplicationContext(payload);
-  }, [home.data]);
+  }, [home.data, token]);
 }
 
 function watchPayloadFromHome(data: HomeData): Record<string, unknown> {

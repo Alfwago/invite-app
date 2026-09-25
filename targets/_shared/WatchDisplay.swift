@@ -139,6 +139,12 @@ enum WatchDateFormatting {
         return date < today
     }
 
+    /// Today's local calendar day as "YYYY-MM-DD", comparable with a
+    /// skate's `date`.
+    static func todayString(now: Date = .now) -> String {
+        todayFormatter.string(from: now)
+    }
+
     /// Start of the next local day — when the current skate should stop
     /// counting as current, so the complication can schedule a refresh.
     static func nextLocalMidnight(after now: Date = .now) -> Date {

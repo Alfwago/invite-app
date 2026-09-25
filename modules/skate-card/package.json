@@ -1,0 +1,13 @@
+{
+  "name": "expo-skate-card",
+  "version": "0.1.0",
+  "description": "Starts the skate-day Live Activity card and reports its ActivityKit push tokens to invite-server.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "UNLICENSED",
+  "author": "jvmalone",
+  "homepage": "https://github.com/alfwago/invite-app",
+  "peerDependencies": {
+    "expo": "*"
+  }
+}

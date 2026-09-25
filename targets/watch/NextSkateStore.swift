@@ -47,6 +47,25 @@ final class NextSkateStore: ObservableObject {
             }
         }
 
+        // Start from whatever was last saved (a background fetch or an
+        // earlier phone push), not a blank screen.
+        if nextSkate == nil, let saved = WatchSharedStorage.load() {
+            self.nextSkate = saved.nextSkate
+            hasReceivedData = true
+        }
+
+        // A background refresh (WatchSync) saved newer data while this
+        // screen exists — show it; WatchSync already saved and reloaded.
+        NotificationCenter.default.addObserver(
+            forName: WatchSync.didUpdate, object: nil, queue: .main
+        ) { [weak self] note in
+            let skate = note.object as? WatchNextSkate
+            Task { @MainActor in
+                self?.hasReceivedData = true
+                self?.nextSkate = skate
+            }
+        }
+
         connector.deliverCachedContextIfAny()
     }
 

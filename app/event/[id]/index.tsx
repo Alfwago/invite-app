@@ -22,6 +22,7 @@ import { formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
 import { useEvent } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
+import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const TABS: { key: RsvpStatus; label: string }[] = [
   { key: "YES", label: "Yes" },
@@ -35,6 +36,7 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const query = useEvent(id);
+  const pull = usePullToRefresh(query.refetch);
 
   if (query.isLoading) return <Loading label="Loading event…" />;
   if (query.isError || !query.data) {
@@ -75,8 +77,8 @@ export default function EventDetailScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={query.isRefetching}
-            onRefresh={query.refetch}
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
             tintColor={colors.gold}
           />
         }

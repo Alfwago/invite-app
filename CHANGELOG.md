@@ -1,7 +1,50 @@
 # Changelog — OBH Skate Invites app
 
-Dates are when the work was done, not released. The app has not shipped to a
-store yet.
+Dates are when the work was done, not released. 1.4.0 is live in the App
+Store; Android ships as a direct-download APK from the site.
+
+## 2026-09-25 — 1.5.0: skate-day lock-screen card, watch stays current, roster taps
+
+Version 1.5.0 (iOS build 22). Needs `invite-server` 0.29.0 on prod (card token
+endpoints, Home's night logo + board line, the Home visibility fix). New native
+code and a new widget extension, so it can't go out as an over-the-air update —
+it needs a store build. Do not bump `SiteConfiguration.latest_app_version` until
+1.5.0 is live in the App Store.
+
+- **Skate-day card (iOS 16.2+)**: a Live Activity on the Lock Screen and in the
+  Dynamic Island for your next skate, from 7 hours before puck drop to an hour
+  after — the night's logo (Monday Mules etc., bundled; custom uploads show the
+  default OBH logo), name and time, one status pill (NEED GOALIES / NEED
+  SKATERS / FULL, or your own WAITLIST / MAYBE / NOT ANSWERED when you're not a
+  Yes), the app's roster fill bar, "13/16 skaters · 1/2 G", your jersey once
+  teams are picked ("Jersey: TBA" until then), and the newest post on the
+  night's board from the last 24 hours. After puck drop it reads "Started
+  9:30 PM" and drops the pill. Tapping opens the event. Goes to everyone
+  invited who hasn't said No.
+  - Started and kept current by the server over APNs (push-to-start needs iOS
+    17.2+). Until the server has its APNs key, the card starts and refreshes
+    whenever the app is opened during that window.
+  - `targets/skate-card` (widget extension, night logos in its asset
+    catalog), `modules/skate-card` (starts the card, reports its ActivityKit
+    tokens to `/api/live-activity/register/` natively so a background wake can
+    do it), `src/hooks/useSkateCard.ts` + `src/skateCard.ts`.
+  - Android's pinned-notification version isn't in this release.
+- **Watch stays current without opening it**: the watch now fetches
+  `/api/home/` from the server itself — when the watch app opens and in
+  background refreshes (every ~15 min on skate day, hourly otherwise; watchOS
+  decides the exact timing) — and reloads the complication each time. The
+  phone hands the watch its server URL + login token in the existing
+  application context and clears it on sign-out. The phone's instant push
+  while its app is open is unchanged. `targets/watch/WatchSync.swift`.
+- **Director roster: Present / Paid taps are instant**: the tick flips right
+  away (rolled back if the save fails) and the other rows stay tappable while
+  it saves. The screen no longer jumps under your finger — a background
+  refresh used to show the pull-to-refresh spinner, which pushed the list
+  down; the spinner now only shows for your own pull. Same spinner fix on
+  Home, Events, Messages, event detail and event chat.
+- **Home: Night status and Other events** only list skates you can open
+  (server-side fix in 0.29.0).
+- Tests: `npm test` 29 (was 17).
 
 ## 2026-09-20 — 1.4.0: watch no-skate look + sync fix, jerseys, profile locks
 

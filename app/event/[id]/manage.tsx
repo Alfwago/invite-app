@@ -48,6 +48,7 @@ import {
   useSendInvites,
 } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
+import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -61,6 +62,7 @@ type TabKey = (typeof TABS)[number]["key"];
 export default function ManageEventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const query = useEvent(id);
+  const pull = usePullToRefresh(query.refetch);
   const [tab, setTab] = useState<TabKey>("overview");
 
   if (query.isLoading) return <Loading label="Loading event…" />;
@@ -111,8 +113,8 @@ export default function ManageEventScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={query.isRefetching}
-            onRefresh={query.refetch}
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
             tintColor={colors.gold}
           />
         }
@@ -1002,6 +1004,7 @@ function RosterCard({ event }: { event: EventDetail }) {
             present={p.present}
             paid={p.paid}
             disabled={busy}
+            tickDisabled={bulkBusy}
             beerOn={p.is_beer_guy}
             whiskeyOn={p.is_whiskey_guy}
             showBeer={event.beer_guy_enabled}
@@ -1052,6 +1055,7 @@ function RosterCard({ event }: { event: EventDetail }) {
             present={dp.present}
             paid={dp.paid}
             disabled={busy}
+            tickDisabled={bulkBusy}
             onEdit={() => setEditWalkOn(dp)}
             onPresent={(v) => act({ action: "set_present", day_player_id: dp.id, present: v })}
             onPaid={(v) => act({ action: "set_paid", day_player_id: dp.id, paid: v })}
@@ -1229,6 +1233,7 @@ function RosterAdminRow({
   present,
   paid,
   disabled,
+  tickDisabled = disabled,
   beerOn,
   whiskeyOn,
   showBeer,
@@ -1255,6 +1260,10 @@ function RosterAdminRow({
   present: boolean;
   paid: boolean;
   disabled?: boolean;
+  /** Present / paid ticks update instantly (optimistic), so they stay
+   *  tappable while another roster change is saving — only a bulk
+   *  "Select all" run locks them. */
+  tickDisabled?: boolean;
   beerOn?: boolean;
   whiskeyOn?: boolean;
   showBeer?: boolean;
@@ -1292,9 +1301,9 @@ function RosterAdminRow({
           </Text>
         ) : null}
         <View style={styles.tinyBtns}>
-          <TinyBtn icon="checkmark" on={present} disabled={disabled} onPress={() => onPresent(!present)} />
+          <TinyBtn icon="checkmark" on={present} disabled={tickDisabled} onPress={() => onPresent(!present)} />
           {pays ? (
-            <TinyBtn text="$" on={paid} disabled={disabled} onPress={() => onPaid(!paid)} />
+            <TinyBtn text="$" on={paid} disabled={tickDisabled} onPress={() => onPaid(!paid)} />
           ) : null}
           {hasGuys ? <View style={styles.grpGap} /> : null}
           {showBeer && onBeer ? (
@@ -1318,8 +1327,8 @@ function RosterAdminRow({
             {g.skill ? ` (${g.skill})` : ""}
           </Text>
           <View style={styles.tinyBtns}>
-            <TinyBtn icon="checkmark" on={g.present} disabled={disabled} onPress={() => onGuestPresent?.(i, !g.present)} />
-            <TinyBtn text="$" on={g.paid} disabled={disabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
+            <TinyBtn icon="checkmark" on={g.present} disabled={tickDisabled} onPress={() => onGuestPresent?.(i, !g.present)} />
+            <TinyBtn text="$" on={g.paid} disabled={tickDisabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
             <View style={styles.grpGap} />
             <TinyBtn icon="close" danger disabled={disabled} onPress={() => onGuestRemove?.(i)} />
           </View>

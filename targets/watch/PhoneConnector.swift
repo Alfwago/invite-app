@@ -73,6 +73,13 @@ final class PhoneConnector: NSObject {
     }
 
     private func apply(_ context: [String: Any]) {
+        // Server credentials ride along so the watch can fetch on its own
+        // (WatchSync). No token in the context = the phone signed out.
+        if let apiUrl = context["apiUrl"] as? String, let token = context["authToken"] as? String {
+            WatchCredentials.save(apiUrl: apiUrl, token: token)
+        } else {
+            WatchCredentials.clear()
+        }
         let decoder = JSONDecoder()
         // The phone's JS sends `new Date().toISOString()` — fractional seconds
         // ("...:00.123Z"), which the stock `.iso8601` strategy rejects, leaving

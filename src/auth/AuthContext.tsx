@@ -13,6 +13,7 @@ import * as SecureStore from "expo-secure-store";
 import { setTokenProvider } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { Me } from "@/src/api/types";
+import { skateCardSignOut } from "@/modules/skate-card";
 import { registerForPush, unregisterForPush } from "@/src/push";
 
 const TOKEN_KEY = "obh.authToken";
@@ -104,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await unregisterForPush();
+    await skateCardSignOut();
     try {
       await api.logout();
     } catch {

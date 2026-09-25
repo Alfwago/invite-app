@@ -25,6 +25,7 @@ import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useHome, useInbox, usePolls } from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
+import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const WORDMARK = require("@/assets/brand/wordmark.png");
 const HERO = require("@/assets/brand/hero.jpg");
@@ -33,6 +34,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { me, signOut } = useAuth();
   const query = useHome();
+  const pull = usePullToRefresh(query.refetch);
   const [nightsOpen, setNightsOpen] = useState(false);
 
   function confirmSignOut() {
@@ -83,8 +85,8 @@ export default function HomeScreen() {
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
-          refreshing={query.isRefetching}
-          onRefresh={query.refetch}
+          refreshing={pull.refreshing}
+          onRefresh={pull.onRefresh}
           tintColor={colors.gold}
         />
       }
