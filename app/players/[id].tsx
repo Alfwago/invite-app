@@ -12,10 +12,11 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import Slider from "@react-native-community/slider";
 
 import { ApiError } from "@/src/api/client";
-import type { PlayerNightRow } from "@/src/api/types";
+import type { GlobalScore, PlayerDetail, PlayerNightRow } from "@/src/api/types";
 import { RatingRadar } from "@/src/components/RatingRadar";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayer, useSaveRatings } from "@/src/hooks/queries";
+import { formatScore, obhGrade } from "@/src/ratings";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 type RatingKey = "hockey_sense" | "skating" | "defense" | "offense" | "goalie";
@@ -153,7 +154,7 @@ export default function PlayerDetailScreen() {
         <Card>
           <Text style={styles.cardLabel}>Ratings</Text>
           <View style={styles.nightChips}>
-            <NightChip label="Global" active={nightId === null} onPress={() => setNightId(null)} />
+            <NightChip label="Global Score" active={nightId === null} onPress={() => setNightId(null)} />
             {player.nights.map((n) => (
               <NightChip
                 key={n.id}
@@ -165,12 +166,17 @@ export default function PlayerDetailScreen() {
             ))}
           </View>
 
+          {nightId === null ? (
+            <GlobalScoreBlock player={player} />
+          ) : (
+          <>
           {baseRatings ? (
             <RatingRadar values={draft} />
           ) : null}
           <Text style={styles.ppvLine}>
-            PPV <Text style={styles.ppvValue}>{ppv.toFixed(2)}</Text>
-            {nightId === null ? "  ·  global (per-night editing only)" : ""}
+            {selectedNight?.name} PPV{" "}
+            <Text style={[styles.ppvValue, !(ppv > 0) && styles.notRated]}>{formatScore(ppv)}</Text>
+            {ppv > 0 ? `  ·  ${obhGrade(ppv)}` : ""}
           </Text>
 
           {KEYS.map(({ key, label, max }) =>
@@ -239,15 +245,48 @@ export default function PlayerDetailScreen() {
               </View>
             ) : (
               <Button
-                label="Edit ratings"
+                label={ppv > 0 ? "Edit ratings" : "Rate this player"}
                 variant="secondary"
                 onPress={() => setEditing(true)}
               />
             )
           ) : null}
+          </>
+          )}
         </Card>
       </ScrollView>
     </>
+  );
+}
+
+/** Global Score (and Global Goalie Score for goalies): the number, its OBH
+ *  grade, and which nights it came from — or Not Rated. */
+function GlobalScoreBlock({ player }: { player: PlayerDetail }) {
+  const rows: { label: string; score: GlobalScore; grade: boolean; fallback: string }[] = [
+    { label: "Global Score", score: player.global_score, grade: true, fallback: "3.00" },
+  ];
+  if (player.global_goalie_score) {
+    rows.push({ label: "Global Goalie Score", score: player.global_goalie_score, grade: false, fallback: "2.00" });
+  }
+  return (
+    <View style={styles.globalBlock}>
+      {rows.map(({ label, score, grade, fallback }) => (
+        <View key={label} style={styles.globalRow}>
+          <Text style={styles.globalLabel}>{label}</Text>
+          <Text style={[styles.globalValue, score.score == null && styles.notRated]}>
+            {formatScore(score.score)}
+            {grade && score.score != null ? <Text style={styles.globalGrade}>{`  ${obhGrade(score.score)}`}</Text> : null}
+          </Text>
+          <Text style={styles.globalDetail}>
+            {score.score == null
+              ? `No rated nights yet — pick a night above to rate them. Teams count them as ${fallback}.`
+              : `${score.rule[0].toUpperCase()}${score.rule.slice(1)}: ${score.nights
+                  .map((n) => `${n.name} ${n.value.toFixed(2)}`)
+                  .join(" · ")}`}
+          </Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -289,6 +328,13 @@ function clamp(n: number, lo: number, hi: number) {
 }
 
 const styles = StyleSheet.create({
+  globalBlock: { gap: spacing.md, paddingVertical: spacing.sm },
+  globalRow: { alignItems: "center", gap: 2 },
+  globalLabel: { color: colors.textMuted, fontSize: font.sm, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
+  globalValue: { color: colors.gold, fontSize: font.xl, fontWeight: "800" },
+  globalGrade: { color: colors.text, fontSize: font.base, fontWeight: "700" },
+  globalDetail: { color: colors.textMuted, fontSize: font.sm, textAlign: "center" },
+  notRated: { color: colors.textMuted, fontWeight: "600" },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg },
   headerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },

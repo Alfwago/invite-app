@@ -3,6 +3,24 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-09-26 — 1.5.1: Global Score, Not Rated, App Store update button
+
+Version 1.5.1 (iOS build 23). Needs `invite-server` 0.30.0 on prod (the player
+directory's Global Score / `rated` fields). JS + TypeScript only — no native
+changes — but ships as a store build like 1.5.0.
+
+- **Player ratings (directors)**: the old single per-player rating is gone.
+  A player's screen opens on **Global Score** — from their rated nights: one
+  night → that PPV, two → average, three or more → average of highest and
+  lowest — with the OBH grade and the nights behind it, plus **Global Goalie
+  Score** for goalies. Each night shows its PPV or **Not Rated** (no rating,
+  or 0.00); the button reads "Rate this player" on an unrated night. The
+  Players list shows Global Score (or the picked night's PPV), Not Rated
+  players at the bottom. `src/ratings.ts`.
+- **Update banner**: on iPhone it now has an **Open App Store** button (the
+  listing is live); Android keeps its Update button to the download page.
+- Tests: `npm test` 33 (was 29).
+
 ## 2026-09-25 — 1.5.0: skate-day lock-screen card, watch stays current, roster taps
 
 Version 1.5.0 (iOS build 22). Needs `invite-server` 0.29.0 on prod (card token

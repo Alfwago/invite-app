@@ -570,6 +570,16 @@ export interface SkillRatings {
   offense: number;
   goalie: number;
   ppv: number;
+  /** false = Not Rated (no rating for this night, or a 0.00 PPV). */
+  rated: boolean;
+}
+
+/** A Global Score (or Global Goalie Score). `score` null = Not Rated. */
+export interface GlobalScore {
+  score: number | null;
+  /** How it was reached: "one rated night" / "average of both nights" / … */
+  rule: string;
+  nights: { name: string; value: number }[];
 }
 
 export type PlayerTypeTag = "skater" | "goalie" | "goalie_skater" | "non_playing";
@@ -580,8 +590,11 @@ export interface PlayerRow {
   profile_id: string;
   is_goalie: boolean;
   player_type: PlayerTypeTag;
+  /** That night's ratings when ?night= is set (all 0, rated false otherwise). */
   ratings: SkillRatings;
-  rating_source: "night" | "global";
+  rating_source: "night" | "none";
+  global_score: number | null;
+  global_goalie_score: number | null;
 }
 
 export interface PlayersResponse {
@@ -594,7 +607,7 @@ export interface PlayerNightRow {
   id: number;
   name: string;
   ratings: SkillRatings;
-  rating_source: "night" | "global";
+  rating_source: "night" | "none";
   can_edit: boolean;
 }
 
@@ -609,7 +622,11 @@ export interface PlayerDetail {
   years_in_obh: number | null;
   skill_assessment: string;
   phone_number: string;
-  global_ratings: SkillRatings;
+  /** Retired per-player ratings — always null now. */
+  global_ratings: null;
+  global_score: GlobalScore;
+  /** Goalies only. */
+  global_goalie_score: GlobalScore | null;
   metrics: MeMetrics;
   nights: PlayerNightRow[];
 }

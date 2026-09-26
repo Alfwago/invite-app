@@ -14,6 +14,7 @@ import { ApiError } from "@/src/api/client";
 import type { PlayerRow } from "@/src/api/types";
 import { Badge, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayers } from "@/src/hooks/queries";
+import { formatScore, listScore, NOT_RATED, sortByScore } from "@/src/ratings";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function PlayersScreen() {
@@ -26,10 +27,7 @@ export default function PlayersScreen() {
   const nights = query.data?.nights ?? [];
   const players = query.data?.players ?? [];
 
-  const sorted = useMemo(
-    () => [...players].sort((a, b) => b.ratings.ppv - a.ratings.ppv),
-    [players],
-  );
+  const sorted = useMemo(() => sortByScore(players, night != null), [players, night]);
 
   return (
     <>
@@ -81,9 +79,9 @@ export default function PlayersScreen() {
               color={goaliesOnly ? colors.gold : colors.textMuted}
             />
             <Text style={styles.toggleText}>Goalies only</Text>
-            {night != null ? (
-              <Text style={styles.sourceNote}>· showing {nights.find((n) => n.id === night)?.name} ratings</Text>
-            ) : null}
+            <Text style={styles.sourceNote}>
+              · {night != null ? `${nights.find((n) => n.id === night)?.name} PPV` : "Global Score"}
+            </Text>
           </Pressable>
         </View>
 
@@ -102,7 +100,11 @@ export default function PlayersScreen() {
             keyExtractor={(p) => String(p.id)}
             contentContainerStyle={styles.list}
             renderItem={({ item }) => (
-              <PlayerListRow row={item} onPress={() => router.push(`/players/${item.id}` as never)} />
+              <PlayerListRow
+                row={item}
+                nightSelected={night != null}
+                onPress={() => router.push(`/players/${item.id}` as never)}
+              />
             )}
             ListEmptyComponent={
               <Text style={styles.empty}>No players match.</Text>
@@ -114,16 +116,24 @@ export default function PlayersScreen() {
   );
 }
 
-function PlayerListRow({ row, onPress }: { row: PlayerRow; onPress: () => void }) {
+function PlayerListRow({
+  row,
+  nightSelected,
+  onPress,
+}: {
+  row: PlayerRow;
+  nightSelected: boolean;
+  onPress: () => void;
+}) {
+  const text = formatScore(listScore(row, nightSelected));
   return (
     <Pressable style={styles.row} onPress={onPress}>
       <View style={styles.rowMain}>
         <Text style={styles.name}>{row.name}</Text>
         {row.is_goalie ? <Badge text="G" tone="goalie" /> : null}
-        {row.rating_source === "night" ? <Badge text="NIGHT" tone="gold" /> : null}
       </View>
       <View style={styles.rowRight}>
-        <Text style={styles.ppv}>{row.ratings.ppv.toFixed(2)}</Text>
+        <Text style={[styles.ppv, text === NOT_RATED && styles.notRated]}>{text}</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </View>
     </Pressable>
@@ -177,6 +187,7 @@ const styles = StyleSheet.create({
   rowMain: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexShrink: 1 },
   rowRight: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   name: { color: colors.text, fontSize: font.base, fontWeight: "600" },
+  notRated: { color: colors.textMuted, fontWeight: "600" },
   ppv: {
     color: colors.gold,
     fontSize: font.base,

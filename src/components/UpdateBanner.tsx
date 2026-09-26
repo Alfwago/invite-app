@@ -10,12 +10,12 @@ import { isNewerVersion } from "@/src/version";
 
 const DISMISSED_KEY = "obh.dismissedAppVersion";
 
-// Android's only live distribution today is the direct-APK page (no Play
-// Store listing yet) — see android_app / android_app_download on the
-// server. iOS has no public App Store URL yet, so there's nothing to link
-// to there; the banner still informs, it just has no button. Once either
-// store listing goes live, point this at it instead.
-const UPDATE_URL = Platform.OS === "android" ? `${API_BASE}/app/` : null;
+// Where "Update" goes: the App Store listing on iOS; on Android the site's
+// direct-APK page (no Play Store listing yet — see android_app /
+// android_app_download on the server).
+const APP_STORE_URL = "https://apps.apple.com/us/app/obh-invites/id6807978133";
+const UPDATE_URL = Platform.OS === "ios" ? APP_STORE_URL : `${API_BASE}/app/`;
+const UPDATE_LABEL = Platform.OS === "ios" ? "Open App Store" : "Update";
 
 /**
  * Soft, dismissible nudge — informational only, no enforcement. Shown when
@@ -61,7 +61,7 @@ export function UpdateBanner({ latestVersion }: { latestVersion: string }) {
           onPress={() => Linking.openURL(UPDATE_URL).catch(() => {})}
           style={styles.updateBtn}
         >
-          <Text style={styles.updateBtnText}>Update</Text>
+          <Text style={styles.updateBtnText}>{UPDATE_LABEL}</Text>
         </Pressable>
       ) : null}
     </View>
