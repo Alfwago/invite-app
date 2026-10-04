@@ -2,7 +2,7 @@
   "expo": {
     "name": "OBH Invites",
     "slug": "jvmalone",
-    "version": "1.5.1",
+    "version": "1.5.2",
     "orientation": "portrait",
     "scheme": "obhinvites",
     "userInterfaceStyle": "automatic",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.falcon83.obhinvites",
-      "buildNumber": "23",
+      "buildNumber": "24",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -29,7 +29,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "permissions": [
+      "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ],
       "intentFilters": [

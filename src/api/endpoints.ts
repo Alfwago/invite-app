@@ -62,6 +62,11 @@ export function logout(): Promise<void> {
   return apiFetch("/api/auth/logout/", { method: "POST" });
 }
 
+/** Delete (anonymize) the signed-in account — invite-server account_deletion.py. */
+export function deleteAccount(password: string): Promise<void> {
+  return apiFetch("/api/me/delete/", { method: "POST", body: { password } });
+}
+
 /** "Forgot password" — sends a reset link to the address if it matches an account. */
 export function requestPasswordResetAnon(email: string): Promise<{ sent: boolean }> {
   return apiFetch("/api/auth/password-reset/", {

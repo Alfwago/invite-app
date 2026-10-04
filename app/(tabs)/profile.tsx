@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Image, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 
-import { ApiError } from "@/src/api/client";
+import { API_BASE, ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { Me, NotificationPrefs, PlayerType, ProfilePatch } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
@@ -470,6 +471,7 @@ function AccountCard({
   approved: boolean;
   username: string;
 }) {
+  const router = useRouter();
   const reset = useMutation({
     mutationFn: () => api.requestPasswordReset(),
     onSuccess: () =>
@@ -496,6 +498,17 @@ function AccountCard({
         onPress={() => reset.mutate()}
         loading={reset.isPending}
       />
+      <View style={styles.legalRow}>
+        <Text
+          style={styles.legalLink}
+          onPress={() => Linking.openURL(`${API_BASE}/privacy/`).catch(() => {})}
+        >
+          Privacy Policy
+        </Text>
+        <Text style={[styles.legalLink, styles.deleteLink]} onPress={() => router.push("/delete-account" as never)}>
+          Delete account
+        </Text>
+      </View>
     </Card>
   );
 }
@@ -573,6 +586,9 @@ function ChoiceChips({
 }
 
 const styles = StyleSheet.create({
+  legalRow: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },
+  legalLink: { color: colors.textMuted, fontSize: font.sm, textDecorationLine: "underline" },
+  deleteLink: { color: colors.red },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg },
   idRow: { flexDirection: "row", alignItems: "center", gap: spacing.lg },

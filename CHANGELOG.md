@@ -3,6 +3,29 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-04 — 1.5.2: notification settings, Recent events, account deletion
+
+Version 1.5.2 (iOS build 24). Needs `invite-server` 0.32.0 on prod
+(`notification_prefs`, `is_past`, archived events in Recent, pending-invite
+signup links). JS + TypeScript, plus one Android manifest change
+(`RECORD_AUDIO` is now blocked), so it ships as a store build.
+
+- **Notifications** (Profile): "All notifications", or with it off, just
+  Skate invites / Director messages / President messages. Push only; emails
+  are unchanged. Hidden if the server doesn't send `notification_prefs`.
+- **Recent events** now lists finished skates from the last month, newest
+  first; they open read-only ("This skate is over"), with no RSVP.
+- **Roster card**: the Skaters / Goalies / Waitlist tiles stay visible when
+  the card is collapsed.
+- **Home**: tapping the "You're on Gold/Black" card opens that skate's roster
+  with team shirts.
+- **Team generator PDF**: equal-width Gold | Black columns; long names wrap.
+- **Account**: Privacy Policy link and **Delete account** (password confirm)
+  on Profile — App Store / Google Play requirement.
+- **Sign in**: Forgot password copy mentions pending invites (the server now
+  emails invitees a fresh signup link).
+- Tests: `npm test` 33.
+
 ## 2026-09-26 — 1.5.1: Global Score, Not Rated, App Store update button
 
 Version 1.5.1 (iOS build 23). Needs `invite-server` 0.30.0 on prod (the player
