@@ -61,6 +61,8 @@ export interface Me {
   email_verified: boolean;
   phone_number: string;
   sms_opt_in: boolean;
+  /** Absent on servers that predate notification settings — hide the card. */
+  notification_prefs?: NotificationPrefs;
   sms_provider: string;
   skill_assessment: string;
   join_year: number | null;
@@ -112,6 +114,15 @@ export interface MeMetrics {
   invites_by_night: { name: string; count: number }[];
 }
 
+/** Push-notification preferences (Profile → Notifications). `all` on = every
+ *  push; off = only the categories switched on. Emails are unaffected. */
+export interface NotificationPrefs {
+  all: boolean;
+  invites: boolean;
+  director_messages: boolean;
+  president_messages: boolean;
+}
+
 export interface ProfilePatch {
   email?: string;
   join_year?: number | null;
@@ -120,6 +131,7 @@ export interface ProfilePatch {
   sms_provider?: string;
   skill_assessment?: string;
   player_type?: PlayerType;
+  notification_prefs?: Partial<NotificationPrefs>;
 }
 
 export interface RosterStats {
@@ -166,6 +178,9 @@ export interface EventSummary {
   roster: RosterStats;
   my_rsvp: MyRsvp | null;
   can_manage: boolean;
+  /** Server archived it (6h after start) — shown read-only under "Recent".
+   *  Optional: servers before the Recent-events fix don't send it. */
+  is_past?: boolean;
 }
 
 export interface RosterGuest {

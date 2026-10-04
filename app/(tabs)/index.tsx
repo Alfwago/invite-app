@@ -32,6 +32,7 @@ const HERO = require("@/assets/brand/hero.jpg");
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { me, signOut } = useAuth();
   const query = useHome();
   const pull = usePullToRefresh(query.refetch);
@@ -124,7 +125,12 @@ export default function HomeScreen() {
           </Card>
         )}
 
-        {team_assignment ? <TeamAssignmentCard assignment={team_assignment} /> : null}
+        {team_assignment ? (
+          <TeamAssignmentCard
+            assignment={team_assignment}
+            onPress={() => router.push(`/event/${team_assignment.event_id}`)}
+          />
+        ) : null}
 
         <View style={styles.section}>
           <Pressable

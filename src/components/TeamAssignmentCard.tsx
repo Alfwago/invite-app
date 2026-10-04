@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import type { TeamAssignment } from "@/src/api/types";
@@ -25,11 +25,18 @@ function postedAt(iso: string): string {
 }
 
 /** Minimal "You're on Gold" card, shared by Home and the event detail screen.
- *  Render only when the assignment is non-null. */
-export function TeamAssignmentCard({ assignment }: { assignment: TeamAssignment }) {
+ *  Render only when the assignment is non-null. `onPress` (Home) makes it a
+ *  link — it shows a chevron and opens the event's roster with teams. */
+export function TeamAssignmentCard({
+  assignment,
+  onPress,
+}: {
+  assignment: TeamAssignment;
+  onPress?: () => void;
+}) {
   const tint = TEAM_TINT[assignment.team];
 
-  return (
+  const card = (
     <Card>
       <View style={styles.row}>
         <Ionicons name="shirt" size={22} color={tint} />
@@ -41,9 +48,24 @@ export function TeamAssignmentCard({ assignment }: { assignment: TeamAssignment 
             <Text style={styles.badgeText}>Updated</Text>
           </View>
         ) : null}
+        {onPress ? (
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={styles.chevron} />
+        ) : null}
       </View>
       <Text style={styles.posted}>Posted {postedAt(assignment.published_at)}</Text>
     </Card>
+  );
+
+  if (!onPress) return card;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={`You're on ${assignment.team}. View the roster with teams.`}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      {card}
+    </Pressable>
   );
 }
 
@@ -67,4 +89,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   posted: { color: colors.textMuted, fontSize: font.xs, marginTop: spacing.xs },
+  chevron: { marginLeft: "auto" },
+  pressed: { opacity: 0.7 },
 });

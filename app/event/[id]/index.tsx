@@ -114,22 +114,24 @@ export default function EventDetailScreen() {
           title="Roster"
           defaultOpen
           right={<Text style={styles.headerCount}>{goingCount} going</Text>}
+          summary={
+            <View style={styles.tiles}>
+              <StatTile
+                value={`${roster.skaters}`}
+                sub={roster.capacity != null ? `/ ${roster.capacity}` : undefined}
+                label="Skaters"
+                tone={skaterTone}
+              />
+              <StatTile
+                value={`${roster.goalies}`}
+                sub={roster.goalies_needed != null ? `/ ${roster.goalies_needed}` : undefined}
+                label="Goalies"
+                tone={goalieTone}
+              />
+              <StatTile value={`${roster.waitlist}`} label="Waitlist" />
+            </View>
+          }
         >
-          <View style={styles.tiles}>
-            <StatTile
-              value={`${roster.skaters}`}
-              sub={roster.capacity != null ? `/ ${roster.capacity}` : undefined}
-              label="Skaters"
-              tone={skaterTone}
-            />
-            <StatTile
-              value={`${roster.goalies}`}
-              sub={roster.goalies_needed != null ? `/ ${roster.goalies_needed}` : undefined}
-              label="Goalies"
-              tone={goalieTone}
-            />
-            <StatTile value={`${roster.waitlist}`} label="Waitlist" />
-          </View>
           {pct != null ? <FillBar pct={pct} tone={health} /> : null}
           <Text style={styles.rosterLine}>
             {spotsText} · {roster.maybe} maybe
@@ -139,7 +141,11 @@ export default function EventDetailScreen() {
 
         <PenaltyBoxCard event={event} />
 
-        {event.status === "OPEN" ? (
+        {event.is_past ? (
+          <Card>
+            <Text style={styles.muted}>This skate is over.</Text>
+          </Card>
+        ) : event.status === "OPEN" ? (
           <CollapsibleCard title="Your RSVP" defaultOpen>
             <RsvpControls event={event} />
           </CollapsibleCard>

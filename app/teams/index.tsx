@@ -918,8 +918,13 @@ function teamsPdfHtml(d: {
     .hdr img { max-height: 216pt; max-width: 100%; }
     h1 { font-size: 18pt; margin: 12pt 0 0; }
     .desc { font-size: 12pt; margin: 6pt 0 12pt; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12pt; }
-    th, td { border: 1pt solid #000; text-align: center; padding: 5pt; font-size: 13pt; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12pt; table-layout: fixed; }
+    col { width: 50%; }
+    tr { page-break-inside: avoid; }
+    th, td {
+      border: 1pt solid #000; text-align: center; vertical-align: middle; padding: 5pt; font-size: 13pt;
+      white-space: normal; word-wrap: break-word; overflow-wrap: anywhere;
+    }
     th { font-size: 14pt; }
     th.gold { color: #ffd54a; }
   </style></head><body>
@@ -927,6 +932,7 @@ function teamsPdfHtml(d: {
     <h1>${esc(d.poolName)}</h1>
     ${d.poolDescription ? `<div class="desc">${esc(d.poolDescription)}</div>` : ""}
     <table>
+      <colgroup><col><col></colgroup>
       <thead><tr><th class="gold">Gold</th><th>Black</th></tr></thead>
       <tbody>${body}</tbody>
     </table>

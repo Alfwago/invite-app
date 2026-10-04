@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
-import type { Me, PlayerType, ProfilePatch } from "@/src/api/types";
+import type { Me, NotificationPrefs, PlayerType, ProfilePatch } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
@@ -119,10 +119,83 @@ export default function ProfileScreen() {
         </Card>
       )}
 
+      {me.notification_prefs ? (
+        <NotificationsCard prefs={me.notification_prefs} onChanged={refreshMe} />
+      ) : null}
+
       <AccountCard verified={me.email_verified} approved={me.director_approved || me.is_director} username={me.username} />
 
       <AppFooter />
     </KeyboardAwareScrollView>
+  );
+}
+
+// ── notifications ──────────────────────────────────────────────────────
+
+const NOTIFICATION_OPTIONS: { key: Exclude<keyof NotificationPrefs, "all">; label: string }[] = [
+  { key: "invites", label: "Skate invites" },
+  { key: "director_messages", label: "Director messages" },
+  { key: "president_messages", label: "President messages" },
+];
+
+/** Saves each switch as it's flipped. With "All notifications" on, every push
+ *  comes through; off, only the categories below do. */
+function NotificationsCard({
+  prefs,
+  onChanged,
+}: {
+  prefs: NotificationPrefs;
+  onChanged: () => void | Promise<void>;
+}) {
+  const [local, setLocal] = useState(prefs);
+  const save = useMutation({
+    mutationFn: (patch: Partial<NotificationPrefs>) => api.updateMe({ notification_prefs: patch }),
+    onSuccess: () => onChanged(),
+    onError: (e) => {
+      setLocal(prefs);
+      Alert.alert(
+        "Couldn't save",
+        e instanceof ApiError ? e.detail : "Check your connection and try again.",
+      );
+    },
+  });
+
+  function set(key: keyof NotificationPrefs, value: boolean) {
+    setLocal((p) => ({ ...p, [key]: value }));
+    save.mutate({ [key]: value });
+  }
+
+  return (
+    <Card>
+      <Text style={styles.heading}>Notifications</Text>
+      <View style={styles.toggleRow}>
+        <Text style={styles.toggleLabel}>All notifications</Text>
+        <Switch
+          value={local.all}
+          onValueChange={(v) => set("all", v)}
+          trackColor={{ true: colors.gold, false: colors.border }}
+          thumbColor="#fff"
+        />
+      </View>
+      <Text style={styles.hint}>
+        {local.all
+          ? "You get every push: invites, team picks, messages and chirps."
+          : "Only the notifications switched on below. Emails still arrive."}
+      </Text>
+      {local.all
+        ? null
+        : NOTIFICATION_OPTIONS.map((o) => (
+            <View key={o.key} style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>{o.label}</Text>
+              <Switch
+                value={local[o.key]}
+                onValueChange={(v) => set(o.key, v)}
+                trackColor={{ true: colors.gold, false: colors.border }}
+                thumbColor="#fff"
+              />
+            </View>
+          ))}
+    </Card>
   );
 }
 

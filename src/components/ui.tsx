@@ -151,12 +151,15 @@ export function CollapsibleCard({
   title,
   right,
   defaultOpen = false,
+  summary,
   children,
   accent,
 }: {
   title: string;
   right?: ReactNode;
   defaultOpen?: boolean;
+  /** Shown under the header whether the card is open or collapsed. */
+  summary?: ReactNode;
   children: ReactNode;
   accent?: "public" | "director";
 }) {
@@ -181,6 +184,7 @@ export function CollapsibleCard({
           />
         </View>
       </Pressable>
+      {summary ? <View style={styles.collapseBody}>{summary}</View> : null}
       {open ? <View style={styles.collapseBody}>{children}</View> : null}
     </Card>
   );

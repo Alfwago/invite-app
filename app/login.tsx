@@ -165,7 +165,8 @@ export default function LoginScreen() {
             <View style={styles.resetPanel}>
               {resetDone ? (
                 <Text style={styles.resetDone}>
-                  If that address has an account, a reset link is on its way. Check your email.
+                  If that address has an account or a pending invite, a link is on its way. Check
+                  your email.
                 </Text>
               ) : (
                 <>
