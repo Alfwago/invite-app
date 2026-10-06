@@ -8,6 +8,7 @@ import {
 import * as api from "@/src/api/endpoints";
 import { applyOptimisticRosterAction } from "@/src/rosterOptimistic";
 import { APP_VERSION_CHECK_MS } from "@/src/updateCheck";
+import type { SiteInvitePayload } from "@/src/siteInvites";
 import type {
   BoardMessage,
   CreateNextEventBody,
@@ -46,6 +47,7 @@ export const keys = {
   teamHistory: (id: number) => ["team-history", id] as const,
   teamGeneratorState: (id: number) => ["team-generator-state", id] as const,
   approvals: ["approvals"] as const,
+  siteInviteOptions: ["site-invite-options"] as const,
   nameChangeApprovals: ["name-change-approvals"] as const,
   usernameChangeApprovals: ["username-change-approvals"] as const,
   polls: ["polls"] as const,
@@ -652,6 +654,31 @@ export function useApprovePlayer() {
   return useMutation({
     mutationFn: (profileId: number) => api.approvePlayer(profileId),
     onSuccess: (pending) => qc.setQueryData(keys.approvals, pending),
+  });
+}
+
+/** Invite form options; `null` data = older server without site invites. */
+export function useSiteInviteOptions() {
+  return useQuery({
+    queryKey: keys.siteInviteOptions,
+    queryFn: ({ signal }) => api.fetchSiteInviteOptions(signal),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSendSiteInvites() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SiteInvitePayload) => api.sendSiteInvites(payload),
+    onSuccess: (data) => qc.setQueryData(keys.approvals, data.pending),
+  });
+}
+
+export function useResendSiteInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: number) => api.resendSiteInvite(profileId),
+    onSuccess: (data) => qc.setQueryData(keys.approvals, data.pending),
   });
 }
 

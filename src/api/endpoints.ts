@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from "./client";
+import type { SiteInvitePayload } from "../siteInvites";
 import type {
   AppVersions,
   BoardMessage,
@@ -27,6 +28,9 @@ import type {
   PollResults,
   PollSummary,
   PendingApproval,
+  SiteInviteOptions,
+  SiteInviteResendResponse,
+  SiteInviteResponse,
   PendingNameChangeApproval,
   PendingUsernameChangeApproval,
   Poll,
@@ -656,6 +660,27 @@ export async function approvePlayer(profileId: number): Promise<PendingApproval[
     body: { action: "approve" },
   });
   return data.pending;
+}
+
+/** What the invite form needs (admin director picker). Resolves `null` on a
+ *  server too old to have site invites (404) — the screen then hides the
+ *  invite form. */
+export async function fetchSiteInviteOptions(signal?: AbortSignal): Promise<SiteInviteOptions | null> {
+  try {
+    return await apiFetch<SiteInviteOptions>("/api/approvals/invite/", { signal });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+export function sendSiteInvites(payload: SiteInvitePayload): Promise<SiteInviteResponse> {
+  return apiFetch("/api/approvals/invite/", { method: "POST", body: payload });
+}
+
+/** Resend a pending player's setup link (sponsor or admin; server 0.33+). */
+export function resendSiteInvite(profileId: number): Promise<SiteInviteResendResponse> {
+  return apiFetch(`/api/approvals/${profileId}/resend/`, { method: "POST" });
 }
 
 // ---- Name-change approval queue (director) -------------------------

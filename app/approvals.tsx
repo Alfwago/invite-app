@@ -3,9 +3,12 @@ import { Stack } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
+import { SiteInviteCard } from "@/src/components/SiteInviteCard";
 import {
   useApprovals,
   useApprovePlayer,
+  useResendSiteInvite,
+  useSiteInviteOptions,
   useDecideNameChange,
   useDecideUsernameChange,
   useNameChangeApprovals,
@@ -16,7 +19,10 @@ import { colors, font, spacing } from "@/src/theme";
 export default function ApprovalsScreen() {
   const query = useApprovals();
   const approve = useApprovePlayer();
+  const resend = useResendSiteInvite();
   const pending = query.data ?? [];
+  // null = server without site invites (pre-0.33): no invite form.
+  const inviteOptions = useSiteInviteOptions();
 
   const nameQuery = useNameChangeApprovals();
   const decideName = useDecideNameChange();
@@ -28,8 +34,19 @@ export default function ApprovalsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Player approvals" }} />
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <Stack.Screen options={{ title: "Invites & approvals" }} />
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {inviteOptions.data ? (
+          <>
+            <Text style={styles.sectionHeading}>Invite</Text>
+            <SiteInviteCard options={inviteOptions.data} />
+          </>
+        ) : null}
+
         <Text style={styles.sectionHeading}>New accounts</Text>
         {query.isLoading ? (
           <Loading label="Loading…" />
@@ -49,20 +66,40 @@ export default function ApprovalsScreen() {
               </View>
               {p.email ? <Text style={styles.meta}>{p.email}</Text> : null}
               {p.sponsor ? <Text style={styles.meta}>Sponsored by {p.sponsor}</Text> : null}
-              <Button
-                label={p.account_ready ? "Approve" : "Waiting on the player"}
-                onPress={() =>
-                  approve.mutate(p.profile_id, {
-                    onError: (e) =>
-                      Alert.alert(
-                        "Couldn't approve",
-                        e instanceof ApiError ? e.detail : "Try again.",
-                      ),
-                  })
-                }
-                loading={approve.isPending}
-                disabled={!p.account_ready}
-              />
+              {!p.account_ready && p.can_resend ? (
+                <Button
+                  label="Resend invite"
+                  variant="secondary"
+                  labelColor={colors.gold}
+                  onPress={() =>
+                    resend.mutate(p.profile_id, {
+                      onSuccess: (data) =>
+                        Alert.alert(data.sent ? "Invite resent" : "Already sent", data.detail),
+                      onError: (e) =>
+                        Alert.alert(
+                          "Couldn't resend",
+                          e instanceof ApiError ? e.detail : "Try again.",
+                        ),
+                    })
+                  }
+                  loading={resend.isPending && resend.variables === p.profile_id}
+                />
+              ) : (
+                <Button
+                  label={p.account_ready ? "Approve" : "Waiting on the player"}
+                  onPress={() =>
+                    approve.mutate(p.profile_id, {
+                      onError: (e) =>
+                        Alert.alert(
+                          "Couldn't approve",
+                          e instanceof ApiError ? e.detail : "Try again.",
+                        ),
+                    })
+                  }
+                  loading={approve.isPending}
+                  disabled={!p.account_ready}
+                />
+              )}
             </Card>
           ))
         )}

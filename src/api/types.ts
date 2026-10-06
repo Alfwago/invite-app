@@ -776,6 +776,36 @@ export interface PendingApproval {
   email: string;
   sponsor: string;
   account_ready: boolean;
+  /** Server 0.33+: this user may resend the setup link (sponsor or admin,
+   *  setup unfinished). Absent on older servers → no Resend button. */
+  can_resend?: boolean;
+}
+
+/** GET /api/approvals/invite/ (server 0.33+). */
+export interface SiteInviteOptions {
+  can_choose_director: boolean;
+  directors: { id: number; name: string }[];
+  default_director_id: number;
+}
+
+export interface SiteInviteResult {
+  email: string;
+  /** "sent" | "exists" | "invalid" | "other_director" (string: newer servers may add more). */
+  status: string;
+  message: string;
+}
+
+export interface SiteInviteResponse {
+  results: SiteInviteResult[];
+  sent: number;
+  director: { id: number; name: string };
+  pending: PendingApproval[];
+}
+
+export interface SiteInviteResendResponse {
+  sent: boolean;
+  detail: string;
+  pending: PendingApproval[];
 }
 
 export interface PendingUsernameChangeApproval {
