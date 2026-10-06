@@ -59,7 +59,12 @@ export default function LoginScreen() {
       // RootNavigator redirects on token change.
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
-        setError("That username and password didn't match.");
+        // Newer servers add `invite_hint` to a failed email login (and
+        // mail a fresh setup link if the address has an unfinished invite).
+        // Older servers don't send it, so this is just the plain message.
+        const hint = (e.payload as { invite_hint?: unknown } | null)?.invite_hint;
+        const base = "That username and password didn't match.";
+        setError(typeof hint === "string" && hint ? `${base}\n\n${hint}` : base);
       } else if (e instanceof ApiError) {
         setError(e.detail);
       } else {
