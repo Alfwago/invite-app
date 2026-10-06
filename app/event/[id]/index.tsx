@@ -147,6 +147,12 @@ export default function EventDetailScreen() {
           </Card>
         ) : event.status === "OPEN" ? (
           <CollapsibleCard title="Your RSVP" defaultOpen>
+            {event.my_borrow ? (
+              <Text style={styles.borrowNote}>
+                You&apos;re filling in for {event.my_borrow.night_name}, this skate only.
+                {event.my_borrow.added_by_name ? ` Added by ${event.my_borrow.added_by_name}.` : ""}
+              </Text>
+            ) : null}
             <RsvpControls event={event} />
           </CollapsibleCard>
         ) : (
@@ -325,6 +331,16 @@ function PlayerLine({ entry }: { entry: RosterEntry }) {
             {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
           </Text>
           <RoleTag entry={entry} />
+          {entry.is_borrowed ? (
+            <Text
+              style={styles.walkOn}
+              accessibilityLabel={
+                entry.borrowed_from_name ? `Borrowed from ${entry.borrowed_from_name}` : "Borrowed"
+              }
+            >
+              borrowed
+            </Text>
+          ) : null}
           {entry.team ? (
             <Ionicons
               name="shirt"
@@ -428,6 +444,15 @@ const styles = StyleSheet.create({
   playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
   goldTag: { color: colors.gold, fontSize: 15, fontWeight: "900" },
   walkOn: { color: colors.textMuted, fontSize: font.xs },
+  borrowNote: {
+    color: colors.text,
+    fontSize: font.sm,
+    backgroundColor: colors.cardRaised,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+  },
   guestLine: { color: colors.textMuted, fontSize: font.xs, marginLeft: spacing.md, marginBottom: 4 },
   threadBtn: {
     flexDirection: "row",

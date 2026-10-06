@@ -174,7 +174,7 @@ export interface EventSummary {
   start_time: string | null; // HH:MM:SS
   location: string;
   status: EventStatus;
-  night: { id: number; name: string } | null;
+  night: { id: number; name: string; /** "Tuesday" (server 0.33+) */ weekday?: string } | null;
   roster: RosterStats;
   my_rsvp: MyRsvp | null;
   can_manage: boolean;
@@ -208,6 +208,10 @@ export interface RosterEntry {
   added_by_director: boolean;
   /** Gold/Black once a director publishes teams; null before (or for players not on a side). */
   team: "Gold" | "Black" | null;
+  /** Borrowed from another skate group for this skate only (server 0.33+;
+   *  missing on older servers). Shown to everyone as a "Borrowed" badge. */
+  is_borrowed?: boolean;
+  borrowed_from_name?: string;
 }
 
 export interface DayPlayer {
@@ -300,6 +304,15 @@ export interface EventManage {
   batch_invitee_ids: number[];
   invitees: InviteeEntry[];
   penalty_box: PenaltyBoxEntry[];
+  /** Show "Borrow a Goalie or Skater" (server 0.33+; missing → hide it). */
+  can_borrow?: boolean;
+}
+
+/** The viewer's "You're filling in for <Night>" card (server 0.33+). */
+export interface MyBorrow {
+  night_name: string;
+  borrowed_from_name: string;
+  added_by_name: string;
 }
 
 export interface EventDetail extends EventSummary {
@@ -324,6 +337,11 @@ export interface EventDetail extends EventSummary {
   night_directors: { id: number; name: string }[]; // [] if none / can't message
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
+  my_borrow?: MyBorrow | null; // set when the viewer was borrowed onto this skate
+  /** Present on a `borrow` roster action's response. */
+  borrow_result?: { name: string; role: "goalie" | "skater"; pushed: boolean };
+  /** Present on a `make_permanent` response: false = already a member. */
+  joined?: boolean;
 }
 
 /** A player a director can add to an event, from GET /events/<id>/candidates/.
@@ -387,7 +405,11 @@ export type RosterAction =
   | { action: "set_whiskey_guy"; player_id: number | null }
   | { action: "guest_present"; player_id: number; guest_index: number; present: boolean }
   | { action: "guest_paid"; player_id: number; guest_index: number; paid: boolean }
-  | { action: "remove_guest"; player_id: number; guest_index: number };
+  | { action: "remove_guest"; player_id: number; guest_index: number }
+  /** A player from another skate group, this skate only (server 0.33+). */
+  | { action: "borrow"; player_id: number; role: "goalie" | "skater" }
+  /** A borrowed player joins this skate group for good. */
+  | { action: "make_permanent"; player_id: number };
 
 export interface NightMember {
   id: number;
