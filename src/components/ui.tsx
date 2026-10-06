@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { colors, radius, spacing } from "@/src/theme";
+import { colors, font, radius, spacing } from "@/src/theme";
 
 if (
   Platform.OS === "android" &&
@@ -190,6 +190,60 @@ export function CollapsibleCard({
   );
 }
 
+// ---- Segmented ---------------------------------------------------------
+// Gold-on-selected segmented control (Borrow's Goalie/Skater, Add a player's
+// Skate Group/Borrow/Walk-On). A radiogroup of radios for screen readers. A
+// disabled option stays visible but dimmed; its `hint` says why.
+
+export interface SegmentOption<K extends string> {
+  key: K;
+  label: string;
+  disabled?: boolean;
+  hint?: string;
+}
+
+export function Segmented<K extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: SegmentOption<K>[];
+  value: K;
+  onChange: (key: K) => void;
+  /** Read out for the group, e.g. "Borrow a". */
+  label: string;
+}) {
+  return (
+    <View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel={label}>
+      {options.map((o) => {
+        const on = value === o.key;
+        return (
+          <Pressable
+            key={o.key}
+            onPress={() => onChange(o.key)}
+            disabled={o.disabled}
+            style={[styles.segmentItem, on && styles.segmentOn, o.disabled && styles.segmentOff]}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: on, checked: on, disabled: !!o.disabled }}
+            accessibilityLabel={o.label}
+            accessibilityHint={o.hint}
+          >
+            <Text
+              style={[styles.segmentText, on && styles.segmentTextOn]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 // ---- Loading / error / empty placeholders -----------------------------
 
 export function Loading({ label }: { label?: string }) {
@@ -219,6 +273,21 @@ export function EmptyState({ message }: { message: string }) {
 }
 
 const styles = StyleSheet.create({
+  segment: { flexDirection: "row", gap: spacing.sm },
+  segmentItem: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+    alignItems: "center",
+  },
+  segmentOn: { borderColor: colors.gold, backgroundColor: colors.gold },
+  segmentOff: { opacity: 0.45 },
+  segmentText: { color: colors.textMuted, fontSize: font.sm, fontWeight: "700" },
+  segmentTextOn: { color: colors.goldText },
   btn: {
     borderRadius: radius.md,
     paddingVertical: spacing.md,

@@ -14,13 +14,13 @@ import {
   visibleCandidates,
   type BorrowRole,
 } from "@/src/borrow";
-import { Button, ErrorState, Loading } from "@/src/components/ui";
+import { ErrorState, Loading, Segmented } from "@/src/components/ui";
 import { useBorrowCandidates, useRosterAction } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 /**
- * "Borrow a Goalie or Skater" on the Manage → Roster tab, above "Add a
- * walk-on". Only rendered when the server says borrowing is possible
+ * The Borrow body of Manage → Roster's "Add a player" card (Skate Group |
+ * Borrow | Walk-On). Only offered when the server says borrowing is possible
  * (`manage.can_borrow`, server 0.33+ — an older server never sends it).
  *
  * Goalie/Skater first (that choice is the player's slot, so no separate
@@ -28,23 +28,7 @@ import { colors, font, radius, spacing } from "@/src/theme";
  * → add + notify. One player at a time. Goalie lists every goalie at once;
  * Skater lists nobody until 2+ letters are typed (see `needsSearch`).
  */
-export function BorrowCard({ event, busy }: { event: EventDetail; busy: boolean }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <View style={styles.wrap}>
-      <Text style={styles.subhead}>Borrow a Goalie or Skater</Text>
-      <Text style={styles.muted}>From another skate group, for this skate only. They&apos;re notified.</Text>
-      <Button
-        label={open ? "Close" : "Choose a player"}
-        variant="secondary"
-        onPress={() => setOpen((o) => !o)}
-      />
-      {open ? <BorrowPicker event={event} busy={busy} /> : null}
-    </View>
-  );
-}
-
-function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolean }) {
+export function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolean }) {
   const panel = useBorrowCandidates(event.id);
   const roster = useRosterAction(event.id);
   const [role, setRole] = useState<BorrowRole | null>(null);
@@ -100,25 +84,15 @@ function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolean }) {
 
   return (
     <View style={styles.panel}>
-      <View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel="Borrow a">
-        {(["goalie", "skater"] as const).map((r) => {
-          const on = current === r;
-          return (
-            <Pressable
-              key={r}
-              onPress={() => setRole(r)}
-              style={[styles.segmentItem, on && styles.segmentOn]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: on, checked: on }}
-              accessibilityLabel={r === "goalie" ? "Goalie" : "Skater"}
-            >
-              <Text style={[styles.segmentText, on && styles.segmentTextOn]}>
-                {r === "goalie" ? "Goalie" : "Skater"}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <Segmented
+        label="Borrow a"
+        value={current}
+        onChange={setRole}
+        options={[
+          { key: "goalie", label: "Goalie" },
+          { key: "skater", label: "Skater" },
+        ]}
+      />
       <TextInput
         style={styles.input}
         value={query}
@@ -169,36 +143,8 @@ function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.xs },
-  subhead: {
-    color: colors.textMuted,
-    fontSize: font.xs,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: spacing.xs,
-  },
   muted: { color: colors.textMuted },
-  panel: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  segment: { flexDirection: "row", gap: spacing.sm },
-  segmentItem: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardRaised,
-    alignItems: "center",
-  },
-  segmentOn: { borderColor: colors.gold, backgroundColor: colors.gold },
-  segmentText: { color: colors.textMuted, fontSize: font.sm, fontWeight: "700" },
-  segmentTextOn: { color: colors.goldText },
+  panel: { gap: spacing.sm },
   input: {
     backgroundColor: colors.bg,
     borderColor: colors.border,
