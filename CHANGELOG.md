@@ -3,6 +3,34 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-06 — 1.5.3: update pill, invites from the app, login hint
+
+Version 1.5.3 (iOS build 25). Needs `invite-server` 0.33.0 on prod
+(`/api/app-version/`, `/api/approvals/invite/`, `/api/approvals/<id>/resend/`,
+`can_resend`) and 0.32.1 for the login hint. On an older server the new
+parts hide themselves: no invite form or Resend, and the update pill falls
+back to Home's `latest_app_version`. JS + TypeScript only; ships as a store
+build.
+
+- **Update pill** (Home): a small gold "App Update ↑ Available" pill at the
+  right end of the "Hi <name>" line when a newer version is out for your
+  platform (iOS: "Latest app version"; Android: "Android app version").
+  Checked when the app opens and when it comes back to the foreground (at
+  most every 3 hours). Tap → App Store / Get the App page; × hides it until
+  the app is next started. Replaces the old banner at the bottom of Home.
+- **Invites & approvals** (directors and admins; was "Player approvals"):
+  an invite card at the top — one or more emails separated by commas,
+  optional first and last name (one email only), and for admins the
+  approving director. Each address comes back SENT, HAS AN ACCOUNT,
+  INVALID or NOT SENT (invited by another director); the good ones are
+  sent even when others aren't.
+- **Resend invite** on a "setup incomplete" row, for the sponsoring
+  director or an admin. Within 2 minutes of the last link it says one was
+  already sent.
+- **Sign in**: a failed login with an email shows the server's hint about
+  finishing an invited account (a fresh setup link is emailed).
+- Tests: `npm test` 47.
+
 ## 2026-10-04 — 1.5.2: notification settings, Recent events, account deletion
 
 Version 1.5.2 (iOS build 24). Needs `invite-server` 0.32.0 on prod

@@ -2,7 +2,7 @@
   "expo": {
     "name": "OBH Invites",
     "slug": "jvmalone",
-    "version": "1.5.2",
+    "version": "1.5.3",
     "orientation": "portrait",
     "scheme": "obhinvites",
     "userInterfaceStyle": "automatic",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.falcon83.obhinvites",
-      "buildNumber": "24",
+      "buildNumber": "25",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
