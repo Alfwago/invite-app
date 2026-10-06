@@ -15,7 +15,7 @@ import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
 import { Loading } from "@/src/components/ui";
-import { keys } from "@/src/hooks/queries";
+import { keys, useAppVersion } from "@/src/hooks/queries";
 import { useSkateCard } from "@/src/hooks/useSkateCard";
 import { useWatchConnectivity } from "@/src/hooks/useWatchConnectivity";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
@@ -131,6 +131,8 @@ function RootNavigator() {
   useNotificationHandling();
   useWatchConnectivity();
   useSkateCard();
+  // App update check on open + foreground (throttled); Home's pill shows it.
+  useAppVersion();
 
   useEffect(() => {
     if (!ready) return;

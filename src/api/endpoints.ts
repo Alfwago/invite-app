@@ -1,5 +1,6 @@
-import { apiFetch } from "./client";
+import { ApiError, apiFetch } from "./client";
 import type {
+  AppVersions,
   BoardMessage,
   BoardsResponse,
   CreateNextEventBody,
@@ -74,6 +75,18 @@ export function requestPasswordResetAnon(email: string): Promise<{ sent: boolean
     body: { email },
     anonymous: true,
   });
+}
+
+/** Newest app version per platform, for the update pill. Anonymous (works
+ *  with a stale token). Resolves `null` on a server too old to have the
+ *  endpoint (404) so the caller can fall back to Home's latest_app_version. */
+export async function fetchAppVersion(signal?: AbortSignal): Promise<AppVersions | null> {
+  try {
+    return await apiFetch<AppVersions>("/api/app-version/", { anonymous: true, signal });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
 }
 
 /** The signup screen's approving-director picker — same candidates as the

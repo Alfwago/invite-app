@@ -7,6 +7,7 @@ import {
 
 import * as api from "@/src/api/endpoints";
 import { applyOptimisticRosterAction } from "@/src/rosterOptimistic";
+import { APP_VERSION_CHECK_MS } from "@/src/updateCheck";
 import type {
   BoardMessage,
   CreateNextEventBody,
@@ -35,6 +36,7 @@ export const keys = {
   nights: ["nights"] as const,
   boards: ["boards"] as const,
   home: ["home"] as const,
+  appVersion: ["app-version"] as const,
   manageNotices: ["notices", "manage"] as const,
   players: (params: { night?: number | null; goalies?: boolean; q?: string }) =>
     ["players", params] as const,
@@ -122,6 +124,21 @@ export function useNights() {
 
 export function useHome(): UseQueryResult<HomeData> {
   return useQuery({ queryKey: keys.home, queryFn: ({ signal }) => api.fetchHome(signal) });
+}
+
+/** The update check. Mounted once at the root (RootNavigator) so it runs on
+ *  app open and — via the AppState-backed focusManager — on return to the
+ *  foreground, but only once the last result is APP_VERSION_CHECK_MS old.
+ *  Home's UpdatePill reads the same cached result. Independent of
+ *  /api/home/ and of login. */
+export function useAppVersion() {
+  return useQuery({
+    queryKey: keys.appVersion,
+    queryFn: ({ signal }) => api.fetchAppVersion(signal),
+    staleTime: APP_VERSION_CHECK_MS,
+    gcTime: Infinity,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useBoards() {

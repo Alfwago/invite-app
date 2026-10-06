@@ -20,7 +20,7 @@ import { AppFooter } from "@/src/components/AppFooter";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
-import { UpdateBanner } from "@/src/components/UpdateBanner";
+import { UpdatePill } from "@/src/components/UpdatePill";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useHome, useInbox, usePolls } from "@/src/hooks/queries";
@@ -95,7 +95,12 @@ export default function HomeScreen() {
       {brand}
 
       <View style={styles.body}>
-        <Text style={styles.greeting}>Hi {me?.first_name || me?.username}</Text>
+        <View style={styles.greetingRow}>
+          <Text style={styles.greeting} numberOfLines={1}>
+            Hi {me?.first_name || me?.username}
+          </Text>
+          <UpdatePill homeLatest={latest_app_version} />
+        </View>
 
         <VerifyBanner />
 
@@ -166,8 +171,6 @@ export default function HomeScreen() {
         <DirectorToolsCard />
 
         <Button label="Sign out" variant="secondary" onPress={confirmSignOut} style={styles.signOut} />
-
-        <UpdateBanner latestVersion={latest_app_version} />
 
         <AppFooter />
       </View>
@@ -268,7 +271,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   body: { padding: spacing.lg, gap: spacing.md },
-  greeting: { color: colors.text, fontSize: font.lg, fontWeight: "800" },
+  greetingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  greeting: { color: colors.text, fontSize: font.lg, fontWeight: "800", flexShrink: 1 },
   section: { gap: spacing.sm },
   noticeLabel: {
     color: colors.gold,

@@ -471,8 +471,17 @@ export interface HomeData {
    *  skate-day card. null = none / not a member of that board. `at` = Unix seconds. */
   next_skate_board_message?: { author: string; text: string; at: number } | null;
   /** Newest version submitted to the App/Play Store — see
-   *  SiteConfiguration.latest_app_version. "" when nothing's configured. */
+   *  SiteConfiguration.latest_app_version. "" when nothing's configured.
+   *  Since 1.5.3 only the fallback for servers without /api/app-version/. */
   latest_app_version: string;
+}
+
+/** GET /api/app-version/ (server 0.33+): newest version per platform. iOS =
+ *  Site configuration "Latest app version", Android = "Android app version".
+ *  "" = not configured. */
+export interface AppVersions {
+  ios: string;
+  android: string;
 }
 
 export interface MessageReaction {
