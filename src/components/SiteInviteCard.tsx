@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Keyboard, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ApiError } from "@/src/api/client";
 import type { SiteInviteOptions, SiteInviteResult } from "@/src/api/types";
@@ -37,6 +37,7 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
 
   const onSend = () => {
     if (emails.length === 0) return;
+    Keyboard.dismiss();
     setError("");
     const payload = buildInvitePayload({
       emailText,
@@ -51,8 +52,9 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
         setResultDirector(
           data.director.id === options.default_director_id ? "" : data.director.name,
         );
-        // Keep anything that didn't go out so it can be fixed and re-sent.
-        const leftOver = data.results.filter((r) => r.status !== "sent").map((r) => r.email);
+        // Keep only the typos so they can be fixed and re-sent; the rest
+        // (sent, has an account, someone else's invitee) are done here.
+        const leftOver = data.results.filter((r) => r.status === "invalid").map((r) => r.email);
         setEmailText(leftOver.join(", "));
         if (leftOver.length === 0) {
           setFirstName("");
@@ -65,7 +67,6 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
 
   return (
     <Card>
-      <Text style={styles.title}>Invite to the site</Text>
       <Text style={styles.meta}>
         They get an email link to set up a username and password.
         {options.can_choose_director
@@ -88,7 +89,7 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
       <View style={styles.row}>
         <TextInput
           style={[styles.input, styles.half, !nameOk && styles.disabled]}
-          placeholder="First name (optional)"
+          placeholder="First name"
           placeholderTextColor={colors.textMuted}
           editable={nameOk}
           value={firstName}
@@ -96,16 +97,18 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
         />
         <TextInput
           style={[styles.input, styles.half, !nameOk && styles.disabled]}
-          placeholder="Last name (optional)"
+          placeholder="Last name"
           placeholderTextColor={colors.textMuted}
           editable={nameOk}
           value={lastName}
           onChangeText={setLastName}
         />
       </View>
-      {!namesApply(emails) && emails.length > 1 ? (
-        <Text style={styles.meta}>A name is only used when you invite one email.</Text>
-      ) : null}
+      <Text style={styles.meta}>
+        {namesApply(emails) || emails.length === 0
+          ? "Name is optional."
+          : "A name is only used when you invite one email."}
+      </Text>
 
       {options.can_choose_director ? (
         <>
@@ -159,7 +162,6 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.text, fontSize: font.base, fontWeight: "700" },
   meta: { color: colors.textMuted, fontSize: font.sm },
   label: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
   row: { flexDirection: "row", gap: spacing.sm },
