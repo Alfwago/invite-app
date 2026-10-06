@@ -28,7 +28,9 @@ import type {
 } from "@/src/api/types";
 import { ClockField, DateField, DateTimeField, NumberField } from "@/src/components/pickers";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { BorrowCard } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
+import { makePermanentCopy, weekdayOf } from "@/src/borrow";
 import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
 import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
@@ -942,8 +944,25 @@ function RosterCard({ event }: { event: EventDetail }) {
     act({ action: "promote", waitlist_id: w.waitlist_id, ...(role ? { role } : {}) });
   }
 
+  // "Add to <Night>" under a borrowed player's name — director only (this
+  // whole screen is), confirmed first. The server is idempotent.
+  function confirmMakePermanent(entry: RosterEntry) {
+    if (!event.night) return;
+    const copy = makePermanentCopy(
+      entry.name,
+      event.night.name,
+      event.night.weekday ?? weekdayOf(event.date),
+      entry.borrowed_from_name ?? "",
+    );
+    Alert.alert(copy.title, copy.body, [
+      { text: "Cancel", style: "cancel" },
+      { text: copy.button, onPress: () => act({ action: "make_permanent", player_id: entry.player_id }) },
+    ]);
+  }
+
   function confirmRemove(entry: RosterEntry) {
-    Alert.alert("Remove from roster?", `${entry.name} will be set to Not going.`, [
+    const told = entry.is_borrowed ? " They'll be told they've been taken off this skate." : "";
+    Alert.alert("Remove from roster?", `${entry.name} will be set to Not going.${told}`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
@@ -999,6 +1018,10 @@ function RosterCard({ event }: { event: EventDetail }) {
             isGoalie={p.is_goalie}
             isDirector={p.is_director}
             isAssistantDirector={p.is_assistant_director}
+            borrowed={!!p.is_borrowed}
+            borrowedFrom={p.borrowed_from_name}
+            makePermanentLabel={event.night ? `Add to ${event.night.name}` : undefined}
+            onMakePermanent={event.night ? () => confirmMakePermanent(p) : undefined}
             team={p.team}
             pays={p.pays}
             present={p.present}
@@ -1066,12 +1089,20 @@ function RosterCard({ event }: { event: EventDetail }) {
 
       <View style={styles.divider} />
 
+      {event.night ? (
+        <>
+          <Text style={styles.subhead}>Add from {event.night.name}</Text>
+          <Text style={styles.muted}>Members of this skate group.</Text>
+        </>
+      ) : null}
       <Button
-        label={showAdd ? "Close player list" : "Add players"}
+        label={showAdd ? "Close player list" : event.night ? "Choose players" : "Add players"}
         variant="secondary"
         onPress={() => setShowAdd((s) => !s)}
       />
       {showAdd ? <AddPlayerPanel event={event} busy={busy} onAct={act} /> : null}
+
+      {event.manage?.can_borrow ? <BorrowCard event={event} busy={busy} /> : null}
 
       <Text style={styles.subhead}>Add a walk-on</Text>
       <View style={styles.walkOnRow}>
@@ -1226,6 +1257,10 @@ function RosterAdminRow({
   isGoalie,
   isDirector,
   isAssistantDirector,
+  borrowed,
+  borrowedFrom,
+  makePermanentLabel,
+  onMakePermanent,
   team,
   pays = true,
   walkOn,
@@ -1253,6 +1288,11 @@ function RosterAdminRow({
   isGoalie: boolean;
   isDirector?: boolean;
   isAssistantDirector?: boolean;
+  /** Borrowed from another skate group — its own badge after the role tag. */
+  borrowed?: boolean;
+  borrowedFrom?: string;
+  makePermanentLabel?: string;
+  onMakePermanent?: () => void;
   team?: "Gold" | "Black" | null;
   pays?: boolean;
   walkOn?: boolean;
@@ -1292,6 +1332,14 @@ function RosterAdminRow({
         ) : walkOn ? (
           <Text style={styles.roleTag}>walk-on</Text>
         ) : null}
+        {borrowed ? (
+          <Text
+            style={styles.roleTag}
+            accessibilityLabel={borrowedFrom ? `Borrowed from ${borrowedFrom}` : "Borrowed"}
+          >
+            borrowed
+          </Text>
+        ) : null}
         {team ? (
           <Ionicons name="shirt" size={15} color={TEAM_TINT[team]} accessibilityLabel={`${team} Team`} />
         ) : null}
@@ -1319,6 +1367,19 @@ function RosterAdminRow({
           <TinyBtn icon="close" danger disabled={disabled} onPress={onRemove} />
         </View>
       </View>
+
+      {borrowed && onMakePermanent && makePermanentLabel ? (
+        <Pressable
+          onPress={onMakePermanent}
+          disabled={disabled}
+          hitSlop={6}
+          style={styles.makePermanent}
+          accessibilityRole="button"
+          accessibilityLabel={`${makePermanentLabel}: ${name}`}
+        >
+          <Text style={styles.linkText}>{makePermanentLabel}</Text>
+        </Pressable>
+      ) : null}
 
       {guests.map((g, i) => (
         <View key={i} style={styles.guestAdminRow}>
@@ -1993,6 +2054,7 @@ const styles = StyleSheet.create({
   tinyTextOn: { color: colors.goldText },
   tinyTextDanger: { color: colors.red },
   linkText: { color: colors.gold, fontSize: font.xs, fontWeight: "700" },
+  makePermanent: { alignSelf: "flex-start", paddingTop: 2 },
 
   walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
   goaliePick: {

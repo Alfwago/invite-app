@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from "./client";
+import type { BorrowPanel } from "../borrow";
 import type { SiteInvitePayload } from "../siteInvites";
 import type {
   AppVersions,
@@ -411,6 +412,15 @@ export function fetchCandidates(
   signal?: AbortSignal,
 ): Promise<EventCandidates> {
   return apiFetch(`/api/events/${id}/candidates/`, { signal });
+}
+
+/** Players from other skate groups a director can borrow (server 0.33+;
+ *  404 on older servers — the Borrow card stays hidden). */
+export function fetchBorrowCandidates(
+  id: number | string,
+  signal?: AbortSignal,
+): Promise<BorrowPanel> {
+  return apiFetch(`/api/events/${id}/borrow-candidates/`, { signal });
 }
 
 /** One roster edit; the server returns the fresh event. */

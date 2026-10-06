@@ -66,6 +66,21 @@ export function RsvpControls({ event }: { event: EventDetail }) {
     setGuests((g) => g.filter((_, idx) => idx !== i));
   }
 
+  // A borrowed player dropping out of a locked roster can't get back in on
+  // their own — say so first.
+  function confirmThenSubmit() {
+    const wasYes = current?.status === "YES";
+    const lockedForThem = current?.is_goalie ? event.goalie_rsvp_locked : event.rsvp_locked;
+    if (event.my_borrow && wasYes && choice !== "YES" && lockedForThem) {
+      Alert.alert("Drop out of this skate?", "The roster is locked, so you won't be able to rejoin yourself.", [
+        { text: "Stay in", style: "cancel" },
+        { text: "Drop out", style: "destructive", onPress: () => void submit() },
+      ]);
+      return;
+    }
+    void submit();
+  }
+
   async function submit() {
     setNotices([]);
     const body: RsvpBody = { status: choice };
@@ -201,7 +216,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
         <>
           <Button
             label={current ? "Save changes" : "Save RSVP"}
-            onPress={submit}
+            onPress={confirmThenSubmit}
             loading={rsvp.isPending}
           />
           {current ? (

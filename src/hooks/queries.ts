@@ -8,6 +8,7 @@ import {
 import * as api from "@/src/api/endpoints";
 import { applyOptimisticRosterAction } from "@/src/rosterOptimistic";
 import { APP_VERSION_CHECK_MS } from "@/src/updateCheck";
+import type { BorrowPanel } from "@/src/borrow";
 import type { SiteInvitePayload } from "@/src/siteInvites";
 import type {
   BoardMessage,
@@ -328,6 +329,14 @@ export function useCandidates(id: number | string, enabled = true) {
   return useQuery<EventCandidates>({
     queryKey: ["event", String(id), "candidates"],
     queryFn: ({ signal }) => api.fetchCandidates(id, signal),
+    enabled: enabled && id != null && id !== "",
+  });
+}
+
+export function useBorrowCandidates(id: number | string, enabled = true) {
+  return useQuery<BorrowPanel>({
+    queryKey: ["event", String(id), "candidates", "borrow"],
+    queryFn: ({ signal }) => api.fetchBorrowCandidates(id, signal),
     enabled: enabled && id != null && id !== "",
   });
 }
