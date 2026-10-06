@@ -7,11 +7,11 @@ import {
   candidateA11yLabel,
   confirmCopy,
   emptyText,
-  filterCandidates,
   groupCandidates,
   roleMark,
   successText,
   type BorrowCandidate,
+  visibleCandidates,
   type BorrowRole,
 } from "@/src/borrow";
 import { Button, ErrorState, Loading } from "@/src/components/ui";
@@ -25,7 +25,8 @@ import { colors, font, radius, spacing } from "@/src/theme";
  *
  * Goalie/Skater first (that choice is the player's slot, so no separate
  * Goalie-or-Skater prompt), then search, then one tap per player → confirm
- * → add + notify. One player at a time.
+ * → add + notify. One player at a time. Goalie lists every goalie at once;
+ * Skater lists nobody until 2+ letters are typed (see `needsSearch`).
  */
 export function BorrowCard({ event, busy }: { event: EventDetail; busy: boolean }) {
   const [open, setOpen] = useState(false);
@@ -62,7 +63,7 @@ function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolean }) {
   if (!data.available) return <Text style={styles.muted}>{data.reason}</Text>;
 
   const current: BorrowRole = role ?? data.default_role ?? "skater";
-  const rows = filterCandidates(data.players, current, query);
+  const rows = visibleCandidates(data.players, current, query);
   const empty = emptyText(data.players, current, query);
 
   async function add(p: BorrowCandidate) {
@@ -129,7 +130,9 @@ function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolean }) {
         accessibilityLabel="Search by name"
       />
       {empty ? (
-        <Text style={styles.muted}>{empty}</Text>
+        <Text style={styles.muted} accessibilityLiveRegion="polite">
+          {empty}
+        </Text>
       ) : (
         groupCandidates(rows).map((g) => (
           <View key={g.night} style={styles.group}>

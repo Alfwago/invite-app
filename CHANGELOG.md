@@ -15,7 +15,9 @@ card or Borrowed tags, and the update pill falls back to Home's
 
 - **Borrow a Goalie or Skater** (Manage → Roster, directors; above "Add a
   walk-on"): pick Goalie or Skater, search, tap a player from another skate
-  group (grouped by their group, each shown once with all their groups) →
+  group (grouped by their group, each shown once with all their groups;
+  Goalie lists every goalie at once, Skater lists nobody until 2+ letters
+  are typed — "Type a name to find a skater from another skate group.") →
   "Add Sam Lee as goalie?" → "Add & notify Sam". They go on this skate's
   roster as Yes, for this skate only, and get a push and email. If the
   goalie or skater spots are already full the confirm says so. Result:

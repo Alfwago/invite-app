@@ -8,8 +8,10 @@ import {
   filterCandidates,
   groupCandidates,
   makePermanentCopy,
+  needsSearch,
   roleMark,
   successText,
+  visibleCandidates,
   weekdayOf,
   type BorrowCandidate,
   type BorrowPanel,
@@ -64,6 +66,17 @@ test("filterCandidates: Goalie shows goalies + G/S, Skater shows skaters + G/S",
   assert.deepEqual(filterCandidates(panel.players, "skater", " kim ").map((p) => p.id), [3]);
 });
 
+test("visibleCandidates: Goalie lists at once, Skater waits for 2 letters", () => {
+  assert.deepEqual(visibleCandidates(panel.players, "goalie", "").map((p) => p.id), [2, 1]);
+  assert.deepEqual(visibleCandidates(panel.players, "goalie", "pa").map((p) => p.id), [2]);
+  assert.deepEqual(visibleCandidates(panel.players, "skater", ""), []);
+  assert.deepEqual(visibleCandidates(panel.players, "skater", " k "), []);
+  assert.deepEqual(visibleCandidates(panel.players, "skater", "Ki").map((p) => p.id), [3]);
+  assert.equal(needsSearch("goalie", ""), false);
+  assert.equal(needsSearch("skater", "k"), true);
+  assert.equal(needsSearch("skater", "ki"), false);
+});
+
 test("groupCandidates keeps server order, one group per home night", () => {
   const g = groupCandidates([both, goalie, skater]);
   assert.deepEqual(
@@ -94,6 +107,13 @@ test("emptyText: nobody, no goalies, search miss, or nothing to say", () => {
     "No one named 'zed' in other skate groups. Not in the app? Add them as a walk-on below.",
   );
   assert.equal(emptyText([skater], "skater", "ki"), "");
+  // Skater before 2 letters: the prompt, not a miss.
+  assert.equal(emptyText([skater], "skater", ""), "Type a name to find a skater from another skate group.");
+  assert.equal(emptyText([skater], "skater", "z"), "Type a name to find a skater from another skate group.");
+  // …unless there are no skaters to find at all.
+  assert.equal(emptyText([goalie], "skater", ""), "No players from other skate groups are free for this skate.");
+  // A 1-letter goalie search still filters.
+  assert.equal(emptyText([goalie], "goalie", "x"), "No one named 'x' in other skate groups. Not in the app? Add them as a walk-on below.");
 });
 
 test("confirmCopy matches the owner's wording, plus the server's warning", () => {

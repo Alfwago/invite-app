@@ -50,6 +50,27 @@ export function filterCandidates(
   );
 }
 
+/**
+ * Letters needed before Skater lists anyone (owner's call, 2026-10-06: the
+ * league has 100+ players, too many to show at once). Goalie lists every
+ * goalie and G/S straight away — there are only a handful.
+ */
+export const SKATER_MIN_SEARCH = 2;
+
+/** True while Skater is picked and fewer than 2 letters are typed: show the prompt, no rows. */
+export function needsSearch(role: BorrowRole, query: string): boolean {
+  return role === "skater" && query.trim().length < SKATER_MIN_SEARCH;
+}
+
+/** The rows the picker shows: none for Skater until the search is long enough. */
+export function visibleCandidates(
+  players: BorrowCandidate[],
+  role: BorrowRole,
+  query: string,
+): BorrowCandidate[] {
+  return needsSearch(role, query) ? [] : filterCandidates(players, role, query);
+}
+
 /** Group rows by home night, keeping the server's order (by weekday, then name). */
 export function groupCandidates(players: BorrowCandidate[]): { night: string; players: BorrowCandidate[] }[] {
   const groups: { night: string; players: BorrowCandidate[] }[] = [];
@@ -84,6 +105,7 @@ export function emptyText(
       ? "No goalies from other skate groups are free. Try Skater, or add a walk-on goalie below."
       : "No players from other skate groups are free for this skate.";
   }
+  if (needsSearch(role, query)) return "Type a name to find a skater from another skate group.";
   if (filterCandidates(players, role, query).length === 0) {
     return `No one named '${query.trim()}' in other skate groups. Not in the app? Add them as a walk-on below.`;
   }
