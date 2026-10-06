@@ -3,14 +3,30 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-06 — 1.5.3: update pill, invites from the app, login hint
+## 2026-10-06 — 1.5.3: update pill, invites from the app, login hint, borrow players
 
 Version 1.5.3 (iOS build 25). Needs `invite-server` 0.33.0 on prod
 (`/api/app-version/`, `/api/approvals/invite/`, `/api/approvals/<id>/resend/`,
-`can_resend`) and 0.32.1 for the login hint. On an older server the new
-parts hide themselves: no invite form or Resend, and the update pill falls
-back to Home's `latest_app_version`. JS + TypeScript only; ships as a store
-build.
+`can_resend`, `/api/events/<id>/borrow-candidates/` + roster actions
+`borrow` / `make_permanent`) and 0.32.1 for the login hint. On an older
+server the new parts hide themselves: no invite form or Resend, no Borrow
+card or Borrowed tags, and the update pill falls back to Home's
+`latest_app_version`. JS + TypeScript only; ships as a store build.
+
+- **Borrow a Goalie or Skater** (Manage → Roster, directors; above "Add a
+  walk-on"): pick Goalie or Skater, search, tap a player from another skate
+  group (grouped by their group, each shown once with all their groups) →
+  "Add Sam Lee as goalie?" → "Add & notify Sam". They go on this skate's
+  roster as Yes, for this skate only, and get a push and email. If the
+  goalie or skater spots are already full the confirm says so. Result:
+  "Sam Lee added as goalie, notified." (or "…by email only." with no app).
+- **Borrowed** tag after the G / ND / AD tag on both rosters (everyone sees
+  it). Under a borrowed player's name, directors get **Add to <Night>**
+  (confirmed) to make them a member. Removing one tells them.
+- "Add players" is now **Add from <Night>** — "Members of this skate group."
+- A borrowed player sees "You're filling in for <Night>, this skate only.
+  Added by <director>." above their RSVP, and on a locked roster a confirm
+  before dropping out ("you won't be able to rejoin yourself").
 
 - **Update pill** (Home): a small gold "App Update ↑ Available" pill at the
   right end of the "Hi <name>" line when a newer version is out for your
