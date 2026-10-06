@@ -10,11 +10,20 @@ Version 1.5.3 (iOS build 25). Needs `invite-server` 0.33.0 on prod
 `can_resend`, `/api/events/<id>/borrow-candidates/` + roster actions
 `borrow` / `make_permanent`) and 0.32.1 for the login hint. On an older
 server the new parts hide themselves: no invite form or Resend, no Borrow
-card or Borrowed tags, and the update pill falls back to Home's
+option or Borrowed tags, and the update pill falls back to Home's
 `latest_app_version`. JS + TypeScript only; ships as a store build.
 
-- **Borrow a Goalie or Skater** (Manage → Roster, directors; above "Add a
-  walk-on"): pick Goalie or Skater, search, tap a player from another skate
+- **One "Add a player" card** (Manage → Roster, directors, below the
+  roster): a **Skate Group | Borrow | Walk-On** toggle replaces the separate
+  "Add from <Night>", "Borrow a Goalie or Skater" and "Add a walk-on"
+  sections (owner's call). Skate Group — "Members of <Night>.", Choose
+  players as before; Borrow — the picker below, open straight away;
+  Walk-On — "Someone without an account. No emails sent.", name / G / PPV
+  as before. Opens on Skate Group and keeps your choice while the screen is
+  open (tab switches and adds included). Borrow is greyed out with the
+  reason when borrowing isn't possible, and left out entirely on a server
+  without borrow. Screen readers get a radio group.
+- **Borrow** (in "Add a player"): pick Goalie or Skater, search, tap a player from another skate
   group (grouped by their group, each shown once with all their groups;
   Goalie lists every goalie at once, Skater lists nobody until 2+ letters
   are typed — "Type a name to find a skater from another skate group.") →
@@ -25,7 +34,6 @@ card or Borrowed tags, and the update pill falls back to Home's
 - **Borrowed** tag after the G / ND / AD tag on both rosters (everyone sees
   it). Under a borrowed player's name, directors get **Add to <Night>**
   (confirmed) to make them a member. Removing one tells them.
-- "Add players" is now **Add from <Night>** — "Members of this skate group."
 - A borrowed player sees "You're filling in for <Night>, this skate only.
   Added by <director>." above their RSVP, and on a locked roster a confirm
   before dropping out ("you won't be able to rejoin yourself").

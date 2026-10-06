@@ -28,11 +28,12 @@ import type {
 } from "@/src/api/types";
 import { ClockField, DateField, DateTimeField, NumberField } from "@/src/components/pickers";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
-import { BorrowCard } from "@/src/components/BorrowCard";
+import { BorrowPicker } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
+import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
 import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
-import { Badge, Button, Card, ErrorState, FillBar, Loading } from "@/src/components/ui";
+import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
 import {
@@ -66,6 +67,9 @@ export default function ManageEventScreen() {
   const query = useEvent(id);
   const pull = usePullToRefresh(query.refetch);
   const [tab, setTab] = useState<TabKey>("overview");
+  // Roster → "Add a player" mode; kept here so it survives tab switches and
+  // adds, for as long as this screen is open (never persisted).
+  const [addMode, setAddMode] = useState<AddMode | null>(null);
 
   if (query.isLoading) return <Loading label="Loading event…" />;
   if (query.isError || !query.data) {
@@ -124,7 +128,7 @@ export default function ManageEventScreen() {
         {tab === "overview" ? <OverviewPanel event={event} manage={manage} /> : null}
         {tab === "settings" ? <SettingsPanel event={event} /> : null}
         {tab === "communications" ? <CommunicationsPanel event={event} manage={manage} /> : null}
-        {tab === "roster" ? <RosterCard event={event} /> : null}
+        {tab === "roster" ? <RosterCard event={event} addMode={addMode} onAddMode={setAddMode} /> : null}
         {tab === "advanced" ? <AdvancedPanel event={event} manage={manage} /> : null}
       </KeyboardAwareScrollView>
     </>
@@ -864,7 +868,15 @@ function PenaltyBoxCard({ event, manage }: { event: EventDetail; manage: EventMa
 // ROSTER
 // ====================================================================
 
-function RosterCard({ event }: { event: EventDetail }) {
+function RosterCard({
+  event,
+  addMode,
+  onAddMode,
+}: {
+  event: EventDetail;
+  addMode: AddMode | null;
+  onAddMode: (mode: AddMode) => void;
+}) {
   const roster = useRosterAction(event.id);
   const candidates = useCandidates(event.id);
   const [showAdd, setShowAdd] = useState(false);
@@ -987,204 +999,239 @@ function RosterCard({ event }: { event: EventDetail }) {
     setWalkOnRating("");
   }
 
+  // "Add a player": one card, Skate Group | Borrow | Walk-On. Borrow only
+  // when the server sends can_borrow (0.33+), disabled with its reason when
+  // false.
+  const modes = addModeOptions({
+    nightName: event.night?.name ?? null,
+    status: event.status,
+    isPast: event.is_past,
+    canBorrow: event.manage?.can_borrow,
+  });
+  const mode = resolveAddMode(addMode, modes);
+  const current = modes.find((m) => m.key === mode)!;
+  const borrowOff = modes.find((m) => m.key === "borrow" && m.disabledReason);
+
   return (
-    <Card>
-      <Text style={styles.heading}>Roster</Text>
+    <>
+      <Card>
+        <Text style={styles.heading}>Roster</Text>
 
-      <Text style={styles.subhead}>Going ({going.length})</Text>
-      {presentEligible.length > 0 || paidEligible.length > 0 ? (
-        <View style={styles.bulkRow}>
-          {presentEligible.length > 0 ? (
-            <Pressable onPress={toggleAllPresent} disabled={busy} hitSlop={6}>
-              <Text style={styles.linkText}>
-                {presentAllOn ? "Deselect all present" : "Select all present"}
-              </Text>
-            </Pressable>
-          ) : null}
-          {paidEligible.length > 0 ? (
-            <Pressable onPress={toggleAllPaid} disabled={busy} hitSlop={6}>
-              <Text style={styles.linkText}>{paidAllOn ? "Deselect all paid" : "Select all paid"}</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-      {going.length === 0 ? (
-        <Text style={styles.muted}>Nobody yet.</Text>
-      ) : (
-        going.map((p) => (
-          <RosterAdminRow
-            key={`p-${p.player_id}`}
-            name={p.name}
-            isGoalie={p.is_goalie}
-            isDirector={p.is_director}
-            isAssistantDirector={p.is_assistant_director}
-            borrowed={!!p.is_borrowed}
-            borrowedFrom={p.borrowed_from_name}
-            makePermanentLabel={event.night ? `Add to ${event.night.name}` : undefined}
-            onMakePermanent={event.night ? () => confirmMakePermanent(p) : undefined}
-            team={p.team}
-            pays={p.pays}
-            present={p.present}
-            paid={p.paid}
-            disabled={busy}
-            tickDisabled={bulkBusy}
-            beerOn={p.is_beer_guy}
-            whiskeyOn={p.is_whiskey_guy}
-            showBeer={event.beer_guy_enabled}
-            showWhiskey={event.whiskey_guy_enabled}
-            guests={p.guests}
-            onBeer={() =>
-              act({ action: "set_beer_guy", player_id: p.is_beer_guy ? null : p.player_id })
-            }
-            onWhiskey={() =>
-              act({ action: "set_whiskey_guy", player_id: p.is_whiskey_guy ? null : p.player_id })
-            }
-            onGuestPresent={(i, v) =>
-              act({ action: "guest_present", player_id: p.player_id, guest_index: i, present: v })
-            }
-            onGuestPaid={(i, v) =>
-              act({ action: "guest_paid", player_id: p.player_id, guest_index: i, paid: v })
-            }
-            onGuestRemove={(i) =>
-              act({ action: "remove_guest", player_id: p.player_id, guest_index: i })
-            }
-            onPresent={(v) => act({ action: "set_present", player_id: p.player_id, present: v })}
-            onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
-            onRemove={() => confirmRemove(p)}
-          />
-        ))
-      )}
-
-      {event.day_players.map((dp: DayPlayer) =>
-        editWalkOn?.id === dp.id ? (
-          <WalkOnEditor
-            key={`dp-${dp.id}`}
-            dp={dp}
-            busy={busy}
-            onCancel={() => setEditWalkOn(null)}
-            onSave={(patch) => {
-              act({ action: "edit_day_player", day_player_id: dp.id, ...patch });
-              setEditWalkOn(null);
-            }}
-          />
+        <Text style={styles.subhead}>Going ({going.length})</Text>
+        {presentEligible.length > 0 || paidEligible.length > 0 ? (
+          <View style={styles.bulkRow}>
+            {presentEligible.length > 0 ? (
+              <Pressable onPress={toggleAllPresent} disabled={busy} hitSlop={6}>
+                <Text style={styles.linkText}>
+                  {presentAllOn ? "Deselect all present" : "Select all present"}
+                </Text>
+              </Pressable>
+            ) : null}
+            {paidEligible.length > 0 ? (
+              <Pressable onPress={toggleAllPaid} disabled={busy} hitSlop={6}>
+                <Text style={styles.linkText}>{paidAllOn ? "Deselect all paid" : "Select all paid"}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+        {going.length === 0 ? (
+          <Text style={styles.muted}>Nobody yet.</Text>
         ) : (
-          <RosterAdminRow
-            key={`dp-${dp.id}`}
-            name={dp.name}
-            isGoalie={dp.is_goalie}
-            pays={dp.pays}
-            walkOn
-            ratingPpv={dp.rating_ppv}
-            present={dp.present}
-            paid={dp.paid}
-            disabled={busy}
-            tickDisabled={bulkBusy}
-            onEdit={() => setEditWalkOn(dp)}
-            onPresent={(v) => act({ action: "set_present", day_player_id: dp.id, present: v })}
-            onPaid={(v) => act({ action: "set_paid", day_player_id: dp.id, paid: v })}
-            onRemove={() => act({ action: "remove_day_player", day_player_id: dp.id })}
-          />
-        ),
-      )}
+          going.map((p) => (
+            <RosterAdminRow
+              key={`p-${p.player_id}`}
+              name={p.name}
+              isGoalie={p.is_goalie}
+              isDirector={p.is_director}
+              isAssistantDirector={p.is_assistant_director}
+              borrowed={!!p.is_borrowed}
+              borrowedFrom={p.borrowed_from_name}
+              makePermanentLabel={event.night ? `Add to ${event.night.name}` : undefined}
+              onMakePermanent={event.night ? () => confirmMakePermanent(p) : undefined}
+              team={p.team}
+              pays={p.pays}
+              present={p.present}
+              paid={p.paid}
+              disabled={busy}
+              tickDisabled={bulkBusy}
+              beerOn={p.is_beer_guy}
+              whiskeyOn={p.is_whiskey_guy}
+              showBeer={event.beer_guy_enabled}
+              showWhiskey={event.whiskey_guy_enabled}
+              guests={p.guests}
+              onBeer={() =>
+                act({ action: "set_beer_guy", player_id: p.is_beer_guy ? null : p.player_id })
+              }
+              onWhiskey={() =>
+                act({ action: "set_whiskey_guy", player_id: p.is_whiskey_guy ? null : p.player_id })
+              }
+              onGuestPresent={(i, v) =>
+                act({ action: "guest_present", player_id: p.player_id, guest_index: i, present: v })
+              }
+              onGuestPaid={(i, v) =>
+                act({ action: "guest_paid", player_id: p.player_id, guest_index: i, paid: v })
+              }
+              onGuestRemove={(i) =>
+                act({ action: "remove_guest", player_id: p.player_id, guest_index: i })
+              }
+              onPresent={(v) => act({ action: "set_present", player_id: p.player_id, present: v })}
+              onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
+              onRemove={() => confirmRemove(p)}
+            />
+          ))
+        )}
 
-      <View style={styles.divider} />
+        {event.day_players.map((dp: DayPlayer) =>
+          editWalkOn?.id === dp.id ? (
+            <WalkOnEditor
+              key={`dp-${dp.id}`}
+              dp={dp}
+              busy={busy}
+              onCancel={() => setEditWalkOn(null)}
+              onSave={(patch) => {
+                act({ action: "edit_day_player", day_player_id: dp.id, ...patch });
+                setEditWalkOn(null);
+              }}
+            />
+          ) : (
+            <RosterAdminRow
+              key={`dp-${dp.id}`}
+              name={dp.name}
+              isGoalie={dp.is_goalie}
+              pays={dp.pays}
+              walkOn
+              ratingPpv={dp.rating_ppv}
+              present={dp.present}
+              paid={dp.paid}
+              disabled={busy}
+              tickDisabled={bulkBusy}
+              onEdit={() => setEditWalkOn(dp)}
+              onPresent={(v) => act({ action: "set_present", day_player_id: dp.id, present: v })}
+              onPaid={(v) => act({ action: "set_paid", day_player_id: dp.id, paid: v })}
+              onRemove={() => act({ action: "remove_day_player", day_player_id: dp.id })}
+            />
+          ),
+        )}
 
-      {event.night ? (
-        <>
-          <Text style={styles.subhead}>Add from {event.night.name}</Text>
-          <Text style={styles.muted}>Members of this skate group.</Text>
-        </>
-      ) : null}
-      <Button
-        label={showAdd ? "Close player list" : event.night ? "Choose players" : "Add players"}
-        variant="secondary"
-        onPress={() => setShowAdd((s) => !s)}
-      />
-      {showAdd ? <AddPlayerPanel event={event} busy={busy} onAct={act} /> : null}
+        {event.waitlist.length > 0 ? (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.subhead}>Waitlist ({event.waitlist.length})</Text>
+            <Text style={styles.muted}>In promotion order — use ▲▼ to reorder.</Text>
+            {event.waitlist.map((w: WaitlistEntry, i) => (
+              <View key={`w-${w.waitlist_id}`} style={styles.rosterRow}>
+                <Text style={styles.wlNum}>{i + 1}</Text>
+                <Text style={[styles.playerName, styles.grow]} numberOfLines={1}>
+                  {w.name}
+                  {gsWaitlist.has(w.waitlist_id) ? " (G/S)" : w.is_goalie ? " (G)" : ""}
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "up" })
+                  }
+                  disabled={busy || i === 0}
+                  hitSlop={6}
+                  style={[styles.arrowBtn, i === 0 && styles.arrowDisabled]}
+                >
+                  <Text style={styles.arrowText}>▲</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() =>
+                    act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "down" })
+                  }
+                  disabled={busy || i === event.waitlist.length - 1}
+                  hitSlop={6}
+                  style={[styles.arrowBtn, i === event.waitlist.length - 1 && styles.arrowDisabled]}
+                >
+                  <Text style={styles.arrowText}>▼</Text>
+                </Pressable>
+                <Button
+                  label="Promote"
+                  variant="secondary"
+                  onPress={() => promote(w)}
+                  disabled={busy}
+                  style={styles.promoteBtn}
+                />
+              </View>
+            ))}
+          </>
+        ) : null}
+        {modal}
+      </Card>
 
-      {event.manage?.can_borrow ? <BorrowCard event={event} busy={busy} /> : null}
-
-      <Text style={styles.subhead}>Add a walk-on</Text>
-      <View style={styles.walkOnRow}>
-        <TextInput
-          style={[styles.input, styles.grow]}
-          value={walkOn}
-          onChangeText={setWalkOn}
-          placeholder="Name"
-          placeholderTextColor={colors.textMuted}
+      <Card>
+        <Text style={styles.heading}>Add a player</Text>
+        <Segmented
+          label="Add a player from"
+          value={mode}
+          onChange={onAddMode}
+          options={modes.map((m) => ({
+            key: m.key,
+            label: m.label,
+            disabled: !!m.disabledReason,
+            hint: m.disabledReason ?? undefined,
+          }))}
         />
-        <Pressable
-          onPress={() => setWalkOnGoalie((g) => !g)}
-          style={[styles.goaliePick, walkOnGoalie && styles.goaliePickOn]}
-        >
-          <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
-        </Pressable>
-      </View>
-      <View style={styles.walkOnRow}>
-        <TextInput
-          style={[styles.input, styles.walkOnRatingInput]}
-          value={walkOnRating}
-          onChangeText={setWalkOnRating}
-          keyboardType="decimal-pad"
-          placeholder={walkOnGoalie ? "Goalie score" : "PPV"}
-          placeholderTextColor={colors.textMuted}
-        />
-        <Text style={[styles.muted, styles.grow]}>
-          {walkOnGoalie ? "0–3, defaults to 2.0" : "0–5, defaults to 3.0"} · feeds Team Generator
-        </Text>
-      </View>
-      <Button
-        label="Add walk-on"
-        variant="secondary"
-        onPress={addWalkOn}
-        disabled={busy || !walkOn.trim()}
-      />
+        <Text style={styles.muted}>{current.description}</Text>
+        {borrowOff ? <Text style={styles.addModeNote}>Borrow: {borrowOff.disabledReason}</Text> : null}
 
-      {event.waitlist.length > 0 ? (
-        <>
-          <View style={styles.divider} />
-          <Text style={styles.subhead}>Waitlist ({event.waitlist.length})</Text>
-          <Text style={styles.muted}>In promotion order — use ▲▼ to reorder.</Text>
-          {event.waitlist.map((w: WaitlistEntry, i) => (
-            <View key={`w-${w.waitlist_id}`} style={styles.rosterRow}>
-              <Text style={styles.wlNum}>{i + 1}</Text>
-              <Text style={[styles.playerName, styles.grow]} numberOfLines={1}>
-                {w.name}
-                {gsWaitlist.has(w.waitlist_id) ? " (G/S)" : w.is_goalie ? " (G)" : ""}
-              </Text>
-              <Pressable
-                onPress={() =>
-                  act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "up" })
-                }
-                disabled={busy || i === 0}
-                hitSlop={6}
-                style={[styles.arrowBtn, i === 0 && styles.arrowDisabled]}
-              >
-                <Text style={styles.arrowText}>▲</Text>
-              </Pressable>
-              <Pressable
-                onPress={() =>
-                  act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "down" })
-                }
-                disabled={busy || i === event.waitlist.length - 1}
-                hitSlop={6}
-                style={[styles.arrowBtn, i === event.waitlist.length - 1 && styles.arrowDisabled]}
-              >
-                <Text style={styles.arrowText}>▼</Text>
-              </Pressable>
-              <Button
-                label="Promote"
-                variant="secondary"
-                onPress={() => promote(w)}
-                disabled={busy}
-                style={styles.promoteBtn}
+        {mode === "group" ? (
+          <>
+            <Button
+              label={showAdd ? "Close player list" : event.night ? "Choose players" : "Add players"}
+              variant="secondary"
+              onPress={() => setShowAdd((s) => !s)}
+            />
+            {showAdd ? <AddPlayerPanel event={event} busy={busy} onAct={act} /> : null}
+          </>
+        ) : null}
+
+        {mode === "borrow" ? <BorrowPicker event={event} busy={busy} /> : null}
+
+        {mode === "walkon" ? (
+          <>
+            <View style={styles.walkOnRow}>
+              <TextInput
+                style={[styles.input, styles.grow]}
+                value={walkOn}
+                onChangeText={setWalkOn}
+                placeholder="Name"
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Walk-on name"
               />
+              <Pressable
+                onPress={() => setWalkOnGoalie((g) => !g)}
+                style={[styles.goaliePick, walkOnGoalie && styles.goaliePickOn]}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: walkOnGoalie }}
+                accessibilityLabel="Goalie"
+              >
+                <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
+              </Pressable>
             </View>
-          ))}
-        </>
-      ) : null}
-      {modal}
-    </Card>
+            <View style={styles.walkOnRow}>
+              <TextInput
+                style={[styles.input, styles.walkOnRatingInput]}
+                value={walkOnRating}
+                onChangeText={setWalkOnRating}
+                keyboardType="decimal-pad"
+                placeholder={walkOnGoalie ? "Goalie score" : "PPV"}
+                placeholderTextColor={colors.textMuted}
+              />
+              <Text style={[styles.muted, styles.grow]}>
+                {walkOnGoalie ? "0–3, defaults to 2.0" : "0–5, defaults to 3.0"} · feeds Team Generator
+              </Text>
+            </View>
+            <Button
+              label="Add walk-on"
+              variant="secondary"
+              onPress={addWalkOn}
+              disabled={busy || !walkOn.trim()}
+            />
+          </>
+        ) : null}
+      </Card>
+    </>
   );
 }
 
@@ -1864,6 +1911,7 @@ const styles = StyleSheet.create({
   error: { color: colors.red, fontWeight: "600" },
   muted: { color: colors.textMuted },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
+  addModeNote: { color: colors.textMuted, fontSize: font.xs },
   grow: { flex: 1 },
 
   tiles: { flexDirection: "row", gap: spacing.sm },

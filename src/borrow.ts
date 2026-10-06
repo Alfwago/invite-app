@@ -102,12 +102,12 @@ export function emptyText(
   if (players.length === 0) return "No players from other skate groups are free for this skate.";
   if (filterCandidates(players, role, "").length === 0) {
     return role === "goalie"
-      ? "No goalies from other skate groups are free. Try Skater, or add a walk-on goalie below."
+      ? "No goalies from other skate groups are free. Try Skater, or add a walk-on goalie under Walk-On."
       : "No players from other skate groups are free for this skate.";
   }
   if (needsSearch(role, query)) return "Type a name to find a skater from another skate group.";
   if (filterCandidates(players, role, query).length === 0) {
-    return `No one named '${query.trim()}' in other skate groups. Not in the app? Add them as a walk-on below.`;
+    return `No one named '${query.trim()}' in other skate groups. Not in the app? Add them under Walk-On.`;
   }
   return "";
 }

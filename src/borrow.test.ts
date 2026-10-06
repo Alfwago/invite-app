@@ -100,11 +100,11 @@ test("emptyText: nobody, no goalies, search miss, or nothing to say", () => {
   assert.equal(emptyText([], "skater", ""), "No players from other skate groups are free for this skate.");
   assert.equal(
     emptyText([skater], "goalie", ""),
-    "No goalies from other skate groups are free. Try Skater, or add a walk-on goalie below.",
+    "No goalies from other skate groups are free. Try Skater, or add a walk-on goalie under Walk-On.",
   );
   assert.equal(
     emptyText([skater], "skater", "zed"),
-    "No one named 'zed' in other skate groups. Not in the app? Add them as a walk-on below.",
+    "No one named 'zed' in other skate groups. Not in the app? Add them under Walk-On.",
   );
   assert.equal(emptyText([skater], "skater", "ki"), "");
   // Skater before 2 letters: the prompt, not a miss.
@@ -113,7 +113,7 @@ test("emptyText: nobody, no goalies, search miss, or nothing to say", () => {
   // …unless there are no skaters to find at all.
   assert.equal(emptyText([goalie], "skater", ""), "No players from other skate groups are free for this skate.");
   // A 1-letter goalie search still filters.
-  assert.equal(emptyText([goalie], "goalie", "x"), "No one named 'x' in other skate groups. Not in the app? Add them as a walk-on below.");
+  assert.equal(emptyText([goalie], "goalie", "x"), "No one named 'x' in other skate groups. Not in the app? Add them under Walk-On.");
 });
 
 test("confirmCopy matches the owner's wording, plus the server's warning", () => {
