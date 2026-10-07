@@ -3,9 +3,9 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-06 — 1.5.3: update pill, invites from the app, login hint, borrow players
+## 2026-10-06 — 1.6.0: update pill, invites from the app, login hint, borrow players
 
-Version 1.5.3 (iOS build 25). Needs `invite-server` 0.33.0 on prod
+Version 1.6.0 (iOS build 25). Needs `invite-server` 0.33.0 on prod
 (`/api/app-version/`, `/api/approvals/invite/`, `/api/approvals/<id>/resend/`,
 `can_resend`, `/api/events/<id>/borrow-candidates/` + roster actions
 `borrow` / `make_permanent`) and 0.32.1 for the login hint. On an older

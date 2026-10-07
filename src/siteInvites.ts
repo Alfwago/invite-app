@@ -1,4 +1,4 @@
-// Site invites from Invites & approvals (app 1.5.3+, server 0.33+).
+// Site invites from Invites & approvals (app 1.6.0+, server 0.33+).
 // Pure helpers so the form's rules can be unit-tested without React Native.
 // The server (services.parse_site_invite_emails / classify_site_invite) has
 // the final say; these only shape what the app sends and shows.

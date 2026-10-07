@@ -494,7 +494,7 @@ export interface HomeData {
   next_skate_board_message?: { author: string; text: string; at: number } | null;
   /** Newest version submitted to the App/Play Store — see
    *  SiteConfiguration.latest_app_version. "" when nothing's configured.
-   *  Since 1.5.3 only the fallback for servers without /api/app-version/. */
+   *  Since 1.6.0 only the fallback for servers without /api/app-version/. */
   latest_app_version: string;
 }
 

@@ -1,4 +1,4 @@
-// "Borrow a Goalie or Skater" (app 1.5.3+, server 0.33+): a director puts a
+// "Borrow a Goalie or Skater" (app 1.6.0+, server 0.33+): a director puts a
 // player from ANOTHER skate group on this skate's roster as Yes, for this
 // skate only. Pure helpers so the picker's rules and copy can be unit-tested
 // without React Native. The server (services.borrow_player) enforces every
