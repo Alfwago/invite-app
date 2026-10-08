@@ -666,17 +666,13 @@ export default function TeamGeneratorScreen() {
                   </Text>
                 ) : null}
 
+                {/* Fixed layout: Auto-balance on its own full-width row, then
+                    Present only + Refresh; the buttons that appear after the
+                    first balance (Lock, Swap…, Clear locks) fill whole rows
+                    below, so nothing above them moves — Auto-balance stays
+                    under the finger for a second tap. */}
                 <View style={styles.toolGrid}>
-                  {balanced ? (
-                    <BarBtn
-                      label={isLocked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
-                      active={isLocked}
-                      grid
-                      busy={busy.isBusy("lock")}
-                      onPress={isLocked ? onUnlock : onLock}
-                    />
-                  ) : null}
-                  <BarBtn label="Auto-balance" gold grid onPress={() => rebalanceWithToast()} />
+                  <BarBtn label="Auto-balance" gold grid wide onPress={() => rebalanceWithToast()} />
                   <BarBtn
                     label={`Present only: ${presentOnly ? "On" : "Off"}`}
                     active={presentOnly}
@@ -691,6 +687,13 @@ export default function TeamGeneratorScreen() {
                   <BarBtn label="Refresh" grid busy={busy.isBusy("refresh")} onPress={onRefresh} />
                   {balanced ? (
                     <>
+                      <BarBtn
+                        label={isLocked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
+                        active={isLocked}
+                        grid
+                        busy={busy.isBusy("lock")}
+                        onPress={isLocked ? onUnlock : onLock}
+                      />
                       <BarBtn label="Swap teams" grid onPress={onSwapTeams} />
                       <BarBtn label="Swap goalies" grid onPress={onSwapGoalies} />
                       <BarBtn label="Clear locks" grid onPress={onClearLocks} />
@@ -844,6 +847,7 @@ function BarBtn({
   active,
   gold,
   grid,
+  wide,
   busy,
 }: {
   label: string;
@@ -851,6 +855,8 @@ function BarBtn({
   active?: boolean;
   gold?: boolean;
   grid?: boolean;
+  /** Grid only: a whole row to itself. */
+  wide?: boolean;
   busy?: boolean;
 }) {
   const on = gold || active;
@@ -865,6 +871,7 @@ function BarBtn({
       style={[
         styles.barBtn,
         grid && styles.barBtnGrid,
+        grid && wide && styles.barBtnWide,
         gold && styles.barBtnGold,
         active && styles.barBtnActive,
         busy && styles.barBtnBusy,
@@ -1105,6 +1112,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   barBtnGrid: { flexGrow: 1, flexBasis: "47%", minHeight: 44 },
+  barBtnWide: { flexBasis: "100%" },
   barBtnGold: { backgroundColor: colors.gold, borderColor: colors.gold },
   barBtnActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
   barBtnText: { color: colors.text, fontSize: font.sm, fontWeight: "700" },

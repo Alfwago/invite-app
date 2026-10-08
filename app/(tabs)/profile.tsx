@@ -12,6 +12,8 @@ import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollVie
 import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card } from "@/src/components/ui";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
+import { selectHaptic } from "@/src/haptics";
+import { saveHapticsPref, useHapticsPref } from "@/src/hapticsSetting";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 const CREST = require("@/assets/brand/crest.jpg");
@@ -125,6 +127,8 @@ export default function ProfileScreen() {
         <NotificationsCard prefs={me.notification_prefs} onChanged={refreshMe} />
       ) : null}
 
+      <AppCard />
+
       <AccountCard verified={me.email_verified} approved={me.director_approved || me.is_director} username={me.username} />
 
       <AppFooter />
@@ -197,6 +201,46 @@ function NotificationsCard({
               />
             </View>
           ))}
+    </Card>
+  );
+}
+
+// ── this app (per device) ──────────────────────────────────────────────
+
+/** Settings that live on this phone, not the account, plus What's New. */
+function AppCard() {
+  const haptics = useHapticsPref();
+  return (
+    <Card>
+      <Text style={styles.heading}>App</Text>
+      <View style={styles.toggleRow}>
+        <Text style={styles.toggleLabel}>Vibration on tap</Text>
+        <Switch
+          value={haptics}
+          onValueChange={(v) => {
+            void saveHapticsPref(v);
+            // Turning it back on: one tick so they feel what they chose.
+            if (v) selectHaptic();
+          }}
+          trackColor={{ true: colors.gold, false: colors.border }}
+          thumbColor="#fff"
+          accessibilityLabel="Vibration on tap"
+        />
+      </View>
+      <Text style={styles.hint}>
+        A light buzz when you tap a button or an action finishes. On this phone only.
+      </Text>
+      <Tap
+        feedback="row"
+        style={styles.linkRow}
+        onPress={() => Linking.openURL(`${API_BASE}/whats-new/`).catch(() => {})}
+        accessibilityRole="link"
+        accessibilityLabel="What's New"
+        accessibilityHint="Opens the release notes in your browser"
+      >
+        <Text style={styles.toggleLabel}>What's New</Text>
+        <Text style={styles.chevron}>›</Text>
+      </Tap>
     </Card>
   );
 }
@@ -679,6 +723,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   toggleLabel: { color: colors.text, fontSize: 15 },
+  linkRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  chevron: { color: colors.textMuted, fontSize: 22, lineHeight: 22 },
 
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: {

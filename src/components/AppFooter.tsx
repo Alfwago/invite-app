@@ -4,12 +4,10 @@ import { StyleSheet, Text, View } from "react-native";
 import { API_BASE } from "@/src/api/client";
 import { colors, font, spacing } from "@/src/theme";
 
-const cfg = Constants.expoConfig;
-const version = cfg?.version ?? "?";
-const build =
-  cfg?.ios?.buildNumber ??
-  (cfg?.android?.versionCode != null ? String(cfg.android.versionCode) : "?");
-const sdk = cfg?.sdkVersion ? `Expo SDK ${cfg.sdkVersion}` : null;
+// Just the app version. No build number: app.json's iOS buildNumber was
+// shown on Android too, and Android's real versionCode is set by EAS at
+// build time, so it isn't in the config to show.
+const version = Constants.expoConfig?.version ?? "?";
 
 // Only surface the API host while it's not production, so testers can see at a
 // glance which stack the build is talking to.
@@ -19,11 +17,7 @@ const apiHost = host === "invites.falcon83.com" ? null : host;
 export function AppFooter() {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.line}>OBH Invites</Text>
-      <Text style={styles.line}>
-        v{version} · build {build}
-        {sdk ? ` · ${sdk}` : ""}
-      </Text>
+      <Text style={styles.line}>OBH Invites v{version}</Text>
       {apiHost ? <Text style={styles.line}>{apiHost}</Text> : null}
     </View>
   );

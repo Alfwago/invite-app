@@ -26,7 +26,7 @@ import type {
   WaitlistEntry,
 } from "@/src/api/types";
 import { ClockField, DateField, DateTimeField, NumberField } from "@/src/components/pickers";
-import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { KeyboardAwareScrollView, useFocusScroll } from "@/src/components/KeyboardAwareScrollView";
 import { BorrowPicker } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
@@ -883,6 +883,9 @@ function RosterCard({
   const [walkOn, setWalkOn] = useState("");
   const [walkOnGoalie, setWalkOnGoalie] = useState(false);
   const [walkOnRating, setWalkOnRating] = useState("");
+  // Walk-On fields scroll near the top on focus, clear of the keyboard.
+  const walkOnNameFocus = useFocusScroll();
+  const walkOnRatingFocus = useFocusScroll();
   const [editWalkOn, setEditWalkOn] = useState<DayPlayer | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const { pick, modal } = useRolePicker();
@@ -1204,6 +1207,7 @@ function RosterCard({
           <>
             <View style={styles.walkOnRow}>
               <TextInput
+                {...walkOnNameFocus}
                 style={[styles.input, styles.grow]}
                 value={walkOn}
                 onChangeText={setWalkOn}
@@ -1223,6 +1227,7 @@ function RosterCard({
             </View>
             <View style={styles.walkOnRow}>
               <TextInput
+                {...walkOnRatingFocus}
                 style={[styles.input, styles.walkOnRatingInput]}
                 value={walkOnRating}
                 onChangeText={setWalkOnRating}

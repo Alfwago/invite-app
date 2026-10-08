@@ -3,11 +3,12 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-08 — 1.6.1: team generator no longer drops a player (in progress)
+## 2026-10-08 — 1.6.1: team generator fixes, tap feedback, keyboard, What's New
 
-Version 1.6.1 (iOS build 26). Works with `invite-server` 0.33.0 — no server
-change needed for this fix. More fixes (Borrow search under the keyboard,
-footer, What's New link) will land on this branch before release.
+Version 1.6.1 (iOS build 26). Works with `invite-server` 0.33.0; the
+What's New link needs 0.33.1 (`/whats-new/`, 404 before it), which ships
+to prod first. Native dependency added (`expo-haptics`) — store build +
+prebuild.
 
 - **Team generator: a split player could vanish.** After pair → remove pair
   → split → Auto-balance, one of the two split players disappeared from
@@ -49,6 +50,29 @@ footer, What's New link) will land on this branch before release.
   checked synchronously so a fast second tap is refused too).
 - Tests: `movedIds` / `balanceMessage` (`src/teams/moves.test.ts`) and the
   pressed-style table (`src/pressFeedback.test.ts`).
+- **"Vibration on tap" switch** (Profile → new App card, on by default;
+  owner request). Off = no haptics at all: taps, segmented ticks and the
+  toast success/error buzz. Per phone, not per account — saved in the
+  device's secure store (`obh.hapticsOnTap`, "on"/"off"; anything but
+  "off" counts as on) and read at startup in `app/_layout.tsx`. Gate in
+  `src/hapticsPref.ts` (pure, tested in `hapticsPref.test.ts`), load/save
+  + hook in `src/hapticsSetting.ts`. No server change.
+- **What's New** row on the same card opens `<server>/whats-new/` in the
+  browser (server 0.33.1).
+- **Team generator: Auto-balance stays put.** It's now a full-width row of
+  its own, then Present only + Refresh; Lock Teams, Swap teams, Swap
+  goalies and Clear locks appear in rows below after the first balance.
+  Before, Lock Teams was inserted first and pushed Auto-balance from the
+  left to the right, under the finger.
+- **Borrow search no longer hides under the keyboard.**
+  `KeyboardAwareScrollView` now uses the ScrollView's automatic keyboard
+  insets on iOS (was a KeyboardAvoidingView with no header offset) and a
+  header-height offset on Android. New `useFocusScroll()`: the Borrow
+  search box and the Walk-On name/PPV fields scroll near the top when
+  focused and stay there while results load in under them.
+- **Footer** is just "OBH Invites v1.6.1" (plus the server host on a
+  non-prod build). The build number and Expo SDK are gone — Android was
+  showing the iOS build number.
 
 ## 2026-10-06 — 1.6.0: update pill, invites from the app, login hint, borrow players
 

@@ -14,6 +14,7 @@ import {
   visibleCandidates,
   type BorrowRole,
 } from "@/src/borrow";
+import { useFocusScroll } from "@/src/components/KeyboardAwareScrollView";
 import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading, Segmented } from "@/src/components/ui";
 import { useBorrowCandidates, useRosterAction } from "@/src/hooks/queries";
@@ -34,6 +35,8 @@ export function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolea
   const roster = useRosterAction(event.id);
   const [role, setRole] = useState<BorrowRole | null>(null);
   const [query, setQuery] = useState("");
+  // Focus scrolls the search box near the top so results show above the keyboard.
+  const searchFocus = useFocusScroll();
 
   if (panel.isLoading) return <Loading label="Loading players…" />;
   if (panel.isError || !panel.data) {
@@ -95,6 +98,7 @@ export function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolea
         ]}
       />
       <TextInput
+        {...searchFocus}
         style={styles.input}
         value={query}
         onChangeText={setQuery}

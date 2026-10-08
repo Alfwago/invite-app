@@ -19,6 +19,7 @@ import { Loading } from "@/src/components/ui";
 import { keys, useAppVersion } from "@/src/hooks/queries";
 import { useSkateCard } from "@/src/hooks/useSkateCard";
 import { useWatchConnectivity } from "@/src/hooks/useWatchConnectivity";
+import { loadHapticsPref } from "@/src/hapticsSetting";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
 import { colors } from "@/src/theme";
 
@@ -38,6 +39,9 @@ focusManager.setEventListener((handleFocus) => {
   });
   return () => sub.remove();
 });
+
+// "Vibration on tap" is a per-device setting; read it before the first tap.
+void loadHapticsPref();
 
 export default function RootLayout() {
   return (
