@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,7 +22,10 @@ import type {
   TeamRosterPlayer,
 } from "@/src/api/types";
 import { Dropdown } from "@/src/components/Dropdown";
-import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
+import { useToast } from "@/src/components/Toast";
+import { Button, Card, ErrorState, Loading, Tap } from "@/src/components/ui";
+import { tapHaptic } from "@/src/haptics";
+import { useBusy } from "@/src/hooks/useBusy";
 import {
   useLockTeamGeneratorState,
   usePublishTeams,
@@ -40,6 +43,7 @@ import {
   type BalanceResult,
   type TGPlayer,
 } from "@/src/teams/balance";
+import { balanceMessage, movedIds } from "@/src/teams/moves";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 type Team = "Gold" | "Black";
@@ -82,6 +86,21 @@ export default function TeamGeneratorScreen() {
   const [blackGoalie, setBlackGoalie] = useState<BalanceResult["blackGoalie"]>(null);
   const [note, setNote] = useState("");
   const [pick, setPick] = useState<null | { mode: "pair" | "split"; first: string | null }>(null);
+  const toast = useToast();
+  const busy = useBusy();
+
+  // Rows that just changed team (Auto-balance, or a tap-to-move) get a brief
+  // gold highlight so the change is visible, then fade back after ~1s.
+  const [flash, setFlash] = useState<Set<string>>(() => new Set());
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashRows = useCallback((ids: string[]) => {
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    setFlash(new Set(ids));
+    flashTimer.current = setTimeout(() => setFlash(new Set()), 1000);
+  }, []);
+  useEffect(() => () => {
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+  }, []);
 
   // {id: name} — see TeamGeneratorSnapshot.pairNames. A ref, not state: it's
   // a display fallback only, never read to decide what to render on its own
@@ -181,13 +200,22 @@ export default function TeamGeneratorScreen() {
   // (possibly unsaved) edits are left alone — only a locked/published
   // server state overwrites the screen, same as the initial-load behavior.
   async function onRefresh() {
-    const [rosterResult, genResult] = await Promise.all([
-      roster.refetch(),
-      generatorState.refetch(),
-    ]);
-    if (genResult.data?.locked && rosterResult.data) {
-      applyLockedState(genResult.data, rosterResult.data);
-    }
+    await busy.run("refresh", async () => {
+      const [rosterResult, genResult] = await Promise.all([
+        roster.refetch(),
+        generatorState.refetch(),
+      ]);
+      if (rosterResult.isError || genResult.isError) {
+        toast.show("Couldn't refresh — try again", "error");
+        return;
+      }
+      if (genResult.data?.locked && rosterResult.data) {
+        applyLockedState(genResult.data, rosterResult.data);
+        toast.show("Refreshed: locked teams loaded");
+      } else {
+        toast.show(`Refreshed: ${rosterResult.data?.length ?? 0} on roster`);
+      }
+    });
   }
 
   // Once locked, every further edit (move, pair/split, swap, re-balance)
@@ -246,9 +274,23 @@ export default function TeamGeneratorScreen() {
       setAssignment(next);
       setGoldGoalie(result.goldGoalie);
       setBlackGoalie(result.blackGoalie);
+      return next;
     },
     [tgPlayers, pairs, splits, presentOnly],
   );
+
+  // Auto-balance (and Present only, which re-balances): say what happened
+  // and highlight who moved — otherwise a re-balance that shuffles two
+  // players looks like nothing happened.
+  function rebalanceWithToast(present = presentOnly, prefix?: string) {
+    const prev = assignment;
+    const hadTeams = Object.keys(prev).length > 0;
+    const next = runBalance(present);
+    const moved = movedIds(prev, next);
+    flashRows(moved);
+    const msg = balanceMessage(hadTeams, moved.length);
+    toast.show(prefix ? `${prefix} · ${msg}` : msg);
+  }
 
   const keeperIds = useMemo(
     () =>
@@ -274,20 +316,41 @@ export default function TeamGeneratorScreen() {
     const to: Team = assignment[k] === "Gold" ? "Black" : "Gold";
     setAssignment((a) => ({ ...a, [k]: to }));
     setLocks((l) => (l[k] ? { ...l, [k]: to } : l));
+    flashRows([k]);
   }
 
   function toggleLock(id: TeamRosterPlayer["id"]) {
     const k = K(id);
+    const wasLocked = !!locks[k];
+    const team = assignment[k] ?? "Gold";
     setLocks((l) => {
       const c = { ...l };
       if (c[k]) delete c[k];
-      else c[k] = assignment[k] ?? "Gold";
+      else c[k] = team;
       return c;
     });
+    toast.show(wasLocked ? `Unlocked ${nameOf(k)}` : `Locked ${nameOf(k)} to ${team}`, "info");
   }
 
   function clearLocks() {
     setLocks({});
+  }
+
+  function onClearLocks() {
+    const n = Object.keys(locks).length;
+    clearLocks();
+    toast.show(n ? `Cleared ${n} lock${n === 1 ? "" : "s"}` : "No locks to clear", n ? "success" : "info");
+  }
+
+  function onSwapTeams() {
+    swapTeams();
+    toast.show("Teams swapped");
+  }
+
+  function onSwapGoalies() {
+    if (!goldGoalie && !blackGoalie) return toast.show("No goalies to swap", "info");
+    swapGoalies();
+    toast.show("Goalies swapped");
   }
 
   function swapTeams() {
@@ -327,7 +390,10 @@ export default function TeamGeneratorScreen() {
         );
         return setPick(null);
       }
-      if (!has(pairs)) setPairs((p) => [...p, edge]);
+      if (!has(pairs)) {
+        setPairs((p) => [...p, edge]);
+        toast.show(`Paired ${nameOf(edge[0])} + ${nameOf(edge[1])} · Auto-balance to apply`);
+      } else toast.show("Already paired", "info");
     } else {
       if (has(pairs)) {
         Alert.alert(
@@ -336,7 +402,10 @@ export default function TeamGeneratorScreen() {
         );
         return setPick(null);
       }
-      if (!has(splits)) setSplits((s) => [...s, edge]);
+      if (!has(splits)) {
+        setSplits((s) => [...s, edge]);
+        toast.show(`Split ${nameOf(edge[0])} / ${nameOf(edge[1])} · Auto-balance to apply`);
+      } else toast.show("Already split", "info");
     }
     setPick(null);
   }
@@ -364,13 +433,15 @@ export default function TeamGeneratorScreen() {
 
   async function onSave() {
     if (!eventId) return;
-    try {
-      await save.mutateAsync(splitBody());
-      setNote("");
-      Alert.alert("Saved to History.");
-    } catch (e) {
-      Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : "Try again.");
-    }
+    await busy.run("save", async () => {
+      try {
+        await save.mutateAsync(splitBody());
+        setNote("");
+        toast.show("Saved to history");
+      } catch (e) {
+        Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : "Try again.");
+      }
+    });
   }
 
   async function onLock() {
@@ -385,12 +456,15 @@ export default function TeamGeneratorScreen() {
       presentOnly,
       pairNames: { ...pairNameCache.current },
     };
-    try {
-      await lockMutation.mutateAsync(snap);
-      lastSavedSnapshotJson.current = JSON.stringify(snap);
-    } catch (e) {
-      Alert.alert("Couldn't lock teams", e instanceof ApiError ? e.detail : "Try again.");
-    }
+    await busy.run("lock", async () => {
+      try {
+        await lockMutation.mutateAsync(snap);
+        lastSavedSnapshotJson.current = JSON.stringify(snap);
+        toast.show("Teams locked");
+      } catch (e) {
+        Alert.alert("Couldn't lock teams", e instanceof ApiError ? e.detail : "Try again.");
+      }
+    });
   }
 
   async function syncLockStateAfterPublish() {
@@ -424,15 +498,17 @@ export default function TeamGeneratorScreen() {
         {
           text: "Unlock",
           style: "destructive",
-          onPress: async () => {
-            try {
-              await unlockMutation.mutateAsync();
-              clearLocks();
-              lastSavedSnapshotJson.current = null;
-            } catch (e) {
-              Alert.alert("Couldn't unlock teams", e instanceof ApiError ? e.detail : "Try again.");
-            }
-          },
+          onPress: () =>
+            busy.run("lock", async () => {
+              try {
+                await unlockMutation.mutateAsync();
+                clearLocks();
+                lastSavedSnapshotJson.current = null;
+                toast.show("Teams unlocked");
+              } catch (e) {
+                Alert.alert("Couldn't unlock teams", e instanceof ApiError ? e.detail : "Try again.");
+              }
+            }),
         },
       ],
     );
@@ -596,10 +672,11 @@ export default function TeamGeneratorScreen() {
                       label={isLocked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
                       active={isLocked}
                       grid
+                      busy={busy.isBusy("lock")}
                       onPress={isLocked ? onUnlock : onLock}
                     />
                   ) : null}
-                  <BarBtn label="Auto-balance" gold grid onPress={() => runBalance()} />
+                  <BarBtn label="Auto-balance" gold grid onPress={() => rebalanceWithToast()} />
                   <BarBtn
                     label={`Present only: ${presentOnly ? "On" : "Off"}`}
                     active={presentOnly}
@@ -607,15 +684,16 @@ export default function TeamGeneratorScreen() {
                     onPress={() => {
                       const next = !presentOnly;
                       setPresentOnly(next);
-                      if (balanced) runBalance(next);
+                      if (balanced) rebalanceWithToast(next, `Present only ${next ? "on" : "off"}`);
+                      else toast.show(`Present only ${next ? "on" : "off"}`, "info");
                     }}
                   />
-                  <BarBtn label="Refresh" grid onPress={onRefresh} />
+                  <BarBtn label="Refresh" grid busy={busy.isBusy("refresh")} onPress={onRefresh} />
                   {balanced ? (
                     <>
-                      <BarBtn label="Swap teams" grid onPress={swapTeams} />
-                      <BarBtn label="Swap goalies" grid onPress={swapGoalies} />
-                      <BarBtn label="Clear locks" grid onPress={clearLocks} />
+                      <BarBtn label="Swap teams" grid onPress={onSwapTeams} />
+                      <BarBtn label="Swap goalies" grid onPress={onSwapGoalies} />
+                      <BarBtn label="Clear locks" grid onPress={onClearLocks} />
                     </>
                   ) : null}
                 </View>
@@ -642,6 +720,7 @@ export default function TeamGeneratorScreen() {
                         onPress={() => {
                           setPairs([]);
                           setSplits([]);
+                          toast.show("Pairs and splits cleared");
                         }}
                       />
                     ) : null}
@@ -652,10 +731,25 @@ export default function TeamGeneratorScreen() {
                     </Text>
                   ) : null}
                   {pairs.map((e, i) => (
-                    <Chip key={`p${i}`} text={`🔗 ${nameOf(e[0])} ↔ ${nameOf(e[1])}`} onX={() => setPairs((p) => p.filter((x) => x !== e))} />
+                    <Chip
+                      key={`p${i}`}
+                      text={`🔗 ${nameOf(e[0])} ↔ ${nameOf(e[1])}`}
+                      onX={() => {
+                        setPairs((p) => p.filter((x) => x !== e));
+                        toast.show(`Pair removed: ${nameOf(e[0])} + ${nameOf(e[1])}`, "info");
+                      }}
+                    />
                   ))}
                   {splits.map((e, i) => (
-                    <Chip key={`s${i}`} text={`✂️ ${nameOf(e[0])} ↔ ${nameOf(e[1])}`} tone="split" onX={() => setSplits((s) => s.filter((x) => x !== e))} />
+                    <Chip
+                      key={`s${i}`}
+                      text={`✂️ ${nameOf(e[0])} ↔ ${nameOf(e[1])}`}
+                      tone="split"
+                      onX={() => {
+                        setSplits((s) => s.filter((x) => x !== e));
+                        toast.show(`Split removed: ${nameOf(e[0])} / ${nameOf(e[1])}`, "info");
+                      }}
+                    />
                   ))}
                 </Card>
 
@@ -668,6 +762,7 @@ export default function TeamGeneratorScreen() {
                       total={teamRating(gold, goldGoalie)}
                       locks={locks}
                       pick={pick}
+                      flash={flash}
                       pairPartners={(k) => partnersFor(k, pairs)}
                       splitPartners={(k) => partnersFor(k, splits)}
                       onMove={move}
@@ -681,6 +776,7 @@ export default function TeamGeneratorScreen() {
                       total={teamRating(black, blackGoalie)}
                       locks={locks}
                       pick={pick}
+                      flash={flash}
                       pairPartners={(k) => partnersFor(k, pairs)}
                       splitPartners={(k) => partnersFor(k, splits)}
                       onMove={move}
@@ -719,7 +815,7 @@ export default function TeamGeneratorScreen() {
                         label="Save to history"
                         variant="secondary"
                         onPress={onSave}
-                        loading={save.isPending}
+                        loading={save.isPending || busy.isBusy("save")}
                         style={styles.wideBtn}
                       />
                       <Button
@@ -740,31 +836,46 @@ export default function TeamGeneratorScreen() {
   );
 }
 
+// Pressed = dimmed + shrunk with a light haptic (Tap). `busy` = a network
+// action is running: spinner, inert, so a second tap can't fire it again.
 function BarBtn({
   label,
   onPress,
   active,
   gold,
   grid,
+  busy,
 }: {
   label: string;
   onPress: () => void;
   active?: boolean;
   gold?: boolean;
   grid?: boolean;
+  busy?: boolean;
 }) {
+  const on = gold || active;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
+      haptic
+      disabled={busy}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ busy: !!busy, disabled: !!busy }}
       style={[
         styles.barBtn,
         grid && styles.barBtnGrid,
         gold && styles.barBtnGold,
         active && styles.barBtnActive,
+        busy && styles.barBtnBusy,
       ]}
     >
-      <Text style={[styles.barBtnText, (gold || active) && styles.barBtnTextOn]}>{label}</Text>
-    </Pressable>
+      {busy ? (
+        <ActivityIndicator size="small" color={on ? colors.goldText : colors.text} />
+      ) : (
+        <Text style={[styles.barBtnText, on && styles.barBtnTextOn]}>{label}</Text>
+      )}
+    </Tap>
   );
 }
 
@@ -775,6 +886,7 @@ function TeamCol({
   total,
   locks,
   pick,
+  flash,
   pairPartners,
   splitPartners,
   onMove,
@@ -787,6 +899,7 @@ function TeamCol({
   total: number;
   locks: Record<string, Team>;
   pick: null | { mode: "pair" | "split"; first: string | null };
+  flash: Set<string>;
   pairPartners: (k: string) => string[];
   splitPartners: (k: string) => string[];
   onMove: (id: TeamRosterPlayer["id"]) => void;
@@ -817,8 +930,12 @@ function TeamCol({
         const paired = pairPartners(k).length > 0;
         const split = splitPartners(k).length > 0;
         return (
-          <View key={k} style={[styles.pRow, selected && styles.pRowSel]}>
-            <Pressable
+          <View
+            key={k}
+            style={[styles.pRow, flash.has(k) && styles.pRowFlash, selected && styles.pRowSel]}
+          >
+            <Tap
+              feedback="row"
               style={styles.pTapArea}
               onPress={() => (pick ? onPick(p.id) : onMove(p.id))}
             >
@@ -828,18 +945,33 @@ function TeamCol({
                 {paired ? " 🔗" : ""}
                 {split ? " ✂️" : ""}
               </Text>
-            </Pressable>
+            </Tap>
             <Text style={styles.pRate}>{ratingOf(p).toFixed(2)}</Text>
-            <Pressable onPress={() => onLock(p.id)} hitSlop={6}>
+            <Tap
+              feedback="icon"
+              onPress={() => {
+                tapHaptic();
+                onLock(p.id);
+              }}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`${locked ? "Unlock" : "Lock"} ${p.name}`}
+            >
               <Ionicons
                 name={locked ? "lock-closed" : "lock-open-outline"}
                 size={15}
                 color={locked ? colors.gold : colors.textMuted}
               />
-            </Pressable>
-            <Pressable onPress={() => onMove(p.id)} hitSlop={6}>
+            </Tap>
+            <Tap
+              feedback="icon"
+              onPress={() => onMove(p.id)}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`Move ${p.name} to ${name === "Gold" ? "Black" : "Gold"}`}
+            >
               <Ionicons name="swap-horizontal" size={16} color={colors.textMuted} />
-            </Pressable>
+            </Tap>
           </View>
         );
       })}
@@ -859,9 +991,9 @@ function Chip({
   return (
     <View style={[styles.constraint, tone === "split" && styles.constraintSplit]}>
       <Text style={styles.constraintText}>{text}</Text>
-      <Pressable onPress={onX} hitSlop={8}>
+      <Tap feedback="icon" onPress={onX} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${text}`}>
         <Ionicons name="close" size={15} color={colors.textMuted} />
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -977,6 +1109,7 @@ const styles = StyleSheet.create({
   barBtnActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
   barBtnText: { color: colors.text, fontSize: font.sm, fontWeight: "700" },
   barBtnTextOn: { color: colors.goldText },
+  barBtnBusy: { opacity: 0.7 },
   psCard: { gap: spacing.sm },
   psTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
   psHint: { color: colors.textMuted, fontSize: font.xs },
@@ -996,6 +1129,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   pRowSel: { backgroundColor: colors.goldDim },
+  // Just moved (Auto-balance / tap-to-move) — brighter than the pick highlight.
+  pRowFlash: { backgroundColor: "rgba(212, 175, 55, 0.28)" },
   pTapArea: { flex: 1 },
   pName: { color: colors.text, fontSize: font.xs },
   gBadge: {

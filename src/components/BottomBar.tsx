@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { Tap } from "@/src/components/Tap";
 import { useBoards, useInbox } from "@/src/hooks/queries";
 import { colors, font } from "@/src/theme";
 
@@ -65,7 +66,8 @@ export function BottomBar() {
       {TABS.map((t) => {
         const on = t.active(pathname);
         return (
-          <Pressable
+          <Tap
+            feedback="row"
             key={t.href}
             style={styles.item}
             onPress={() => router.navigate(t.href as never)}
@@ -84,7 +86,7 @@ export function BottomBar() {
               ) : null}
             </View>
             <Text style={[styles.label, on && styles.labelOn]}>{t.label}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>

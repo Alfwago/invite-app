@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { Tap } from "@/src/components/Tap";
 import { formatEventDate, formatTime } from "@/src/format";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -85,18 +86,18 @@ function FieldChip({
   onClear?: () => void;
 }) {
   return (
-    <Pressable style={[styles.chip, open && styles.chipOpen]} onPress={onPress} hitSlop={4}>
+    <Tap style={[styles.chip, open && styles.chipOpen]} onPress={onPress} hitSlop={4}>
       <Ionicons name={icon} size={16} color={colors.gold} />
       <Text style={[styles.chipText, placeholder && styles.chipPlaceholder]} numberOfLines={1}>
         {text}
       </Text>
       {onClear ? (
-        <Pressable onPress={onClear} hitSlop={8}>
+        <Tap feedback="icon" onPress={onClear} hitSlop={8}>
           <Ionicons name="close-circle" size={16} color={colors.textMuted} />
-        </Pressable>
+        </Tap>
       ) : null}
       <Ionicons name={open ? "chevron-up" : "chevron-down"} size={14} color={colors.textMuted} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -123,23 +124,23 @@ function CalendarPanel({
   return (
     <View style={styles.panel}>
       <View style={styles.calHead}>
-        <Pressable
+        <Tap
           onPress={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
           hitSlop={8}
           style={styles.calNav}
         >
           <Ionicons name="chevron-back" size={18} color={colors.text} />
-        </Pressable>
+        </Tap>
         <Text style={styles.calTitle}>
           {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
         </Text>
-        <Pressable
+        <Tap
           onPress={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
           hitSlop={8}
           style={styles.calNav}
         >
           <Ionicons name="chevron-forward" size={18} color={colors.text} />
-        </Pressable>
+        </Tap>
       </View>
 
       <View style={styles.calGrid}>
@@ -154,7 +155,7 @@ function CalendarPanel({
           const disabled = minDay != null && startOfDay(cellDate) < minDay;
           const isSel = selected != null && sameDay(cellDate, selected);
           return (
-            <Pressable
+            <Tap
               key={`d${day}`}
               style={styles.calCell}
               disabled={disabled}
@@ -171,7 +172,7 @@ function CalendarPanel({
                   {day}
                 </Text>
               </View>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>
@@ -202,13 +203,13 @@ function WheelCol({
       {data.map((n) => {
         const on = n === selected;
         return (
-          <Pressable
+          <Tap
             key={n}
             style={[styles.wheelItem, on && styles.wheelItemOn]}
             onPress={() => onPick(n)}
           >
             <Text style={[styles.wheelText, on && styles.wheelTextOn]}>{label(n)}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </ScrollView>
@@ -246,23 +247,23 @@ function TimePanel({
           onPick={(m) => onChange(h24, m)}
         />
         <View style={styles.merCol}>
-          <Pressable
+          <Tap
             style={[styles.merBtn, !pm && styles.merBtnOn]}
             onPress={() => onChange(h24 % 12, minute)}
           >
             <Text style={[styles.merText, !pm && styles.merTextOn]}>AM</Text>
-          </Pressable>
-          <Pressable
+          </Tap>
+          <Tap
             style={[styles.merBtn, pm && styles.merBtnOn]}
             onPress={() => onChange((h24 % 12) + 12, minute)}
           >
             <Text style={[styles.merText, pm && styles.merTextOn]}>PM</Text>
-          </Pressable>
+          </Tap>
         </View>
       </View>
-      <Pressable style={styles.doneBtn} onPress={onDone}>
+      <Tap style={styles.doneBtn} onPress={onDone}>
         <Text style={styles.doneText}>Done</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
@@ -389,7 +390,7 @@ export function NumberField({
             {nums.map((n) => {
               const on = n === current;
               return (
-                <Pressable
+                <Tap
                   key={n}
                   style={[styles.numItem, on && styles.wheelItemOn]}
                   onPress={() => {
@@ -401,7 +402,7 @@ export function NumberField({
                     {n}
                     {unit ? ` ${unit}` : ""}
                   </Text>
-                </Pressable>
+                </Tap>
               );
             })}
           </ScrollView>

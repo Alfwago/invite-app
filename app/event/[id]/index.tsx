@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -8,6 +8,7 @@ import type { DayPlayer, EventDetail, RosterEntry, RsvpStatus } from "@/src/api/
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { PenaltyBoxCard } from "@/src/components/PenaltyBoxCard";
 import { RsvpControls } from "@/src/components/RsvpControls";
+import { Tap } from "@/src/components/Tap";
 import { TEAM_TINT, TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
 import {
   Badge,
@@ -161,7 +162,7 @@ export default function EventDetailScreen() {
           </Card>
         )}
 
-        <Pressable
+        <Tap
           style={styles.threadBtn}
           onPress={() => router.push(`/event/${event.id}/messages`)}
         >
@@ -176,7 +177,7 @@ export default function EventDetailScreen() {
             </View>
           ) : null}
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
+        </Tap>
 
         {event.can_manage ? (
           <Button
@@ -194,13 +195,13 @@ export default function EventDetailScreen() {
               A question just for whoever runs {event.night.name}? This goes privately to{" "}
               {event.night_directors.map((d) => d.name).join(" and ")} — not the skate thread.
             </Text>
-            <Pressable
+            <Tap
               style={styles.contactBtn}
               onPress={() => router.push(`/inbox/directors/${event.night!.id}` as never)}
             >
               <Ionicons name="mail" size={36} color={colors.goldText} />
               <Text style={styles.contactBtnText}>Contact Directors</Text>
-            </Pressable>
+            </Tap>
           </Card>
         ) : null}
       </KeyboardAwareScrollView>
@@ -235,7 +236,7 @@ function RosterTabs({ event }: { event: EventDetail }) {
           const count = (byStatus.get(t.key) ?? []).length + (t.key === "YES" ? event.day_players.length : 0);
           const active = tab === t.key;
           return (
-            <Pressable
+            <Tap
               key={t.key}
               onPress={() => setTab(t.key)}
               style={[styles.tab, active && styles.tabActive]}
@@ -243,7 +244,7 @@ function RosterTabs({ event }: { event: EventDetail }) {
               <Text style={[styles.tabText, active && styles.tabTextActive]}>
                 {t.label} {count}
               </Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </ScrollView>

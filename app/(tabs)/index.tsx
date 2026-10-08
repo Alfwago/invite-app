@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Alert,
   Image,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
+import { Tap } from "@/src/components/Tap";
 import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
 import { UpdatePill } from "@/src/components/UpdatePill";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
@@ -138,7 +138,8 @@ export default function HomeScreen() {
         ) : null}
 
         <View style={styles.section}>
-          <Pressable
+          <Tap
+            feedback="row"
             onPress={() => setNightsOpen((o) => !o)}
             style={styles.collapseHeader}
             hitSlop={8}
@@ -149,7 +150,7 @@ export default function HomeScreen() {
               size={16}
               color={colors.textMuted}
             />
-          </Pressable>
+          </Tap>
           {nightsOpen ? (
             <Card>
               {nights.map((night, i) => (
@@ -184,7 +185,7 @@ function InboxRow() {
   const unread = inbox.data?.unread_total ?? 0;
   return (
     <Card>
-      <Pressable style={styles.inboxRow} onPress={() => router.push("/inbox" as never)}>
+      <Tap feedback="row" style={styles.inboxRow} onPress={() => router.push("/inbox" as never)}>
         <Ionicons name="mail-outline" size={20} color={colors.gold} />
         <Text style={styles.inboxLabel}>Inbox</Text>
         {unread > 0 ? (
@@ -193,7 +194,7 @@ function InboxRow() {
           </View>
         ) : null}
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-      </Pressable>
+      </Tap>
     </Card>
   );
 }
@@ -209,7 +210,8 @@ function PollsCard() {
         {open.length === 1 ? "Poll" : "Polls"} to answer
       </Text>
       {open.map((p) => (
-        <Pressable
+        <Tap
+          feedback="row"
           key={p.id}
           style={styles.pollRow}
           onPress={() => router.push(`/polls/${p.id}` as never)}
@@ -217,7 +219,7 @@ function PollsCard() {
           <Text style={styles.pollTitle}>{p.title}</Text>
           <Text style={styles.pollMeta}>{p.answered_q}/{p.total_q}</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </Pressable>
+        </Tap>
       ))}
     </Card>
   );
@@ -234,10 +236,10 @@ function NightRow({ night, last }: { night: HomeNight; last?: boolean }) {
   }
   return (
     <Link href="/events" asChild>
-      <Pressable style={[styles.nightBlock, !last && styles.nightRowBorder]}>
+      <Tap feedback="row" style={[styles.nightBlock, !last && styles.nightRowBorder]}>
         <Text style={styles.nightName}>{night.name}</Text>
         <Text style={styles.muted}>No event scheduled</Text>
-      </Pressable>
+      </Tap>
     </Link>
   );
 }

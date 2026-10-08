@@ -22,6 +22,33 @@ footer, What's New link) will land on this branch before release.
   with pairs, splits and locks asserting every player appears exactly once
   and team sizes stay within one, split players end up apart (numeric and
   string edges). All four fail on 1.6.0.
+- **Every tap looks like a tap** (owner: "no confirmation" on Auto-balance).
+  New `Tap` (`src/components/Tap.tsx`) wraps Pressable with one pressed
+  look from `src/pressFeedback.ts`: buttons and chips dim to 60% and shrink
+  to 96%; list rows dim only; small icons/text links dim to 40% and shrink
+  to 88%; modal backdrops/sheets none. Every Pressable in the app now goes
+  through it. `Button` keeps its look; disabled/loading now dims further
+  (45%) than pressed.
+- **Haptics** (new dependency `expo-haptics` ~15.0.8 — needs a prebuild):
+  a light tap on `Button`, the team generator's toolbar buttons and lock
+  icon, and the roster row's tiny buttons ($, ✓, beer, edit, ×); a
+  selection tick on segmented controls; a success buzz with every success
+  toast, an error buzz with error toasts. `src/haptics.ts` swallows every
+  failure and does nothing on web.
+- **Toasts** (`src/components/Toast.tsx`): a short pill above the bottom
+  bar, gone after 2 s, never blocks taps, read out by VoiceOver/TalkBack.
+  Team generator: Auto-balance ("Teams balanced: 4 players moved" — moved
+  rows also flash gold for 1 s; a tap-to-move flashes its row too), Present
+  only, Refresh, Swap teams, Swap goalies, Clear locks, per-player
+  lock/unlock, Lock/Unlock Teams, pair/split added or removed, Clear
+  pairs/splits, and Save to history (was an Alert). Push to players and
+  Reset jerseys keep their Alerts. Manage → Add a player: Skate Group adds
+  and walk-ons toast on success; Borrow keeps its confirm/result Alerts.
+- **No double fire:** Refresh, Lock/Unlock Teams and Save to history show a
+  spinner and ignore taps while their request runs (`src/hooks/useBusy.ts`,
+  checked synchronously so a fast second tap is refused too).
+- Tests: `movedIds` / `balanceMessage` (`src/teams/moves.test.ts`) and the
+  pressed-style table (`src/pressFeedback.test.ts`).
 
 ## 2026-10-06 — 1.6.0: update pill, invites from the app, login hint, borrow players
 

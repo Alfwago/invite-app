@@ -5,7 +5,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +17,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { ApiError } from "@/src/api/client";
 import type { DMMessage } from "@/src/api/types";
 import { LinkText } from "@/src/components/LinkText";
+import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
 import { useDmMessageActions, useDmThread, useSendDm } from "@/src/hooks/queries";
@@ -155,7 +155,8 @@ export default function DmThreadScreen() {
         {editing ? (
           <View style={styles.editBanner}>
             <Text style={styles.editBannerText}>Editing message</Text>
-            <Pressable
+            <Tap
+              feedback="icon"
               hitSlop={8}
               onPress={() => {
                 setEditing(null);
@@ -163,7 +164,7 @@ export default function DmThreadScreen() {
               }}
             >
               <Ionicons name="close" size={16} color={colors.textMuted} />
-            </Pressable>
+            </Tap>
           </View>
         ) : null}
 
@@ -177,7 +178,7 @@ export default function DmThreadScreen() {
               onChangeText={setDraft}
               multiline
             />
-            <Pressable
+            <Tap
               onPress={submit}
               disabled={!draft.trim() || send.isPending || actions.edit.isPending}
               style={[
@@ -186,7 +187,7 @@ export default function DmThreadScreen() {
               ]}
             >
               <Ionicons name={editing ? "checkmark" : "arrow-up"} size={20} color={colors.goldText} />
-            </Pressable>
+            </Tap>
           </View>
         ) : who !== "system" ? (
           <Text style={styles.readonly}>You can&apos;t reply to this player.</Text>
@@ -209,19 +210,21 @@ function Bubble({
 }) {
   if (msg.is_system) {
     return (
-      <Pressable
+      <Tap
+        feedback="row"
         style={styles.systemRow}
         disabled={msg.event_id == null}
         onPress={() => msg.event_id != null && onEvent(msg.event_id)}
       >
         <Text style={styles.systemText}>{msg.body}</Text>
         <Text style={styles.systemWhen}>{formatDateTime(msg.created_at)}</Text>
-      </Pressable>
+      </Tap>
     );
   }
   return (
     <View style={[styles.bubbleRow, msg.mine ? styles.mineRow : styles.theirRow]}>
-      <Pressable
+      <Tap
+        feedback="row"
         onLongPress={onLongPress}
         delayLongPress={250}
         style={[styles.bubble, msg.mine ? styles.mine : styles.theirs]}
@@ -232,12 +235,12 @@ function Bubble({
         >
           {msg.body}
         </LinkText>
-      </Pressable>
+      </Tap>
 
       {msg.reactions.length > 0 ? (
         <View style={[styles.reactions, msg.mine ? styles.reactionsMine : undefined]}>
           {msg.reactions.map((r) => (
-            <Pressable
+            <Tap
               key={r.emoji}
               onPress={() => onToggleReaction(r.emoji)}
               style={[styles.pill, r.mine && styles.pillMine]}
@@ -245,7 +248,7 @@ function Bubble({
               <Text style={styles.pillText}>
                 {r.emoji} {r.count}
               </Text>
-            </Pressable>
+            </Tap>
           ))}
         </View>
       ) : null}

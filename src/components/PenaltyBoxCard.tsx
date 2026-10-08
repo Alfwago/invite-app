@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import type { EventDetail, PlayerPenaltyEntry } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { Card } from "@/src/components/ui";
 import { useChirpOptions, useTaunts } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -77,9 +78,9 @@ function PenaltyRow({ eventId, entry }: { eventId: number | string; entry: Playe
             {t.text}
           </Text>
           {t.mine ? (
-            <Pressable hitSlop={8} disabled={busy} onPress={() => remove.mutate(t.id)}>
+            <Tap feedback="icon" hitSlop={8} disabled={busy} onPress={() => remove.mutate(t.id)}>
               <Ionicons name="close" size={14} color={colors.textMuted} />
-            </Pressable>
+            </Tap>
           ) : null}
         </View>
       ))}
@@ -89,9 +90,9 @@ function PenaltyRow({ eventId, entry }: { eventId: number | string; entry: Playe
           {chirps.data?.presets?.length ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetRow}>
               {chirps.data.presets.map((p) => (
-                <Pressable key={p} style={styles.presetChip} disabled={busy} onPress={() => send(p, true)}>
+                <Tap key={p} style={styles.presetChip} disabled={busy} onPress={() => send(p, true)}>
                   <Text style={styles.presetChipText}>{p}</Text>
-                </Pressable>
+                </Tap>
               ))}
             </ScrollView>
           ) : null}
@@ -104,13 +105,13 @@ function PenaltyRow({ eventId, entry }: { eventId: number | string; entry: Playe
               placeholderTextColor={colors.textMuted}
               maxLength={200}
             />
-            <Pressable
+            <Tap
               style={[styles.sendBtn, (!draft.trim() || busy) && styles.sendOff]}
               disabled={!draft.trim() || busy}
               onPress={() => send(draft, false)}
             >
               <Ionicons name="arrow-up" size={18} color={colors.goldText} />
-            </Pressable>
+            </Tap>
           </View>
         </>
       ) : null}

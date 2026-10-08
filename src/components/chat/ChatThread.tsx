@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -22,6 +21,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { ChatMessage, EmojiGroup } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { LinkText } from "@/src/components/LinkText";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -243,18 +243,18 @@ export function ChatThread({
         <View style={styles.editBanner}>
           <Ionicons name="pencil" size={14} color={colors.gold} />
           <Text style={styles.editBannerText}>Editing message</Text>
-          <Pressable onPress={resetComposer} hitSlop={8}>
+          <Tap feedback="icon" onPress={resetComposer} hitSlop={8}>
             <Text style={styles.editCancel}>Cancel</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : null}
 
       {imageUri ? (
         <View style={styles.previewRow}>
           <Image source={{ uri: imageUri }} style={styles.preview} />
-          <Pressable onPress={() => setImageUri(undefined)} hitSlop={8}>
+          <Tap feedback="icon" onPress={() => setImageUri(undefined)} hitSlop={8}>
             <Text style={styles.removePhoto}>Remove</Text>
-          </Pressable>
+          </Tap>
         </View>
       ) : null}
 
@@ -267,17 +267,17 @@ export function ChatThread({
           contentContainerStyle={styles.mentionBarInner}
         >
           {suggestions.map((p) => (
-            <Pressable key={p.id} style={styles.mentionOpt} onPress={() => applyMention(p)}>
+            <Tap feedback="row" key={p.id} style={styles.mentionOpt} onPress={() => applyMention(p)}>
               <Text style={styles.mentionOptText}>{p.name}</Text>
-            </Pressable>
+            </Tap>
           ))}
         </ScrollView>
       ) : null}
 
       <View style={styles.composer}>
-        <Pressable onPress={pickImage} style={styles.iconBtn} hitSlop={6}>
+        <Tap onPress={pickImage} style={styles.iconBtn} hitSlop={6}>
           <Ionicons name="image-outline" size={24} color={colors.textMuted} />
-        </Pressable>
+        </Tap>
         <TextInput
           style={styles.input}
           placeholder={editing ? "Edit message…" : placeholder}
@@ -286,24 +286,24 @@ export function ChatThread({
           onChangeText={setDraft}
           multiline
         />
-        <Pressable
+        <Tap
           onPress={send}
           disabled={disabled}
           style={[styles.sendBtn, disabled && styles.sendBtnOff]}
         >
           <Ionicons name={editing ? "checkmark" : "arrow-up"} size={20} color={colors.goldText} />
-        </Pressable>
+        </Tap>
       </View>
 
       <Modal visible={!!sheetFor} transparent animationType="fade" onRequestClose={closeSheet}>
-        <Pressable style={styles.sheetBackdrop} onPress={closeSheet}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
+        <Tap feedback="none" style={styles.sheetBackdrop} onPress={closeSheet}>
+          <Tap feedback="none" style={styles.sheet} onPress={() => {}}>
             {pickerOpen ? (
               <>
                 <View style={styles.pickerHead}>
-                  <Pressable onPress={() => setPickerOpen(false)} hitSlop={8}>
+                  <Tap feedback="icon" onPress={() => setPickerOpen(false)} hitSlop={8}>
                     <Ionicons name="chevron-back" size={22} color={colors.text} />
-                  </Pressable>
+                  </Tap>
                   <Text style={styles.pickerTitle}>Pick a reaction</Text>
                   <View style={{ width: 22 }} />
                 </View>
@@ -313,7 +313,7 @@ export function ChatThread({
                       <Text style={styles.pickerGroup}>{g.title}</Text>
                       <View style={styles.pickerGrid}>
                         {g.emoji.map((emoji) => (
-                          <Pressable
+                          <Tap
                             key={emoji}
                             onPress={() => {
                               if (sheetFor) onReact(sheetFor.id, emoji);
@@ -322,7 +322,7 @@ export function ChatThread({
                             style={styles.pickerCell}
                           >
                             <Text style={styles.pickerEmoji}>{emoji}</Text>
-                          </Pressable>
+                          </Tap>
                         ))}
                       </View>
                     </View>
@@ -335,7 +335,7 @@ export function ChatThread({
                   {reactionChoices.map((emoji) => {
                     const on = sheetFor?.reactions.some((r) => r.emoji === emoji && r.mine);
                     return (
-                      <Pressable
+                      <Tap
                         key={emoji}
                         onPress={() => {
                           if (sheetFor) onReact(sheetFor.id, emoji);
@@ -344,15 +344,15 @@ export function ChatThread({
                         style={[styles.reactBig, on && styles.reactBigOn]}
                       >
                         <Text style={styles.reactBigText}>{emoji}</Text>
-                      </Pressable>
+                      </Tap>
                     );
                   })}
-                  <Pressable
+                  <Tap
                     onPress={() => setPickerOpen(true)}
                     style={[styles.reactBig, styles.reactPlus]}
                   >
                     <Ionicons name="add" size={24} color={colors.text} />
-                  </Pressable>
+                  </Tap>
                 </View>
                 {sheetFor?.can_edit ? (
                   <SheetButton icon="pencil" label="Edit" onPress={() => sheetFor && startEdit(sheetFor)} />
@@ -370,8 +370,8 @@ export function ChatThread({
                 ) : null}
               </>
             )}
-          </Pressable>
-        </Pressable>
+          </Tap>
+        </Tap>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -401,7 +401,8 @@ function MessageRow({
           </View>
         ) : null}
 
-        <Pressable
+        <Tap
+          feedback="row"
           onLongPress={onLongPress}
           delayLongPress={250}
           style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}
@@ -418,12 +419,12 @@ function MessageRow({
               {msg.body}
             </LinkText>
           ) : null}
-        </Pressable>
+        </Tap>
 
         {msg.reactions.length > 0 ? (
           <View style={[styles.reactions, mine && styles.reactionsMine]}>
             {msg.reactions.map((r) => (
-              <Pressable
+              <Tap
                 key={r.emoji}
                 onPress={() => onToggleReaction(r.emoji)}
                 style={[styles.reactPill, r.mine && styles.reactPillOn]}
@@ -431,7 +432,7 @@ function MessageRow({
                 <Text style={styles.reactPillText}>
                   {r.emoji} {r.count}
                 </Text>
-              </Pressable>
+              </Tap>
             ))}
           </View>
         ) : null}
@@ -452,10 +453,10 @@ function SheetButton({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.sheetBtn}>
+    <Tap onPress={onPress} style={styles.sheetBtn}>
       <Ionicons name={icon} size={18} color={danger ? colors.red : colors.text} />
       <Text style={[styles.sheetBtnText, danger && { color: colors.red }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 
 import { API_BASE } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { useAppVersion } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 import { latestForPlatform, shouldShowUpdate } from "@/src/updateCheck";
@@ -40,7 +41,7 @@ export function UpdatePill({ homeLatest }: { homeLatest?: string }) {
 
   return (
     <View style={styles.pill}>
-      <Pressable
+      <Tap
         onPress={() => Linking.openURL(UPDATE_URL).catch(() => {})}
         hitSlop={6}
         accessibilityRole="link"
@@ -48,8 +49,8 @@ export function UpdatePill({ homeLatest }: { homeLatest?: string }) {
         style={styles.main}
       >
         <Text style={styles.text}>App Update ↑ Available</Text>
-      </Pressable>
-      <Pressable
+      </Tap>
+      <Tap
         onPress={dismiss}
         // Generous above/below/right; only 4 to the left so it doesn't eat
         // taps meant for the pill text.
@@ -59,7 +60,7 @@ export function UpdatePill({ homeLatest }: { homeLatest?: string }) {
         style={styles.close}
       >
         <Ionicons name="close" size={14} color={colors.goldText} />
-      </Pressable>
+      </Tap>
     </View>
   );
 }

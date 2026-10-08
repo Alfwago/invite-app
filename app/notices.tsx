@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { Stack } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import type { LeagueNotice } from "@/src/api/types";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { Tap } from "@/src/components/Tap";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useManageNotices, useNoticeMutations } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -136,12 +137,12 @@ function NoticeRow({
             />
           </View>
           <View style={styles.row}>
-            <Pressable onPress={() => setEditing(true)} hitSlop={6}>
+            <Tap feedback="icon" onPress={() => setEditing(true)} hitSlop={6}>
               <Text style={styles.link}>Edit</Text>
-            </Pressable>
-            <Pressable onPress={confirmDelete} hitSlop={6}>
+            </Tap>
+            <Tap feedback="icon" onPress={confirmDelete} hitSlop={6}>
               <Text style={styles.linkDanger}>Delete</Text>
-            </Pressable>
+            </Tap>
           </View>
         </>
       )}

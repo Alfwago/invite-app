@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Image, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Image, Linking, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 
@@ -9,6 +9,7 @@ import type { Me, NotificationPrefs, PlayerType, ProfilePatch } from "@/src/api/
 import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card } from "@/src/components/ui";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -417,9 +418,9 @@ function LockedField({
         <>
           <View style={styles.lockedRow}>
             <Text style={[styles.lockedValue, styles.lockedGrey]}>{pending}</Text>
-            <Pressable onPress={() => cancelPending.mutate()} disabled={cancelPending.isPending} hitSlop={6}>
+            <Tap feedback="icon" onPress={() => cancelPending.mutate()} disabled={cancelPending.isPending} hitSlop={6}>
               <Text style={styles.smallBtnText}>Cancel request</Text>
-            </Pressable>
+            </Tap>
           </View>
           <Text style={styles.hint}>Pending director approval</Text>
         </>
@@ -442,20 +443,20 @@ function LockedField({
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.lockedRow}>
-            <Pressable style={styles.smallBtn} onPress={() => submit.mutate()} disabled={submit.isPending}>
+            <Tap style={styles.smallBtn} onPress={() => submit.mutate()} disabled={submit.isPending}>
               <Text style={styles.smallBtnText}>{submit.isPending ? "Saving…" : "Save"}</Text>
-            </Pressable>
-            <Pressable onPress={() => setEditing(false)} disabled={submit.isPending} hitSlop={6}>
+            </Tap>
+            <Tap feedback="icon" onPress={() => setEditing(false)} disabled={submit.isPending} hitSlop={6}>
               <Text style={styles.hint}>Cancel</Text>
-            </Pressable>
+            </Tap>
           </View>
         </>
       ) : (
         <View style={styles.lockedRow}>
           <Text style={[styles.lockedValue, styles.lockedGrey]}>{current.join(" ") || "—"}</Text>
-          <Pressable style={styles.smallBtn} onPress={startEditing}>
+          <Tap style={styles.smallBtn} onPress={startEditing}>
             <Text style={styles.smallBtnText}>{requestLabel}</Text>
-          </Pressable>
+          </Tap>
         </View>
       )}
     </View>
@@ -572,13 +573,13 @@ function ChoiceChips({
       {opts.map((c) => {
         const on = value === c.value;
         return (
-          <Pressable
+          <Tap
             key={c.value || "none"}
             onPress={() => onChange(allowClear && on ? "" : c.value)}
             style={[styles.chip, on && styles.chipOn]}
           >
             <Text style={[styles.chipText, on && styles.chipTextOn]}>{c.label}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>

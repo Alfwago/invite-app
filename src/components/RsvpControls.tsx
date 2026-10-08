@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import type { EventDetail, RsvpBody, RsvpGuest } from "@/src/api/types";
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import { useAuth } from "@/src/auth/AuthContext";
+import { Tap } from "@/src/components/Tap";
 import { Button } from "@/src/components/ui";
 import { useRsvp } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
@@ -138,7 +139,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       >
       <View style={styles.segment}>
         {CHOICES.map((c) => (
-          <Pressable
+          <Tap
             key={c}
             onPress={() => setChoice(c)}
             style={[
@@ -147,7 +148,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
             ]}
           >
             <Text style={[styles.segmentText, choice === c && { color: colors.goldText }]}>{c}</Text>
-          </Pressable>
+          </Tap>
         ))}
       </View>
 
@@ -163,13 +164,13 @@ export function RsvpControls({ event }: { event: EventDetail }) {
         <View style={styles.guests}>
           <View style={styles.guestHead}>
             <Text style={styles.guestTitle}>Guests ({guests.length})</Text>
-            <Pressable
+            <Tap
               onPress={addGuest}
               disabled={guests.length >= MAX_GUESTS}
               style={[styles.addGuest, guests.length >= MAX_GUESTS && { opacity: 0.4 }]}
             >
               <Text style={styles.addGuestText}>+ Add guest</Text>
-            </Pressable>
+            </Tap>
           </View>
           {guests.map((g, i) => (
             <View key={i} style={styles.guestRow}>
@@ -181,19 +182,19 @@ export function RsvpControls({ event }: { event: EventDetail }) {
                   placeholder={`Guest ${i + 1} name`}
                   placeholderTextColor={colors.textMuted}
                 />
-                <Pressable onPress={() => removeGuest(i)} hitSlop={8}>
+                <Tap feedback="icon" onPress={() => removeGuest(i)} hitSlop={8}>
                   <Text style={styles.removeGuest}>Remove</Text>
-                </Pressable>
+                </Tap>
               </View>
               <View style={styles.skillRow}>
                 {SKILLS.map((s) => (
-                  <Pressable
+                  <Tap
                     key={s}
                     onPress={() => setGuest(i, { skill: s })}
                     style={[styles.skillChip, g.skill === s && styles.skillChipOn]}
                   >
                     <Text style={[styles.skillText, g.skill === s && styles.skillTextOn]}>{s}</Text>
-                  </Pressable>
+                  </Tap>
                 ))}
               </View>
             </View>

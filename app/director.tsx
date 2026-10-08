@@ -1,9 +1,10 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { HomeNight } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
 import { useApprovals, useHome, usePolls } from "@/src/hooks/queries";
@@ -158,11 +159,11 @@ function ToolRow({
   last?: boolean;
 }) {
   return (
-    <Pressable style={[styles.toolRow, !last && styles.toolRowBorder]} onPress={onPress}>
+    <Tap feedback="row" style={[styles.toolRow, !last && styles.toolRowBorder]} onPress={onPress}>
       <Ionicons name={icon} size={18} color={colors.gold} />
       <Text style={styles.toolLabel}>{label}</Text>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-    </Pressable>
+    </Tap>
   );
 }
 

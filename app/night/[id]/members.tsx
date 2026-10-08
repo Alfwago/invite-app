@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { useNightMemberMutations, useNightMembers } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -71,9 +72,9 @@ export default function NightMembersScreen() {
                     ) : m.is_goalie ? (
                       <Text style={styles.goldTag}>G</Text>
                     ) : null}
-                    <Pressable onPress={() => removeMember(m.id, m.name)} hitSlop={8}>
+                    <Tap feedback="icon" onPress={() => removeMember(m.id, m.name)} hitSlop={8}>
                       <Text style={styles.remove}>Remove</Text>
-                    </Pressable>
+                    </Tap>
                   </View>
                 ))
               )}
@@ -94,7 +95,8 @@ export default function NightMembersScreen() {
                     {data.addable.map((a) => {
                       const on = picked.includes(a.id);
                       return (
-                        <Pressable
+                        <Tap
+                          feedback="row"
                           key={a.id}
                           style={styles.checkRow}
                           onPress={() =>
@@ -110,7 +112,7 @@ export default function NightMembersScreen() {
                             {a.name}
                             {a.is_goalie_skater ? " (G/S)" : a.is_goalie ? " (G)" : ""}
                           </Text>
-                        </Pressable>
+                        </Tap>
                       );
                     })}
                     <Button

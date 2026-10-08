@@ -3,7 +3,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_BASE, ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import { useAuth } from "@/src/auth/AuthContext";
+import { Tap } from "@/src/components/Tap";
 import { Button } from "@/src/components/ui";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -110,7 +110,8 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             onSubmitEditing={onSubmit}
           />
-          <Pressable
+          <Tap
+            feedback="row"
             style={styles.showRow}
             onPress={() => setShowPassword((v) => !v)}
             hitSlop={8}
@@ -121,9 +122,10 @@ export default function LoginScreen() {
               color={showPassword ? colors.gold : colors.textMuted}
             />
             <Text style={styles.showText}>Show password</Text>
-          </Pressable>
+          </Tap>
 
-          <Pressable
+          <Tap
+            feedback="row"
             style={styles.showRow}
             onPress={() => setRemember((v) => !v)}
             hitSlop={8}
@@ -134,7 +136,7 @@ export default function LoginScreen() {
               color={remember ? colors.gold : colors.textMuted}
             />
             <Text style={styles.showText}>Keep me signed in</Text>
-          </Pressable>
+          </Tap>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -145,7 +147,8 @@ export default function LoginScreen() {
             disabled={!username || !password}
           />
 
-          <Pressable
+          <Tap
+            feedback="row"
             onPress={() => {
               setResetOpen((v) => !v);
               setResetDone(false);
@@ -156,15 +159,16 @@ export default function LoginScreen() {
             <Text style={styles.forgotText}>
               {resetOpen ? "Never mind" : "Forgot password?"}
             </Text>
-          </Pressable>
+          </Tap>
 
-          <Pressable
+          <Tap
+            feedback="row"
             onPress={() => router.push("/signup")}
             hitSlop={8}
             style={styles.forgotRow}
           >
             <Text style={styles.forgotText}>New here? Create an account</Text>
-          </Pressable>
+          </Tap>
 
           {resetOpen ? (
             <View style={styles.resetPanel}>

@@ -1,8 +1,9 @@
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackHeaderProps } from "@react-navigation/native-stack";
 
+import { Tap } from "@/src/components/Tap";
 import { colors } from "@/src/theme";
 
 /**
@@ -23,14 +24,14 @@ export function NavHeader({ navigation, route, options, back }: NativeStackHeade
     <View style={[styles.bar, { paddingTop: insets.top }]}>
       <View style={styles.side}>
         {back ? (
-          <Pressable onPress={navigation.goBack} style={styles.back} hitSlop={8}>
+          <Tap onPress={navigation.goBack} style={styles.back} hitSlop={8}>
             <Ionicons
               name={isModal ? "close" : "chevron-back"}
               size={isModal ? 24 : 26}
               color={colors.gold}
             />
             {isModal ? null : <Text style={styles.backText}>Back</Text>}
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
 

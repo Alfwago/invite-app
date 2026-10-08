@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ApiError } from "@/src/api/client";
 import type { EventDetail } from "@/src/api/types";
@@ -14,6 +14,7 @@ import {
   visibleCandidates,
   type BorrowRole,
 } from "@/src/borrow";
+import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading, Segmented } from "@/src/components/ui";
 import { useBorrowCandidates, useRosterAction } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -116,7 +117,8 @@ export function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolea
             {g.players.map((p) => {
               const mark = roleMark(p);
               return (
-                <Pressable
+                <Tap
+                  feedback="row"
                   key={p.id}
                   onPress={() => void add(p)}
                   disabled={busy || roster.isPending}
@@ -132,7 +134,7 @@ export function BorrowPicker({ event, busy }: { event: EventDetail; busy: boolea
                   <Text style={styles.groups} numberOfLines={1}>
                     {p.home_label}
                   </Text>
-                </Pressable>
+                </Tap>
               );
             })}
           </View>

@@ -1,8 +1,9 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { Card, ErrorState, Loading } from "@/src/components/ui";
 import { usePolls } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -28,7 +29,7 @@ export default function PollsScreen() {
         ) : (
           polls.map((p) => (
             <Card key={p.id}>
-              <Pressable style={styles.row} onPress={() => router.push(`/polls/${p.id}` as never)}>
+              <Tap feedback="row" style={styles.row} onPress={() => router.push(`/polls/${p.id}` as never)}>
                 <View style={styles.main}>
                   <Text style={styles.title}>{p.title}</Text>
                   <Text style={styles.meta}>
@@ -43,7 +44,7 @@ export default function PollsScreen() {
                   <View style={styles.dot} />
                 )}
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </Pressable>
+              </Tap>
             </Card>
           ))
         )}

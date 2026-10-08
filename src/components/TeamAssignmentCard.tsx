@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import type { TeamAssignment } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { Card } from "@/src/components/ui";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -58,14 +59,14 @@ export function TeamAssignmentCard({
 
   if (!onPress) return card;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={`You're on ${assignment.team}. View the roster with teams.`}
       style={({ pressed }) => pressed && styles.pressed}
     >
       {card}
-    </Pressable>
+    </Tap>
   );
 }
 

@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs, useRouter } from "expo-router";
 
+import { Tap } from "@/src/components/Tap";
 import { useBoards, useEvents, useInbox } from "@/src/hooks/queries";
 import { setAppBadge } from "@/src/push";
 import { colors } from "@/src/theme";
@@ -32,7 +33,7 @@ export default function TabsLayout() {
   }, [unread]);
 
   const inboxButton = () => (
-    <Pressable onPress={() => router.push("/inbox")} hitSlop={8} style={{ marginRight: 12 }}>
+    <Tap onPress={() => router.push("/inbox")} hitSlop={8} style={{ marginRight: 12 }}>
       <Ionicons name="mail-outline" size={22} color={colors.text} />
       {dmUnread > 0 ? (
         <View
@@ -47,7 +48,7 @@ export default function TabsLayout() {
           }}
         />
       ) : null}
-    </Pressable>
+    </Tap>
   );
 
   return (

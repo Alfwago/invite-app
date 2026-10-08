@@ -14,6 +14,7 @@ import {
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
+import { ToastHost, ToastProvider } from "@/src/components/Toast";
 import { Loading } from "@/src/components/ui";
 import { keys, useAppVersion } from "@/src/hooks/queries";
 import { useSkateCard } from "@/src/hooks/useSkateCard";
@@ -44,8 +45,10 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <SafeAreaProvider>
-            <StatusBar style="light" />
-            <RootNavigator />
+            <ToastProvider>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </ToastProvider>
           </SafeAreaProvider>
         </AuthProvider>
       </QueryClientProvider>
@@ -148,6 +151,8 @@ function RootNavigator() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    {/* The screens plus the toast layer, so toasts sit just above the bottom bar. */}
+    <View style={{ flex: 1 }}>
     <Stack
       screenOptions={{
         header: (props) => <NavHeader {...props} />,
@@ -182,6 +187,8 @@ function RootNavigator() {
         options={{ title: "New event", presentation: "modal" }}
       />
     </Stack>
+      <ToastHost />
+    </View>
       <BottomBar />
     </View>
   );

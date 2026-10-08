@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { Tap } from "@/src/components/Tap";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export interface DropdownOption {
@@ -28,21 +29,22 @@ export function Dropdown({
 
   return (
     <>
-      <Pressable style={[styles.field, style]} onPress={() => setOpen(true)}>
+      <Tap style={[styles.field, style]} onPress={() => setOpen(true)}>
         <Text style={[styles.fieldText, !selected && styles.placeholder]} numberOfLines={1}>
           {selected ? selected.label : placeholder}
         </Text>
         <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
-      </Pressable>
+      </Tap>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
+        <Tap feedback="none" style={styles.backdrop} onPress={() => setOpen(false)}>
+          <Tap feedback="none" style={styles.sheet} onPress={() => {}}>
             <ScrollView>
               {options.map((o) => {
                 const on = o.value === value;
                 return (
-                  <Pressable
+                  <Tap
+                    feedback="row"
                     key={o.value}
                     style={[styles.row, on && styles.rowOn]}
                     onPress={() => {
@@ -52,12 +54,12 @@ export function Dropdown({
                   >
                     <Text style={[styles.rowText, on && styles.rowTextOn]}>{o.label}</Text>
                     {on ? <Ionicons name="checkmark" size={18} color={colors.gold} /> : null}
-                  </Pressable>
+                  </Tap>
                 );
               })}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </Tap>
+        </Tap>
       </Modal>
     </>
   );

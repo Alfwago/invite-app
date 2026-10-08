@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { TeamHistoryEntry } from "@/src/api/types";
 import { Dropdown } from "@/src/components/Dropdown";
+import { Tap } from "@/src/components/Tap";
 import { Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
 import { useDeleteTeamHistory, useTeamEvents, useTeamHistory } from "@/src/hooks/queries";
@@ -59,7 +60,7 @@ export default function TeamHistoryScreen() {
         ) : (
           (query.data ?? []).map((h) => (
             <Card key={h.id}>
-              <Pressable style={styles.head} onPress={() => setOpen((o) => (o === h.id ? null : h.id))}>
+              <Tap feedback="row" style={styles.head} onPress={() => setOpen((o) => (o === h.id ? null : h.id))}>
                 <View style={styles.headMain}>
                   <Text style={styles.when}>{formatDateTime(h.created_at)}</Text>
                   <Text style={styles.meta}>
@@ -73,7 +74,7 @@ export default function TeamHistoryScreen() {
                   size={18}
                   color={colors.textMuted}
                 />
-              </Pressable>
+              </Tap>
 
               {open === h.id ? (
                 <View style={styles.body}>
@@ -81,10 +82,10 @@ export default function TeamHistoryScreen() {
                     <Side title="Gold" goalie={h.gold_goalie?.name} players={h.gold_players} gold />
                     <Side title="Black" goalie={h.black_goalie?.name} players={h.black_players} />
                   </View>
-                  <Pressable style={styles.delete} onPress={() => confirmDelete(h.id)}>
+                  <Tap style={styles.delete} onPress={() => confirmDelete(h.id)}>
                     <Ionicons name="trash-outline" size={15} color={colors.red} />
                     <Text style={styles.deleteText}>Delete</Text>
-                  </Pressable>
+                  </Tap>
                 </View>
               ) : null}
             </Card>

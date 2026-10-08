@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import { useAuth } from "@/src/auth/AuthContext";
 import { EventCard } from "@/src/components/EventCard";
+import { Tap } from "@/src/components/Tap";
 import { EmptyState, ErrorState, Loading } from "@/src/components/ui";
 import { useEvents } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
@@ -47,9 +48,9 @@ export default function EventsScreen() {
           <ToggleChip label="Recent" active={past} onPress={() => setPast(true)} />
           {me?.is_director ? (
             <Link href="/new-event" asChild>
-              <Pressable style={styles.newBtn}>
+              <Tap style={styles.newBtn}>
                 <Text style={styles.newBtnText}>+ New event</Text>
-              </Pressable>
+              </Tap>
             </Link>
           ) : null}
         </View>
@@ -72,12 +73,12 @@ function ToggleChip({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       style={[styles.chip, active && { backgroundColor: colors.gold, borderColor: colors.gold }]}
     >
       <Text style={[styles.chipText, active && { color: colors.goldText }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

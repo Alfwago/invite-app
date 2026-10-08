@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/src/auth/AuthContext";
+import { Tap } from "@/src/components/Tap";
 import { Card } from "@/src/components/ui";
 import { colors, font, spacing } from "@/src/theme";
 
@@ -31,7 +32,8 @@ export function DirectorToolsCard() {
       <Text style={styles.heading}>Director tools</Text>
       <Card>
         {rows.map((r, i) => (
-          <Pressable
+          <Tap
+            feedback="row"
             key={r.href}
             style={[styles.row, i < rows.length - 1 && styles.rowBorder]}
             onPress={() => router.push(r.href as never)}
@@ -39,7 +41,7 @@ export function DirectorToolsCard() {
             <Ionicons name={r.icon} size={18} color={colors.gold} />
             <Text style={styles.label}>{r.label}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
+          </Tap>
         ))}
       </Card>
     </View>

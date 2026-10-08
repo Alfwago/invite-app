@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { Button, Card } from "@/src/components/ui";
 import { usePollAdminMutations } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -79,9 +80,9 @@ export default function NewPollScreen() {
             <View style={styles.qHead}>
               <Text style={styles.label}>Question {qi + 1}</Text>
               {questions.length > 1 ? (
-                <Pressable onPress={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))} hitSlop={8}>
+                <Tap feedback="icon" onPress={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))} hitSlop={8}>
                   <Text style={styles.remove}>Remove</Text>
-                </Pressable>
+                </Tap>
               ) : null}
             </View>
             <TextInput
@@ -101,18 +102,19 @@ export default function NewPollScreen() {
                   placeholderTextColor={colors.textMuted}
                 />
                 {q.choices.length > 2 ? (
-                  <Pressable
+                  <Tap
+                    feedback="icon"
                     onPress={() => setQ(qi, { choices: q.choices.filter((_, j) => j !== ci) })}
                     hitSlop={8}
                   >
                     <Ionicons name="close" size={18} color={colors.textMuted} />
-                  </Pressable>
+                  </Tap>
                 ) : null}
               </View>
             ))}
-            <Pressable onPress={() => setQ(qi, { choices: [...q.choices, ""] })} style={styles.addChoice}>
+            <Tap onPress={() => setQ(qi, { choices: [...q.choices, ""] })} style={styles.addChoice}>
               <Text style={styles.addChoiceText}>+ Add choice</Text>
-            </Pressable>
+            </Tap>
           </Card>
         ))}
 

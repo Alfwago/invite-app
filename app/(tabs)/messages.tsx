@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Image, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { ChatThread } from "@/src/components/chat/ChatThread";
 import {
   keys,
@@ -92,7 +93,7 @@ export default function MessagesScreen() {
         mentionBoard={board}
         accessory={
           canEmail ? (
-            <Pressable
+            <Tap
               onPress={() => setEmailGroup((v) => !v)}
               style={[styles.emailToggle, emailGroup && styles.emailToggleOn]}
             >
@@ -104,7 +105,7 @@ export default function MessagesScreen() {
               <Text style={[styles.emailToggleText, emailGroup && styles.emailToggleTextOn]}>
                 {emailGroup ? "Will email the group" : "Email the group too"}
               </Text>
-            </Pressable>
+            </Tap>
           ) : null
         }
         onSend={async (body, imageUri, mentionIds) => {
@@ -149,7 +150,7 @@ function BoardChip({
 }) {
   if (!full && imageUrl) {
     return (
-      <Pressable
+      <Tap
         onPress={onPress}
         accessibilityLabel={label}
         style={{ width: size, height: size }}
@@ -158,11 +159,11 @@ function BoardChip({
           <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="cover" />
         </View>
         <UnreadDot count={badge} style={styles.unreadDotCorner} />
-      </Pressable>
+      </Tap>
     );
   }
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       accessibilityLabel={label}
       style={[
@@ -178,7 +179,7 @@ function BoardChip({
         {label}
       </Text>
       <UnreadDot count={badge} />
-    </Pressable>
+    </Tap>
   );
 }
 

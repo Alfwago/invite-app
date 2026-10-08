@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { Tap } from "@/src/components/Tap";
 import { ClockField, DateField, NumberField } from "@/src/components/pickers";
 import type { Night } from "@/src/api/types";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
@@ -191,7 +192,8 @@ function NightOption({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Tap
+      feedback="row"
       onPress={onPress}
       style={[styles.option, active && { borderColor: colors.gold, backgroundColor: colors.bg }]}
     >
@@ -199,7 +201,7 @@ function NightOption({
         {active ? <View style={styles.radioDot} /> : null}
       </View>
       <Text style={styles.optionText}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { PlayerRow } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { Badge, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayers } from "@/src/hooks/queries";
 import { formatScore, listScore, NOT_RATED, sortByScore } from "@/src/ratings";
@@ -56,19 +56,20 @@ export default function PlayersScreen() {
             renderItem={({ item }) => {
               const active = night === item.id;
               return (
-                <Pressable
+                <Tap
                   onPress={() => setNight(item.id)}
                   style={[styles.chip, active && styles.chipOn]}
                 >
                   <Text style={[styles.chipText, active && styles.chipTextOn]}>
                     {item.name}
                   </Text>
-                </Pressable>
+                </Tap>
               );
             }}
           />
 
-          <Pressable
+          <Tap
+            feedback="row"
             style={styles.toggleRow}
             onPress={() => setGoaliesOnly((v) => !v)}
             hitSlop={8}
@@ -82,7 +83,7 @@ export default function PlayersScreen() {
             <Text style={styles.sourceNote}>
               · {night != null ? `${nights.find((n) => n.id === night)?.name} PPV` : "Global Score"}
             </Text>
-          </Pressable>
+          </Tap>
         </View>
 
         {query.isLoading ? (
@@ -127,7 +128,7 @@ function PlayerListRow({
 }) {
   const text = formatScore(listScore(row, nightSelected));
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Tap feedback="row" style={styles.row} onPress={onPress}>
       <View style={styles.rowMain}>
         <Text style={styles.name}>{row.name}</Text>
         {row.is_goalie ? <Badge text="G" tone="goalie" /> : null}
@@ -136,7 +137,7 @@ function PlayerListRow({
         <Text style={[styles.ppv, text === NOT_RATED && styles.notRated]}>{text}</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </View>
-    </Pressable>
+    </Tap>
   );
 }
 

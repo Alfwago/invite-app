@@ -1,8 +1,9 @@
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { Card, ErrorState, Loading } from "@/src/components/ui";
 import { useNights } from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
@@ -28,14 +29,15 @@ export default function SkateGroupsScreen() {
           <Card>
             <Text style={styles.hint}>Pick a skate group to manage who&apos;s on it.</Text>
             {(nights.data ?? []).map((n) => (
-              <Pressable
+              <Tap
+                feedback="row"
                 key={n.id}
                 style={styles.row}
                 onPress={() => router.push(`/night/${n.id}/members` as never)}
               >
                 <Text style={styles.name}>{n.name}</Text>
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </Pressable>
+              </Tap>
             ))}
           </Card>
         )}

@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   LayoutAnimation,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   UIManager,
@@ -12,7 +11,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { Tap } from "@/src/components/Tap";
+import { selectHaptic } from "@/src/haptics";
 import { colors, font, radius, spacing } from "@/src/theme";
+
+export { Tap, type TapFeedback } from "@/src/components/Tap";
 
 if (
   Platform.OS === "android" &&
@@ -22,6 +25,8 @@ if (
 }
 
 // ---- Button -------------------------------------------------------------
+// Pressed = dimmed + slightly shrunk (Tap), plus a light haptic. Disabled or
+// loading = dimmed further and inert, so a running action can't fire twice.
 
 type ButtonVariant = "primary" | "secondary" | "danger";
 
@@ -50,14 +55,16 @@ export function Button({
   const isOff = disabled || loading;
 
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!isOff, busy: !!loading }}
       onPress={onPress}
       disabled={isOff}
-      style={({ pressed }) => [
+      haptic
+      style={[
         styles.btn,
         { backgroundColor: bg, borderColor: border },
-        (pressed || isOff) && { opacity: 0.55 },
+        isOff && { opacity: 0.45 },
         style,
       ]}
     >
@@ -66,7 +73,7 @@ export function Button({
       ) : (
         <Text style={[styles.btnText, { color: fg }]}>{label}</Text>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -166,7 +173,8 @@ export function CollapsibleCard({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Card accent={accent} style={styles.collapseCard}>
-      <Pressable
+      <Tap
+        feedback="row"
         style={styles.collapseHeader}
         onPress={() => {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -183,7 +191,7 @@ export function CollapsibleCard({
             color={colors.textMuted}
           />
         </View>
-      </Pressable>
+      </Tap>
       {summary ? <View style={styles.collapseBody}>{summary}</View> : null}
       {open ? <View style={styles.collapseBody}>{children}</View> : null}
     </Card>
@@ -219,9 +227,12 @@ export function Segmented<K extends string>({
       {options.map((o) => {
         const on = value === o.key;
         return (
-          <Pressable
+          <Tap
             key={o.key}
-            onPress={() => onChange(o.key)}
+            onPress={() => {
+              if (!on) selectHaptic();
+              onChange(o.key);
+            }}
             disabled={o.disabled}
             style={[styles.segmentItem, on && styles.segmentOn, o.disabled && styles.segmentOff]}
             accessibilityRole="radio"
@@ -237,7 +248,7 @@ export function Segmented<K extends string>({
             >
               {o.label}
             </Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>

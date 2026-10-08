@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, StyleSheet, Text, View } from "react-native";
 
+import { Tap } from "@/src/components/Tap";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export type PlayerRole = "goalie" | "skater";
@@ -38,23 +39,23 @@ export function useRolePicker() {
       animationType="fade"
       onRequestClose={() => answer(null)}
     >
-      <Pressable style={styles.backdrop} onPress={() => answer(null)}>
-        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+      <Tap feedback="none" style={styles.backdrop} onPress={() => answer(null)}>
+        <Tap feedback="none" style={styles.card} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.name}>{pending?.name ?? nameRef.current}</Text>
           <Text style={styles.q}>Playing goalie or skater tonight?</Text>
           <View style={styles.row}>
-            <Pressable style={styles.btn} onPress={() => answer("goalie")}>
+            <Tap style={styles.btn} onPress={() => answer("goalie")}>
               <Text style={styles.btnText}>Goalie</Text>
-            </Pressable>
-            <Pressable style={styles.btn} onPress={() => answer("skater")}>
+            </Tap>
+            <Tap style={styles.btn} onPress={() => answer("skater")}>
               <Text style={styles.btnText}>Skater</Text>
-            </Pressable>
+            </Tap>
           </View>
-          <Pressable onPress={() => answer(null)} hitSlop={8} style={styles.cancelHit}>
+          <Tap onPress={() => answer(null)} hitSlop={8} style={styles.cancelHit}>
             <Text style={styles.cancel}>Cancel</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
+          </Tap>
+        </Tap>
+      </Tap>
     </Modal>
   );
 

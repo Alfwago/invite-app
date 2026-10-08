@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import Slider from "@react-native-community/slider";
 import { ApiError } from "@/src/api/client";
 import type { GlobalScore, PlayerDetail, PlayerNightRow } from "@/src/api/types";
 import { RatingRadar } from "@/src/components/RatingRadar";
+import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayer, useSaveRatings } from "@/src/hooks/queries";
 import { formatScore, obhGrade } from "@/src/ratings";
@@ -311,12 +311,12 @@ function NightChip({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.nightChip, active && styles.nightChipOn]}>
+    <Tap onPress={onPress} style={[styles.nightChip, active && styles.nightChipOn]}>
       <Text style={[styles.nightChipText, active && styles.nightChipTextOn]}>
         {label}
         {badge ? " ●" : ""}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

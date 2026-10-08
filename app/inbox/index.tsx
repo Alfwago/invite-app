@@ -3,7 +3,6 @@ import {
   Alert,
   FlatList,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
+import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
 import { useDeleteDmThread, useHome, useInbox } from "@/src/hooks/queries";
@@ -64,14 +64,14 @@ export default function InboxScreen() {
         options={{
           title: "Inbox",
           headerRight: () => (
-            <Pressable
+            <Tap
               onPress={() => setCompose(true)}
               hitSlop={8}
               style={({ pressed }) => [styles.newBtn, pressed && { opacity: 0.85 }]}
             >
               <Ionicons name="add" size={16} color={colors.goldText} />
               <Text style={styles.newBtnText}>New</Text>
-            </Pressable>
+            </Tap>
           ),
         }}
       />
@@ -79,10 +79,10 @@ export default function InboxScreen() {
       <View style={styles.screen}>
         {nights.length > 0 ? (
           <View style={styles.dirRow}>
-            <Pressable style={styles.dirBtn} onPress={contactDirectors}>
+            <Tap style={styles.dirBtn} onPress={contactDirectors}>
               <Ionicons name="mail" size={32} color={colors.goldText} />
               <Text style={styles.dirBtnText}>Contact Directors</Text>
-            </Pressable>
+            </Tap>
             <Text style={styles.dirHint}>
               Reach whoever runs your skate — a private message, not the skate thread.
             </Text>
@@ -107,16 +107,18 @@ export default function InboxScreen() {
               <Swipeable
                 overshootRight={false}
                 renderRightActions={() => (
-                  <Pressable
+                  <Tap
+                    feedback="row"
                     style={styles.swipeDelete}
                     onPress={() => confirmDelete(item.user_id ?? "system", item.name)}
                   >
                     <Ionicons name="trash-outline" size={18} color="#fff" />
                     <Text style={styles.swipeDeleteText}>Delete</Text>
-                  </Pressable>
+                  </Tap>
                 )}
               >
-              <Pressable
+              <Tap
+                feedback="row"
                 style={styles.row}
                 onPress={() =>
                   router.push(`/inbox/${item.user_id ?? "system"}` as never)
@@ -149,7 +151,7 @@ export default function InboxScreen() {
                     </View>
                   ) : null}
                 </View>
-              </Pressable>
+              </Tap>
               </Swipeable>
             )}
           />
@@ -195,9 +197,9 @@ function ComposeModal({
       <SafeAreaView style={styles.modalRoot}>
         <View style={styles.modalHead}>
           <Text style={styles.sheetTitle}>New message</Text>
-          <Pressable onPress={onClose} hitSlop={10}>
+          <Tap feedback="icon" onPress={onClose} hitSlop={10}>
             <Ionicons name="close" size={24} color={colors.textMuted} />
-          </Pressable>
+          </Tap>
         </View>
         <View style={styles.searchRow}>
           <Ionicons name="search" size={16} color={colors.textMuted} />
@@ -218,10 +220,10 @@ function ComposeModal({
           style={styles.recipientList}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
-            <Pressable style={styles.recipientRow} onPress={() => onPick(item.id)}>
+            <Tap feedback="row" style={styles.recipientRow} onPress={() => onPick(item.id)}>
               <Text style={styles.recipientName}>{item.name}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-            </Pressable>
+            </Tap>
           )}
           ListEmptyComponent={
             recipients.isLoading ? (

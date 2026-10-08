@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 
 import type { EventSummary, RsvpStatus } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { Badge, FillBar, type BadgeTone } from "@/src/components/ui";
 import { formatEventDate, formatTime, rosterLabel } from "@/src/format";
 import { fillPct, rosterBadges, rosterHealth } from "@/src/roster";
@@ -30,7 +31,7 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
 
   return (
     <Link href={`/event/${event.id}`} asChild>
-      <Pressable style={styles.card}>
+      <Tap feedback="row" style={styles.card}>
         <View style={styles.topRow}>
           <Text style={styles.title}>{event.display_name}</Text>
           {status ? (
@@ -59,7 +60,7 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
             ))}
           </View>
         </View>
-      </Pressable>
+      </Tap>
     </Link>
   );
 }

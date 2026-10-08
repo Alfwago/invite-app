@@ -3,7 +3,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +12,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { useMessageNightDirectors, useNightDirectors } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -88,14 +88,14 @@ export default function MessageDirectorsScreen() {
               {send.error instanceof ApiError ? send.error.detail : "Couldn't send."}
             </Text>
           ) : null}
-          <Pressable
+          <Tap
             style={[styles.sendBtn, (!draft.trim() || send.isPending) && styles.sendOff]}
             disabled={!draft.trim() || send.isPending}
             onPress={submit}
           >
             <Ionicons name="arrow-up" size={18} color={colors.goldText} />
             <Text style={styles.sendText}>Send</Text>
-          </Pressable>
+          </Tap>
         </View>
       </KeyboardAvoidingView>
     </>

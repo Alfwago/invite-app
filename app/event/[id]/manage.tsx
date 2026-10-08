@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import {
   Alert,
   Image,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Switch,
@@ -33,7 +32,8 @@ import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
 import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
-import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented } from "@/src/components/ui";
+import { useToast } from "@/src/components/Toast";
+import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented, Tap } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
 import {
@@ -96,7 +96,7 @@ export default function ManageEventScreen() {
       <View style={styles.tabBarWrap}>
         <View style={styles.tabBar}>
           {TABS.map((t) => (
-            <Pressable
+            <Tap
               key={t.key}
               onPress={() => setTab(t.key)}
               style={[styles.tab, tab === t.key && styles.tabActive]}
@@ -109,7 +109,7 @@ export default function ManageEventScreen() {
               >
                 {t.label}
               </Text>
-            </Pressable>
+            </Tap>
           ))}
         </View>
       </View>
@@ -812,9 +812,9 @@ function PenaltyBoxCard({ event, manage }: { event: EventDetail; manage: EventMa
             <Text style={styles.playerName} numberOfLines={1}>
               {p.name} · {p.delay_hours}h{p.reason ? ` · ${p.reason}` : ""}
             </Text>
-            <Pressable onPress={() => pb.remove.mutate(p.player_id)} hitSlop={8}>
+            <Tap feedback="icon" onPress={() => pb.remove.mutate(p.player_id)} hitSlop={8}>
               <Text style={styles.removeXText}>Remove</Text>
-            </Pressable>
+            </Tap>
           </View>
         ))
       )}
@@ -895,8 +895,15 @@ function RosterCard({
     (candidates.data?.waitlist ?? []).filter((w) => w.is_goalie_skater).map((w) => w.waitlist_id),
   );
 
-  function act(body: RosterAction) {
-    roster.mutate(body, { onError: (e) => Alert.alert("Roster update failed", errText(e)) });
+  const toast = useToast();
+
+  // `done`: a toast on success, for adds whose result is off-screen (the
+  // roster list is above the Add a player card). Borrow keeps its Alerts.
+  function act(body: RosterAction, done?: string) {
+    roster.mutate(body, {
+      onSuccess: done ? () => toast.show(done) : undefined,
+      onError: (e) => Alert.alert("Roster update failed", errText(e)),
+    });
   }
 
   // "Select all" for Present/Paid: one on/off toggle per column — on when
@@ -988,12 +995,15 @@ function RosterCard({
     const name = walkOn.trim();
     if (!name) return;
     const rating = walkOnRating.trim();
-    act({
-      action: "add_day_player",
-      name,
-      is_goalie: walkOnGoalie,
-      ...(rating ? { rating_ppv: rating } : {}),
-    });
+    act(
+      {
+        action: "add_day_player",
+        name,
+        is_goalie: walkOnGoalie,
+        ...(rating ? { rating_ppv: rating } : {}),
+      },
+      `Added ${name} as a walk-on${walkOnGoalie ? " (goalie)" : ""}`,
+    );
     setWalkOn("");
     setWalkOnGoalie(false);
     setWalkOnRating("");
@@ -1021,16 +1031,16 @@ function RosterCard({
         {presentEligible.length > 0 || paidEligible.length > 0 ? (
           <View style={styles.bulkRow}>
             {presentEligible.length > 0 ? (
-              <Pressable onPress={toggleAllPresent} disabled={busy} hitSlop={6}>
+              <Tap feedback="icon" onPress={toggleAllPresent} disabled={busy} hitSlop={6}>
                 <Text style={styles.linkText}>
                   {presentAllOn ? "Deselect all present" : "Select all present"}
                 </Text>
-              </Pressable>
+              </Tap>
             ) : null}
             {paidEligible.length > 0 ? (
-              <Pressable onPress={toggleAllPaid} disabled={busy} hitSlop={6}>
+              <Tap feedback="icon" onPress={toggleAllPaid} disabled={busy} hitSlop={6}>
                 <Text style={styles.linkText}>{paidAllOn ? "Deselect all paid" : "Select all paid"}</Text>
-              </Pressable>
+              </Tap>
             ) : null}
           </View>
         ) : null}
@@ -1125,7 +1135,8 @@ function RosterCard({
                   {w.name}
                   {gsWaitlist.has(w.waitlist_id) ? " (G/S)" : w.is_goalie ? " (G)" : ""}
                 </Text>
-                <Pressable
+                <Tap
+                  feedback="icon"
                   onPress={() =>
                     act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "up" })
                   }
@@ -1134,8 +1145,9 @@ function RosterCard({
                   style={[styles.arrowBtn, i === 0 && styles.arrowDisabled]}
                 >
                   <Text style={styles.arrowText}>▲</Text>
-                </Pressable>
-                <Pressable
+                </Tap>
+                <Tap
+                  feedback="icon"
                   onPress={() =>
                     act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "down" })
                   }
@@ -1144,7 +1156,7 @@ function RosterCard({
                   style={[styles.arrowBtn, i === event.waitlist.length - 1 && styles.arrowDisabled]}
                 >
                   <Text style={styles.arrowText}>▼</Text>
-                </Pressable>
+                </Tap>
                 <Button
                   label="Promote"
                   variant="secondary"
@@ -1199,7 +1211,7 @@ function RosterCard({
                 placeholderTextColor={colors.textMuted}
                 accessibilityLabel="Walk-on name"
               />
-              <Pressable
+              <Tap
                 onPress={() => setWalkOnGoalie((g) => !g)}
                 style={[styles.goaliePick, walkOnGoalie && styles.goaliePickOn]}
                 accessibilityRole="switch"
@@ -1207,7 +1219,7 @@ function RosterCard({
                 accessibilityLabel="Goalie"
               >
                 <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
-              </Pressable>
+              </Tap>
             </View>
             <View style={styles.walkOnRow}>
               <TextInput
@@ -1261,12 +1273,12 @@ function WalkOnEditor({
           placeholder="Name"
           placeholderTextColor={colors.textMuted}
         />
-        <Pressable
+        <Tap
           onPress={() => setGoalie((g) => !g)}
           style={[styles.goaliePick, goalie && styles.goaliePickOn]}
         >
           <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
-        </Pressable>
+        </Tap>
       </View>
       <View style={styles.walkOnRow}>
         <TextInput
@@ -1416,7 +1428,8 @@ function RosterAdminRow({
       </View>
 
       {borrowed && onMakePermanent && makePermanentLabel ? (
-        <Pressable
+        <Tap
+          feedback="icon"
           onPress={onMakePermanent}
           disabled={disabled}
           hitSlop={6}
@@ -1425,7 +1438,7 @@ function RosterAdminRow({
           accessibilityLabel={`${makePermanentLabel}: ${name}`}
         >
           <Text style={styles.linkText}>{makePermanentLabel}</Text>
-        </Pressable>
+        </Tap>
       ) : null}
 
       {guests.map((g, i) => (
@@ -1471,9 +1484,10 @@ function TinyBtn({
         ? colors.goldText
         : colors.textMuted;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       disabled={disabled}
+      haptic
       hitSlop={4}
       style={[
         styles.tiny,
@@ -1487,7 +1501,7 @@ function TinyBtn({
       ) : (
         <Text style={[styles.tinyText, { color }]}>{text}</Text>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -1498,7 +1512,7 @@ function AddPlayerPanel({
 }: {
   event: EventDetail;
   busy: boolean;
-  onAct: (body: RosterAction) => void;
+  onAct: (body: RosterAction, done?: string) => void;
 }) {
   const candidates = useCandidates(event.id);
   const [selected, setSelected] = useState<number[]>([]);
@@ -1536,7 +1550,11 @@ function AddPlayerPanel({
       if (Object.keys(picked).length > 0) roles = picked;
     }
 
-    onAct({ action: "add", player_ids: selected, to, ...(roles ? { roles } : {}) });
+    const n = selected.length;
+    onAct(
+      { action: "add", player_ids: selected, to, ...(roles ? { roles } : {}) },
+      `Added ${n} player${n === 1 ? "" : "s"} to the ${to}`,
+    );
     setSelected([]);
   }
 
@@ -1678,24 +1696,26 @@ function PresetsCard({ event }: { event: EventDetail }) {
             </View>
             <View style={styles.adminRowActions}>
               {!p.is_default ? (
-                <Pressable
+                <Tap
+                  feedback="icon"
                   onPress={() => mut.update.mutate({ presetId: p.id, body: { is_default: true } })}
                   hitSlop={6}
                 >
                   <Text style={styles.linkText}>Make default</Text>
-                </Pressable>
+                </Tap>
               ) : null}
-              <Pressable
+              <Tap
+                feedback="icon"
                 onPress={() =>
                   mut.update.mutate({ presetId: p.id, body: { from_event_id: Number(event.id) } })
                 }
                 hitSlop={6}
               >
                 <Text style={styles.linkText}>Update from this event</Text>
-              </Pressable>
-              <Pressable onPress={() => confirmDelete(p)} hitSlop={6}>
+              </Tap>
+              <Tap feedback="icon" onPress={() => confirmDelete(p)} hitSlop={6}>
                 <Text style={styles.removeXText}>Delete</Text>
-              </Pressable>
+              </Tap>
             </View>
           </View>
         ))
@@ -1806,7 +1826,7 @@ function ToggleButton({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <Pressable
+    <Tap
       onPress={() => onChange(!value)}
       style={[styles.toggleBtn, value && styles.toggleBtnOn]}
       accessibilityRole="switch"
@@ -1820,7 +1840,7 @@ function ToggleButton({
       >
         {label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -1834,14 +1854,14 @@ function CheckRow({
   onToggle: () => void;
 }) {
   return (
-    <Pressable onPress={onToggle} style={styles.checkRow}>
+    <Tap feedback="row" onPress={onToggle} style={styles.checkRow}>
       <View style={[styles.checkbox, checked && styles.checkboxOn]}>
         {checked ? <Text style={styles.checkboxMark}>✓</Text> : null}
       </View>
       <Text style={styles.checkLabel} numberOfLines={1}>
         {label}
       </Text>
-    </Pressable>
+    </Tap>
   );
 }
 

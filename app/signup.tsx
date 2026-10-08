@@ -3,7 +3,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_BASE, ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { SignupDirector } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { Button } from "@/src/components/ui";
 import { Dropdown } from "@/src/components/Dropdown";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -145,7 +145,8 @@ export default function SignupScreen() {
             value={password}
             onChangeText={setPassword}
           />
-          <Pressable
+          <Tap
+            feedback="row"
             style={styles.showRow}
             onPress={() => setShowPassword((v) => !v)}
             hitSlop={8}
@@ -156,7 +157,7 @@ export default function SignupScreen() {
               color={showPassword ? colors.gold : colors.textMuted}
             />
             <Text style={styles.showText}>Show password</Text>
-          </Pressable>
+          </Tap>
 
           <View style={styles.row}>
             <TextInput
@@ -224,9 +225,9 @@ export default function SignupScreen() {
 
           <Button label="Create account" onPress={onSubmit} loading={busy} disabled={!canSubmit} />
 
-          <Pressable onPress={() => router.replace("/login")} hitSlop={8} style={styles.backRow}>
+          <Tap feedback="row" onPress={() => router.replace("/login")} hitSlop={8} style={styles.backRow}>
             <Text style={styles.backText}>Already have an account? Sign in</Text>
-          </Pressable>
+          </Tap>
         </View>
 
         <Text style={styles.server}>{API_BASE}</Text>

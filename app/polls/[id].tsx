@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
+import { Tap } from "@/src/components/Tap";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { usePollActions, usePolls } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -55,7 +56,8 @@ export default function PollDetailScreen() {
               {q.choices.map((c) => {
                 const on = selected === c.id;
                 return (
-                  <Pressable
+                  <Tap
+                    feedback="row"
                     key={c.id}
                     disabled={locked}
                     onPress={() => setPicks((p) => ({ ...p, [q.id]: c.id }))}
@@ -67,7 +69,7 @@ export default function PollDetailScreen() {
                       color={on ? colors.gold : colors.textMuted}
                     />
                     <Text style={[styles.choiceText, on && styles.choiceTextOn]}>{c.text}</Text>
-                  </Pressable>
+                  </Tap>
                 );
               })}
               {locked ? <Text style={styles.answered}>Your answer is locked in.</Text> : null}
