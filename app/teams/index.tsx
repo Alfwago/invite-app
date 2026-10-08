@@ -107,8 +107,11 @@ export default function TeamGeneratorScreen() {
     (data: TeamGeneratorState, rosterData: TeamRosterPlayer[]) => {
       const snap = (data.state || {}) as TeamGeneratorSnapshot;
       const restoredAssignment = (snap.assignment ?? {}) as Record<string, Team>;
-      const restoredPairs = snap.pairs ?? [];
-      const restoredSplits = snap.splits ?? [];
+      // A draft locked on the website stores numeric ids; the app keys
+      // everything by K(id). Normalize at load so pair/split chips, the
+      // already-paired check and nameOf all match.
+      const restoredPairs = toEdges(snap.pairs);
+      const restoredSplits = toEdges(snap.splits);
       const restoredPresentOnly = !!snap.presentOnly;
       Object.assign(pairNameCache.current, snap.pairNames || {});
 
@@ -861,6 +864,13 @@ function Chip({
       </Pressable>
     </View>
   );
+}
+
+function toEdges(list: unknown): [string, string][] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((e): e is [unknown, unknown] => Array.isArray(e) && e.length === 2)
+    .map(([a, b]) => [String(a), String(b)]);
 }
 
 function sameEdge(a: [string, string], b: [string, string]) {

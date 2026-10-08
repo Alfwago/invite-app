@@ -101,8 +101,14 @@ export function autoBalance(input: BalanceInput): BalanceResult {
 
   const candidates = presentOnly ? players.filter((p) => p.present) : players.slice();
 
+  // Ids can be numbers (real players) or strings (guests / walk-ons, and
+  // every pair/split/lock key the app stores) — compare everything as
+  // strings. A raw `===` between the two silently never matches.
+  const sid = (x: TGPlayer["id"]) => String(x);
+
   // --- Goalies: pick up to 2, honour team preference, rest skate out --------
-  const playerGoalies = candidates.filter((p) => p.is_goalie && !inactiveGoalieIds.has(p.id));
+  const inactiveGoalies = new Set([...inactiveGoalieIds].map(sid));
+  const playerGoalies = candidates.filter((p) => p.is_goalie && !inactiveGoalies.has(sid(p.id)));
   const selected: GoalieSlot[] = playerGoalies.slice(0, 2).map((p) => ({
     id: `goalie_${p.id}`,
     playerId: p.id,
@@ -143,9 +149,6 @@ export function autoBalance(input: BalanceInput): BalanceResult {
   }
 
   // --- Pairs → connected components ("units") among unlocked players -------
-  // Ids can be numbers (real players) or strings (guests / walk-ons), and the
-  // pair/split lists key by string — compare everything as strings.
-  const sid = (x: TGPlayer["id"]) => String(x);
   const pairEdges = pairs.map(([a, b]) => [sid(a), sid(b)] as const);
   const splitEdges = splits.map(([a, b]) => [sid(a), sid(b)] as const);
   const listIds = new Set(list.map((p) => sid(p.id)));
@@ -203,7 +206,7 @@ export function autoBalance(input: BalanceInput): BalanceResult {
     if (partnerTeams.size === 1) {
       const team = [...partnerTeams][0];
       (team === "Gold" ? gold : black).push(p);
-      for (const unit of units) unit.members = unit.members.filter((mem) => mem.id !== p.id);
+      for (const unit of units) unit.members = unit.members.filter((mem) => sid(mem.id) !== sid(p.id));
     }
   }
 
@@ -272,13 +275,14 @@ export function autoBalance(input: BalanceInput): BalanceResult {
       )[0];
     if (!swap) continue; // no safe swap — leave this split unresolved rather than unbalancing team sizes.
 
-    fromTeam.splice(moverIdx, 1);
-    toTeam.push(moved);
-    toTeam.splice(
-      toTeam.findIndex((p) => sid(p.id) === swap.id),
-      1,
-    );
-    fromTeam.push(swap);
+    // Swap by position, both indexes taken before either team changes. (1.6.0
+    // compared sid(p.id) to the raw numeric swap.id here: findIndex gave -1,
+    // splice(-1) removed the mover just pushed, and the swap partner ended up
+    // on both teams — a player vanished from the screen.)
+    const swapIdx = toTeam.indexOf(swap);
+    if (moverIdx < 0 || swapIdx < 0) continue;
+    fromTeam.splice(moverIdx, 1, swap);
+    toTeam.splice(swapIdx, 1, moved);
   }
 
   if (doShuffle) {

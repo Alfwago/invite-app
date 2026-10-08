@@ -3,6 +3,26 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-08 — 1.6.1: team generator no longer drops a player (in progress)
+
+Version 1.6.1 (iOS build 26). Works with `invite-server` 0.33.0 — no server
+change needed for this fix. More fixes (Borrow search under the keyboard,
+footer, What's New link) will land on this branch before release.
+
+- **Team generator: a split player could vanish.** After pair → remove pair
+  → split → Auto-balance, one of the two split players disappeared from
+  both teams and the swap partner showed up on both. Cause: the split swap
+  in `src/teams/balance.ts` compared a string id to a numeric id, so
+  `findIndex` returned -1 and `splice(-1)` removed the wrong player. All id
+  comparisons in the balancer now go through `String(id)` (the deselected-
+  goalie set too), and the swap replaces both players in place. A draft
+  locked on the website (numeric pair/split ids) is normalized to strings
+  when the app loads it, so its pair/split chips and checks match.
+- Tests: the owner's sequence over 200 seeded rosters, a 300-roster sweep
+  with pairs, splits and locks asserting every player appears exactly once
+  and team sizes stay within one, split players end up apart (numeric and
+  string edges). All four fail on 1.6.0.
+
 ## 2026-10-06 — 1.6.0: update pill, invites from the app, login hint, borrow players
 
 Version 1.6.0 (iOS build 25). Needs `invite-server` 0.33.0 on prod

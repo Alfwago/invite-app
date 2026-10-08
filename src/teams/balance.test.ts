@@ -157,3 +157,119 @@ test("presentOnly drops absent players", () => {
   const r = run({ players, pairs: [], splits: [], presentOnly: true });
   assert.equal(r.gold.length + r.black.length, 2);
 });
+
+// ---- 1.6.1: split-swap dropped a player -----------------------------------
+// The app keys pair/split edges by String(id) while real players carry
+// numeric ids. 1.6.0 compared one side of the split swap raw, so a split
+// resolved by a swap removed the mover and duplicated the swap partner.
+
+/** Small deterministic PRNG so the sweeps below are repeatable. */
+function seeded(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** A roster like a real night: numeric members, a string-id walk-on, two goalies. */
+function roster(rng: () => number, size: number): TGPlayer[] {
+  const skill = () => 1 + Math.floor(rng() * 5);
+  const players: TGPlayer[] = Array.from({ length: size }, (_, i) => ({
+    id: 100 + i,
+    name: `P${100 + i}`,
+    is_goalie: false,
+    present: true,
+    ratings: { hockey_sense: skill(), skating: skill(), defense: skill(), offense: skill(), goalie: 0 },
+  }));
+  players.push({ id: "walkon-1", name: "Walk-on", is_goalie: false, present: true, ratings: { ...flat } });
+  players.push({ id: 900, name: "G1", is_goalie: true, present: true, ratings: { ...flat, goalie: 2 } });
+  players.push({ id: 901, name: "G2", is_goalie: true, present: true, ratings: { ...flat, goalie: 2 } });
+  return players;
+}
+
+const S = (x: TGPlayer["id"]) => String(x);
+const skaterIds = (players: TGPlayer[]) => players.filter((p) => !p.is_goalie).map((p) => S(p.id)).sort();
+
+/** Every skater exactly once across the two teams, team sizes within one. */
+function assertEveryoneOnce(players: TGPlayer[], r: ReturnType<typeof autoBalance>, label: string) {
+  const placed = [...r.gold, ...r.black].map((p) => S(p.id));
+  assert.equal(new Set(placed).size, placed.length, `${label}: someone is on the screen twice`);
+  assert.deepEqual([...placed].sort(), skaterIds(players), `${label}: a player is missing`);
+  assert.ok(Math.abs(r.gold.length - r.black.length) <= 1, `${label}: team sizes ${r.gold.length}/${r.black.length}`);
+}
+
+const teamOf = (r: ReturnType<typeof autoBalance>, id: TGPlayer["id"]) =>
+  r.gold.some((p) => S(p.id) === S(id)) ? "Gold" : r.black.some((p) => S(p.id) === S(id)) ? "Black" : null;
+
+test("owner's sequence: pair, unpair, split, Auto-balance keeps both players, apart", () => {
+  // Mirrors the screen: edges are stored as strings (K(id)); the pair is
+  // added, Auto-balanced, removed, then the same two are split and
+  // Auto-balance is pressed again and again.
+  for (let seed = 1; seed <= 200; seed++) {
+    const rng = seeded(seed);
+    const players = roster(rng, 14);
+    const a = S(players[Math.floor(rng() * 14)].id);
+    let b = S(players[Math.floor(rng() * 14)].id);
+    if (a === b) b = "walkon-1";
+
+    let pairs: [string, string][] = [[a, b]];
+    let r = autoBalance({ players, pairs, splits: [], rng });
+    assertEveryoneOnce(players, r, `seed ${seed} paired`);
+    assert.equal(teamOf(r, a), teamOf(r, b), `seed ${seed}: pair split up`);
+
+    pairs = [];
+    const splits: [string, string][] = [[a, b]];
+    for (let press = 0; press < 5; press++) {
+      r = autoBalance({ players, pairs, splits, rng });
+      assertEveryoneOnce(players, r, `seed ${seed} split press ${press}`);
+      assert.notEqual(teamOf(r, a), teamOf(r, b), `seed ${seed} press ${press}: split pair together`);
+    }
+  }
+});
+
+test("seeded sweep: every player appears exactly once with pairs, splits and locks", () => {
+  for (let seed = 1; seed <= 300; seed++) {
+    const rng = seeded(seed * 7919);
+    const players = roster(rng, 10 + Math.floor(rng() * 12));
+    const skaters = players.filter((p) => !p.is_goalie);
+    const pick = () => S(skaters[Math.floor(rng() * skaters.length)].id);
+    // A lock or two, as the 🔒 button sets them.
+    for (const p of skaters) if (rng() < 0.1) p.locked = rng() < 0.5 ? "Gold" : "Black";
+    const pairs: [string, string][] = [];
+    const splits: [string, string][] = [];
+    for (let i = 0; i < 3; i++) {
+      const x = pick();
+      const y = pick();
+      if (x === y) continue;
+      // Numeric and string forms both turn up (app vs a web-locked draft).
+      const edge = (rng() < 0.5 ? [x, y] : [Number(x) || x, Number(y) || y]) as [string, string];
+      (rng() < 0.5 ? pairs : splits).push(edge);
+    }
+    const r = autoBalance({ players, pairs, splits, rng });
+    assertEveryoneOnce(players, r, `seed ${seed}`);
+  }
+});
+
+test("split players end up apart whenever a swap partner exists (numeric and string edges)", () => {
+  for (let seed = 1; seed <= 200; seed++) {
+    const rng = seeded(seed * 104729);
+    const players = roster(rng, 12);
+    const [a, b] = [players[0].id, players[1].id];
+    for (const splits of [[[a, b]], [[S(a), S(b)]]] as [TGPlayer["id"], TGPlayer["id"]][][]) {
+      const r = autoBalance({ players, pairs: [], splits, rng });
+      assertEveryoneOnce(players, r, `seed ${seed}`);
+      assert.notEqual(teamOf(r, a), teamOf(r, b), `seed ${seed}: ${a} and ${b} together`);
+    }
+  }
+});
+
+test("a goalie deselected by string id matches a numeric goalie id", () => {
+  const players = roster(seeded(3), 8);
+  const r = autoBalance({ players, pairs: [], splits: [], inactiveGoalieIds: new Set(["900"]), shuffle: false });
+  assert.equal(r.goldGoalie?.playerId, 901);
+  assert.equal(r.blackGoalie, null);
+});
