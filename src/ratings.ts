@@ -25,6 +25,13 @@ export function inGoalieGroup(row: PlayerRow): boolean {
   return row.is_goalie || row.player_type === "goalie" || row.player_type === "goalie_skater";
 }
 
+/** The role mark beside a name on the list, as on the roster: "G/S" for a
+ *  Goalie & Skater, "G" for a goalie, "" for a skater. */
+export function roleTag(row: Pick<PlayerRow, "is_goalie" | "player_type">): string {
+  if (row.player_type === "goalie_skater") return "G/S";
+  return row.is_goalie || row.player_type === "goalie" ? "G" : "";
+}
+
 /** A goalie's rating for the list: that night's when a night is picked,
  *  else the Global Goalie Score. null = Not Rated (or not a goalie). */
 export function listGoalieScore(row: PlayerRow, nightSelected: boolean): number | null {

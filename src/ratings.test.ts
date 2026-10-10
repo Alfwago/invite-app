@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { PlayerRow } from "./api/types.ts";
-import { formatScore, listScore, listText, NOT_RATED, obhGrade, sortByScore } from "./ratings.ts";
+import { formatScore, listScore, listText, NOT_RATED, obhGrade, roleTag, sortByScore } from "./ratings.ts";
 
 function row(name: string, nightPpv: number, global: number | null): PlayerRow {
   return {
@@ -66,6 +66,14 @@ test("goalie ratings show on the list (website format)", () => {
   assert.equal(listText(goalieRow("Gina", "goalie", 3.0, 2.4, null, 2.4), true), "G 2.40");
   assert.equal(listText(goalieRow("Gail", "goalie", 0, 0, null, null), false), NOT_RATED);
   assert.equal(listText(row("Sam", 4, 4), true), "4.00");
+});
+
+test("role mark: G/S for goalie & skater (even without the Goalie box), G for goalies, none for skaters", () => {
+  assert.equal(roleTag(goalieRow("Gus", "goalie_skater", 0, 0, null, null)), "G/S");
+  assert.equal(roleTag({ ...row("Pat", 0, null), is_goalie: false, player_type: "goalie_skater" }), "G/S");
+  assert.equal(roleTag(goalieRow("Gina", "goalie", 0, 0, null, null)), "G");
+  assert.equal(roleTag({ ...row("Old", 0, null), is_goalie: true }), "G"); // older server, no player_type goalie
+  assert.equal(roleTag(row("Sam", 4, 4)), "");
 });
 
 test("sort: goalies first by goalie rating, then skaters by PPV, Not Rated last in each", () => {

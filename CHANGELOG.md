@@ -35,9 +35,11 @@ No native change (no prebuild needed for the simulator).
   skate; a "COMP"/"CHARGE" tag shows when set. Hidden on an older server.
 - **Player profiles list shows goalie ratings**: "3.10 · G 2.40" for G/S,
   "G 2.40" for goalies; goalies first by goalie rating, then skaters by
-  PPV, Not Rated last in each group (same as the website).
+  PPV, Not Rated last in each group (same as the website). Each row keeps
+  its role mark: "G/S" for Goalie & Skater (also when only the G/S box is
+  ticked), "G" for goalies, none for skaters.
 - Tests: `src/teams/lineup.test.ts` (moves from before/after, 409 handling,
-  optimistic move, roster-order rows), goalie list text + sort.
+  optimistic move, roster-order rows), goalie list text + sort + role mark.
 - iOS `buildNumber` 27.
 
 ## 2026-10-08 — 1.6.1: team generator fixes, tap feedback, keyboard, What's New

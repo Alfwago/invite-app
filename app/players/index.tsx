@@ -14,7 +14,7 @@ import type { PlayerRow } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { Badge, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayers } from "@/src/hooks/queries";
-import { listText, NOT_RATED, sortByScore } from "@/src/ratings";
+import { listText, NOT_RATED, roleTag, sortByScore } from "@/src/ratings";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function PlayersScreen() {
@@ -127,11 +127,12 @@ function PlayerListRow({
   onPress: () => void;
 }) {
   const text = listText(row, nightSelected);
+  const tag = roleTag(row);
   return (
     <Tap feedback="row" style={styles.row} onPress={onPress}>
       <View style={styles.rowMain}>
         <Text style={styles.name}>{row.name}</Text>
-        {row.is_goalie ? <Badge text="G" tone="goalie" /> : null}
+        {tag ? <Badge text={tag} tone="goalie" /> : null}
       </View>
       <View style={styles.rowRight}>
         <Text style={[styles.ppv, text === NOT_RATED && styles.notRated]}>{text}</Text>
