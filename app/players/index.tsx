@@ -14,7 +14,7 @@ import type { PlayerRow } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { Badge, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayers } from "@/src/hooks/queries";
-import { formatScore, listScore, NOT_RATED, sortByScore } from "@/src/ratings";
+import { listText, NOT_RATED, sortByScore } from "@/src/ratings";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function PlayersScreen() {
@@ -81,7 +81,7 @@ export default function PlayersScreen() {
             />
             <Text style={styles.toggleText}>Goalies only</Text>
             <Text style={styles.sourceNote}>
-              · {night != null ? `${nights.find((n) => n.id === night)?.name} PPV` : "Global Score"}
+              · {night != null ? `${nights.find((n) => n.id === night)?.name} PPV` : "Global Score"} · G = goalie
             </Text>
           </Tap>
         </View>
@@ -126,7 +126,7 @@ function PlayerListRow({
   nightSelected: boolean;
   onPress: () => void;
 }) {
-  const text = formatScore(listScore(row, nightSelected));
+  const text = listText(row, nightSelected);
   return (
     <Tap feedback="row" style={styles.row} onPress={onPress}>
       <View style={styles.rowMain}>

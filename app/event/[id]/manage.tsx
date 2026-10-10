@@ -20,6 +20,7 @@ import type {
   EventManage,
   EventPatchBody,
   EventPreset,
+  PayOverride,
   RosterAction,
   RosterEntry,
   RosterGuest,
@@ -1057,6 +1058,13 @@ function RosterCard({
               isGoalie={p.is_goalie}
               isDirector={p.is_director}
               isAssistantDirector={p.is_assistant_director}
+              isActingDirector={p.is_acting_director}
+              payOverride={p.pay_override}
+              onPayOverride={() =>
+                choosePayOverride(p.name, p.pay_override ?? "", (v) =>
+                  act({ action: "set_pay_override", player_id: p.player_id, pay_override: v }),
+                )
+              }
               borrowed={!!p.is_borrowed}
               borrowedFrom={p.borrowed_from_name}
               makePermanentLabel={event.night ? `Add to ${event.night.name}` : undefined}
@@ -1112,6 +1120,12 @@ function RosterCard({
               name={dp.name}
               isGoalie={dp.is_goalie}
               pays={dp.pays}
+              payOverride={dp.pay_override}
+              onPayOverride={() =>
+                choosePayOverride(dp.name, dp.pay_override ?? "", (v) =>
+                  act({ action: "set_pay_override", day_player_id: dp.id, pay_override: v }),
+                )
+              }
               walkOn
               ratingPpv={dp.rating_ppv}
               present={dp.present}
@@ -1316,11 +1330,27 @@ function WalkOnEditor({
   );
 }
 
+// Director's per-event "who pays" override (server 0.34+): Default follows
+// the usual rule, Comp = free tonight, Charge = pays tonight. A payment
+// already marked is kept either way — the $ just hides while they don't pay.
+function choosePayOverride(name: string, current: PayOverride, onPick: (v: PayOverride) => void) {
+  const mark = (v: PayOverride) => (v === current ? " ✓" : "");
+  Alert.alert(`Pays: ${name}`, "Tonight only. Default follows the usual rule (goalies, ND, Beer Guy… don't pay).", [
+    { text: `Default${mark("")}`, onPress: () => current !== "" && onPick("") },
+    { text: `Comp — doesn't pay${mark("comp")}`, onPress: () => current !== "comp" && onPick("comp") },
+    { text: `Charge — pays${mark("charge")}`, onPress: () => current !== "charge" && onPick("charge") },
+    { text: "Cancel", style: "cancel" },
+  ]);
+}
+
 function RosterAdminRow({
   name,
   isGoalie,
   isDirector,
   isAssistantDirector,
+  isActingDirector,
+  payOverride,
+  onPayOverride,
   borrowed,
   borrowedFrom,
   makePermanentLabel,
@@ -1352,6 +1382,11 @@ function RosterAdminRow({
   isGoalie: boolean;
   isDirector?: boolean;
   isAssistantDirector?: boolean;
+  /** The AD standing in for an absent ND (server 0.34+). */
+  isActingDirector?: boolean;
+  /** undefined = an older server without the override (control hidden). */
+  payOverride?: PayOverride;
+  onPayOverride?: () => void;
   /** Borrowed from another skate group — its own badge after the role tag. */
   borrowed?: boolean;
   borrowedFrom?: string;
@@ -1383,7 +1418,15 @@ function RosterAdminRow({
   onPaid: (v: boolean) => void;
   onRemove: () => void;
 }) {
-  const goldTag = isGoalie ? "G" : isDirector ? "ND" : isAssistantDirector ? "AD" : "";
+  const goldTag = isGoalie
+    ? "G"
+    : isDirector
+      ? "ND"
+      : isActingDirector
+        ? "Acting ND"
+        : isAssistantDirector
+          ? "AD"
+          : "";
   const hasGuys = (showBeer && onBeer) || (showWhiskey && onWhiskey);
   return (
     <View style={styles.adminRow}>
@@ -1407,6 +1450,7 @@ function RosterAdminRow({
         {team ? (
           <Ionicons name="shirt" size={15} color={TEAM_TINT[team]} accessibilityLabel={`${team} Team`} />
         ) : null}
+        {payOverride ? <Text style={styles.payTag}>{payOverride}</Text> : null}
         {walkOn && ratingPpv != null ? (
           <Text style={styles.dpRating}>
             {isGoalie ? "G" : "PPV"} {ratingPpv}
@@ -1416,6 +1460,14 @@ function RosterAdminRow({
           <TinyBtn icon="checkmark" on={present} disabled={tickDisabled} onPress={() => onPresent(!present)} />
           {pays ? (
             <TinyBtn text="$" on={paid} disabled={tickDisabled} onPress={() => onPaid(!paid)} />
+          ) : null}
+          {payOverride !== undefined && onPayOverride ? (
+            <TinyBtn
+              icon={payOverride ? "pricetag" : "pricetag-outline"}
+              gold={!!payOverride}
+              disabled={disabled}
+              onPress={onPayOverride}
+            />
           ) : null}
           {hasGuys ? <View style={styles.grpGap} /> : null}
           {showBeer && onBeer ? (
@@ -2107,6 +2159,13 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 15,
     fontWeight: "900",
+  },
+  // "comp" / "charge" — the director's pay override for this skate.
+  payTag: {
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },

@@ -3,6 +3,43 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-10 — 1.6.1 re-cut (iOS build 27): shared teams, Acting ND / Comp, goalie ratings
+
+Held 1.6.1 (26, never submitted) re-cut as build 27; Android needs a new
+APK (versionCode 8). **Needs `invite-server` 0.34.0** — it ships first.
+No native change (no prebuild needed for the simulator).
+
+- **Team generator = one shared lineup with the website.** The server owns
+  each event's teams (Gold/Black, goalie slots, pairs, splits, locks, Lock
+  Teams, Present only). The app no longer balances on the phone
+  (`src/teams/balance.ts` removed): opening the screen shows the saved
+  lineup (the server balances it the first time), and every tap — Auto-
+  balance, move, lock, pair/split, Present only, Refresh, Swap, Clear locks,
+  Lock/Unlock — is one POST to `/api/teams/events/<id>/lineup/` with the
+  version on screen. Hand moves show instantly, then save.
+- **Sync both ways.** While the screen is focused and the app is in the
+  foreground it polls `lineup/version/` every 5 s; a change made on the
+  website, another phone or a new RSVP reloads the teams with an "Updated
+  by <name>" toast and the gold flash on moved rows. A stale edit gets 409
+  → the current teams + "Teams changed on another device — reloaded."; it
+  never overwrites silently. No server → a clear error, nothing balanced
+  locally (also on a pre-0.34 server: "needs the 0.34 update").
+- Behaviour now matches the website: a pair or split change re-balances
+  right away; Refresh re-balances unless the teams are locked; rows in
+  roster order; players who RSVP after balancing appear on the smaller team
+  with a small "new" tag. Save to history / Push to players use the shared
+  lineup (`lineup/save/`, `lineup/publish/`).
+- **Manage → Roster: "Acting ND" and Comp.** The night's AD shows "Acting
+  ND" (and doesn't pay) when the ND isn't on the roster as Yes. New price-
+  tag button per row: Default / Comp (doesn't pay) / Charge (pays) for this
+  skate; a "COMP"/"CHARGE" tag shows when set. Hidden on an older server.
+- **Player profiles list shows goalie ratings**: "3.10 · G 2.40" for G/S,
+  "G 2.40" for goalies; goalies first by goalie rating, then skaters by
+  PPV, Not Rated last in each group (same as the website).
+- Tests: `src/teams/lineup.test.ts` (moves from before/after, 409 handling,
+  optimistic move, roster-order rows), goalie list text + sort.
+- iOS `buildNumber` 27.
+
 ## 2026-10-08 — 1.6.1: team generator fixes, tap feedback, keyboard, What's New
 
 Version 1.6.1 (iOS build 26). Works with `invite-server` 0.33.0; the
