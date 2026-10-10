@@ -25,13 +25,10 @@ import type {
   NewPoll,
   PenaltySeverity,
   PlayerDetail,
-  PublishTeamsBody,
   RatingPatch,
-  SaveTeamsBody,
-  TeamGeneratorSnapshot,
-  TeamGeneratorState,
   RosterAction,
   RsvpBody,
+  TeamLineup,
 } from "@/src/api/types";
 
 export const keys = {
@@ -44,9 +41,9 @@ export const keys = {
     ["players", params] as const,
   player: (id: number) => ["player", id] as const,
   teamEvents: ["team-events"] as const,
-  teamRoster: (id: number) => ["team-roster", id] as const,
   teamHistory: (id: number) => ["team-history", id] as const,
-  teamGeneratorState: (id: number) => ["team-generator-state", id] as const,
+  teamLineup: (id: number) => ["team-lineup", id] as const,
+  teamLineupVersion: (id: number) => ["team-lineup-version", id] as const,
   approvals: ["approvals"] as const,
   siteInviteOptions: ["site-invite-options"] as const,
   nameChangeApprovals: ["name-change-approvals"] as const,
@@ -548,27 +545,11 @@ export function useTeamEvents() {
   });
 }
 
-export function useTeamRoster(eventId: number | null) {
-  return useQuery({
-    queryKey: keys.teamRoster(eventId ?? 0),
-    queryFn: ({ signal }) => api.fetchTeamRoster(eventId as number, signal),
-    enabled: eventId != null,
-  });
-}
-
 export function useTeamHistory(eventId: number | null) {
   return useQuery({
     queryKey: keys.teamHistory(eventId ?? 0),
     queryFn: ({ signal }) => api.fetchTeamHistory(eventId as number, signal),
     enabled: eventId != null,
-  });
-}
-
-export function useSaveTeamHistory(eventId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: SaveTeamsBody) => api.saveTeamHistory(eventId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) }),
   });
 }
 
@@ -580,54 +561,32 @@ export function useDeleteTeamHistory(eventId: number) {
   });
 }
 
-export function usePublishTeams(eventId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: PublishTeamsBody) => api.publishTeams(eventId, body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) });
-      qc.invalidateQueries({ queryKey: keys.event(eventId) }); // team_assignment
-      qc.invalidateQueries({ queryKey: keys.home });
-    },
-  });
-}
-
-export function useTeamGeneratorState(eventId: number | null) {
+/** The event's shared lineup (server 0.34+) — the same teams the website
+ *  shows. Edits go through `api.postTeamLineupAction` and land back here
+ *  with `setQueryData`; `useTeamLineupVersion` notices changes made
+ *  elsewhere. */
+export function useTeamLineup(eventId: number | null) {
   return useQuery({
-    queryKey: keys.teamGeneratorState(eventId ?? 0),
-    queryFn: ({ signal }) => api.fetchTeamGeneratorState(eventId as number, signal),
+    queryKey: keys.teamLineup(eventId ?? 0),
+    queryFn: ({ signal }) => api.fetchTeamLineup(eventId as number, signal),
     enabled: eventId != null,
-    staleTime: 0, // always fresh on open — a lock made on the other platform must show up
+    staleTime: 0,
+    retry: false, // a failure shows an error; nothing is balanced on the phone
   });
 }
 
-export function useLockTeamGeneratorState(eventId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (state: TeamGeneratorSnapshot) => api.lockTeamGeneratorState(eventId, state),
-    onSuccess: (data) => qc.setQueryData(keys.teamGeneratorState(eventId), data),
-  });
-}
-
-export function useUnlockTeamGeneratorState(eventId: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.unlockTeamGeneratorState(eventId),
-    onSuccess: () =>
-      // Merge, don't replace: published_at reflects publish state, which is
-      // independent of the lock draft and untouched by unlocking it — see
-      // TeamGeneratorState.published_at.
-      qc.setQueryData(
-        keys.teamGeneratorState(eventId),
-        (prev: TeamGeneratorState | undefined) => ({
-          ...(prev ?? { published_at: null }),
-          locked: false,
-          state: {},
-          locked_by: "",
-          locked_at: null,
-          updated_at: null,
-        }),
-      ),
+/** The 5 s "has anything changed?" poll while the generator is on screen.
+ *  React Query pauses the interval while the app is in the background (the
+ *  AppState focusManager in app/_layout.tsx); `enabled` follows screen focus. */
+export function useTeamLineupVersion(eventId: number | null, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.teamLineupVersion(eventId ?? 0),
+    queryFn: ({ signal }) => api.fetchTeamLineupVersion(eventId as number, signal),
+    enabled: enabled && eventId != null,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    staleTime: 0,
+    retry: false,
   });
 }
 
@@ -637,11 +596,9 @@ export function useResetJerseys(eventId: number) {
     mutationFn: () => api.resetJerseys(eventId),
     onSuccess: () => {
       // So the button hides immediately rather than waiting for the next
-      // generator-state refetch.
-      qc.setQueryData(
-        keys.teamGeneratorState(eventId),
-        (prev: TeamGeneratorState | undefined) =>
-          prev ? { ...prev, published_at: null } : prev,
+      // lineup refetch.
+      qc.setQueryData(keys.teamLineup(eventId), (prev: TeamLineup | undefined) =>
+        prev ? { ...prev, published_at: null } : prev,
       );
       qc.invalidateQueries({ queryKey: keys.event(eventId) }); // team_assignment
       qc.invalidateQueries({ queryKey: keys.home });

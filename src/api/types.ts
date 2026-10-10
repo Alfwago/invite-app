@@ -197,7 +197,13 @@ export interface RosterEntry {
   is_goalie: boolean;
   is_director: boolean; // night's primary director
   is_assistant_director?: boolean; // night's assistant director
+  /** The AD standing in for an ND who isn't on the roster ("Acting ND"),
+   *  exempt like the ND. Server 0.34+; missing on older servers. */
+  is_acting_director?: boolean;
   pays: boolean; // false = goalie / director / beer-or-whiskey guy who's exempt
+  /** Director's per-event pay override: "" (usual rule), "comp" or "charge".
+   *  Server 0.34+ (missing before — then the control is hidden). */
+  pay_override?: PayOverride;
   guest_count: number;
   guest_names: string[];
   guests: RosterGuest[]; // director view only; [] otherwise
@@ -214,11 +220,15 @@ export interface RosterEntry {
   borrowed_from_name?: string;
 }
 
+export type PayOverride = "" | "comp" | "charge";
+
 export interface DayPlayer {
   id: number;
   name: string;
   is_goalie: boolean;
   pays: boolean;
+  /** See RosterEntry.pay_override. */
+  pay_override?: PayOverride;
   present: boolean;
   paid: boolean;
   /** One score, interpreted by is_goalie: 0-3 goalie, 0-5 skater. Feeds
@@ -384,6 +394,8 @@ export type RosterAction =
   | { action: "reorder_waitlist"; waitlist_id: number; direction: "up" | "down" }
   | { action: "set_present"; present: boolean; player_id?: number; day_player_id?: number }
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
+  /** Director's per-event "Comp" control (server 0.34+). */
+  | { action: "set_pay_override"; pay_override: PayOverride; player_id?: number; day_player_id?: number }
   | {
       action: "add_day_player";
       name: string;
@@ -696,18 +708,6 @@ export interface TeamEvent {
   status: string;
 }
 
-export interface TeamRosterPlayer {
-  id: number | string;
-  name: string;
-  is_goalie: boolean;
-  present: boolean;
-  rating_hockey_sense: number;
-  rating_skating: number;
-  rating_defense: number;
-  rating_offense: number;
-  rating_goalie: number;
-}
-
 export interface TeamHistoryPlayer {
   id: number | string | null;
   name: string;
@@ -737,56 +737,78 @@ export interface TeamHistoryEntry {
   published_at: string | null; // set on the split that's currently live to players
 }
 
-/** POST /api/teams/events/<id>/publish/ — publish a split to the players.
- *  Send an existing saved split by id, a fresh split (same shape as a history
- *  save), or {} to publish the newest saved split. */
-export type PublishTeamsBody =
-  | { history_id: number }
-  | SaveTeamsBody
-  | Record<string, never>;
-
-export interface PublishTeamsResult extends TeamHistoryEntry {
-  published_at: string;
-  recipients: number; // players in the split
-  notified: number; // players actually notified (first push: all; re-push: only movers)
-}
-
-export interface SaveTeamsBody {
-  goldPlayers: TeamHistoryPlayer[];
-  blackPlayers: TeamHistoryPlayer[];
-  goldGoalie: TeamHistoryGoalie | Record<string, never>;
-  blackGoalie: TeamHistoryGoalie | Record<string, never>;
-  note?: string;
-}
-
-/** Opaque snapshot shared with the website's Team Generator — see
- *  TeamGeneratorState / obh_event_generator_state_api on the server. Neither
- *  client validates the other's write; it's read back verbatim. */
-export interface TeamGeneratorSnapshot {
-  assignment: Record<string, "Gold" | "Black">;
-  pairs: [string, string][];
-  splits: [string, string][];
-  presentOnly: boolean;
-  /** {id: name} captured whenever an id last resolved against the live
-   *  roster — a display fallback for when an id no longer resolves (e.g. a
-   *  walk-on edited via delete+re-add mints a new id), so a pair/split chip
-   *  shows the player's last-known name instead of "(removed)". Optional:
-   *  older snapshots predate this field. */
-  pairNames?: Record<string, string>;
-}
-
-/** GET/POST/DELETE /api/teams/events/<id>/generator-state/ — the director's
- *  "Lock Teams" draft. Locking on web is visible on the app and vice versa. */
-export interface TeamGeneratorState {
+/** One row of the shared lineup (server 0.34+, GET /api/teams/events/<id>/lineup/). */
+export interface TeamLineupPlayer {
+  /** "123" (profile id), "guest_<inv>_<n>" or "day_<id>" — always a string. */
+  id: string;
+  name: string;
+  is_goalie: boolean;
+  present: boolean;
+  ppv: number;
+  goalie_rating: number;
+  /** What they balance at: goalie rating in a goalie slot, skater PPV otherwise. */
+  rating: number;
+  team: "Gold" | "Black" | null;
+  /** In a goalie slot (then `team` is null). */
+  slot: "Gold" | "Black" | null;
   locked: boolean;
-  state: TeamGeneratorSnapshot | Record<string, never>;
+  /** RSVP'd after the teams were made — the server added them to the smaller team. */
+  is_new: boolean;
+}
+
+export interface TeamLineupGoalie {
+  id: string;
+  name: string;
+  rating: number;
+}
+
+/** The event's one lineup, shared by the website and the app (server 0.34+).
+ *  Every edit sends `version`; a stale one gets 409 + the current lineup. */
+export interface TeamLineup {
+  event_id: number;
+  version: number;
+  updated_by: string;
+  updated_at: string | null;
+  balanced: boolean;
+  locked: boolean;
   locked_by: string;
   locked_at: string | null;
-  updated_at: string | null;
-  /** Independent of `locked` — reflects publish state (the player-facing
-   *  "you're on Gold/Black" card), not the Lock Teams draft. Drives whether
-   *  to show "Reset jerseys" at all. */
   published_at: string | null;
+  present_only: boolean;
+  roster_count: number;
+  present_count: number;
+  /** Roster order. */
+  players: TeamLineupPlayer[];
+  gold: string[];
+  black: string[];
+  gold_goalie: TeamLineupGoalie | null;
+  black_goalie: TeamLineupGoalie | null;
+  gold_total: number;
+  black_total: number;
+  pairs: [string, string][];
+  splits: [string, string][];
+  pair_names: Record<string, string>;
+}
+
+export interface TeamLineupVersion {
+  version: number;
+  updated_by: string;
+  updated_at: string | null;
+}
+
+/** POST /api/teams/events/<id>/lineup/ — one edit (plus `version`). */
+export type TeamLineupAction =
+  | { action: "balance" | "refresh" | "clear_locks" | "clear_pairs_splits" }
+  | { action: "swap_teams" | "swap_goalies" | "lock_teams" | "unlock_teams" }
+  | { action: "move"; player: string; team?: "Gold" | "Black" }
+  | { action: "set_lock"; player: string; locked: boolean }
+  | { action: "pair_add" | "pair_remove" | "split_add" | "split_remove"; a: string; b: string }
+  | { action: "present_only"; on: boolean };
+
+export interface TeamLineupPublishResult extends TeamHistoryEntry {
+  recipients: number;
+  notified: number;
+  lineup: TeamLineup;
 }
 
 // ---- Player approval queue (director) ------------------------------

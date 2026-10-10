@@ -37,14 +37,12 @@ import type {
   Poll,
   PlayerDetail,
   PlayersResponse,
-  PublishTeamsBody,
-  PublishTeamsResult,
-  SaveTeamsBody,
   TeamEvent,
-  TeamGeneratorSnapshot,
-  TeamGeneratorState,
   TeamHistoryEntry,
-  TeamRosterPlayer,
+  TeamLineup,
+  TeamLineupAction,
+  TeamLineupPublishResult,
+  TeamLineupVersion,
   ProfilePatch,
   RatingPatch,
   RosterAction,
@@ -577,26 +575,6 @@ export async function fetchTeamEvents(signal?: AbortSignal): Promise<TeamEvent[]
   return data.events;
 }
 
-export async function fetchTeamRoster(
-  eventId: number,
-  signal?: AbortSignal,
-): Promise<TeamRosterPlayer[]> {
-  const data = await apiFetch<{ players: TeamRosterPlayer[] }>(
-    `/api/teams/events/${eventId}/players/`,
-    { signal },
-  );
-  return data.players;
-}
-
-export async function fetchTeamAllPlayers(
-  night?: number | null,
-  signal?: AbortSignal,
-): Promise<TeamRosterPlayer[]> {
-  const qs = night != null ? `?night=${night}` : "";
-  const data = await apiFetch<{ players: TeamRosterPlayer[] }>(`/api/teams/players/${qs}`, { signal });
-  return data.players;
-}
-
 export async function fetchTeamHistory(
   eventId: number,
   signal?: AbortSignal,
@@ -608,51 +586,54 @@ export async function fetchTeamHistory(
   return data.history;
 }
 
-export function saveTeamHistory(
-  eventId: number,
-  body: SaveTeamsBody,
-): Promise<TeamHistoryEntry> {
-  return apiFetch(`/api/teams/events/${eventId}/history/`, { method: "POST", body });
-}
-
 export function deleteTeamHistory(historyId: number): Promise<void> {
   return apiFetch(`/api/teams/history/${historyId}/`, { method: "DELETE" });
 }
 
-/** Publish a split to the players — they get a push + a home-screen card. */
-export function publishTeams(
-  eventId: number,
-  body: PublishTeamsBody,
-): Promise<PublishTeamsResult> {
-  return apiFetch(`/api/teams/events/${eventId}/publish/`, { method: "POST", body });
+// ---- Shared lineup (server 0.34+) — the same teams the website shows ----
+
+export function fetchTeamLineup(eventId: number, signal?: AbortSignal): Promise<TeamLineup> {
+  return apiFetch(`/api/teams/events/${eventId}/lineup/`, { signal });
 }
 
-/** The director's "Lock Teams" draft for one event — shared with the
- *  website, so locking here shows up there and vice versa. */
-export function fetchTeamGeneratorState(
-  eventId: number,
-  signal?: AbortSignal,
-): Promise<TeamGeneratorState> {
-  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, { signal });
+export function fetchTeamLineupVersion(eventId: number, signal?: AbortSignal): Promise<TeamLineupVersion> {
+  return apiFetch(`/api/teams/events/${eventId}/lineup/version/`, { signal });
 }
 
-export function lockTeamGeneratorState(
+/** One edit, checked against `version` — 409 (ApiError, payload.lineup =
+ *  the current lineup) when the teams changed elsewhere first. */
+export function postTeamLineupAction(
   eventId: number,
-  state: TeamGeneratorSnapshot,
-): Promise<TeamGeneratorState> {
-  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, {
+  version: number,
+  action: TeamLineupAction,
+): Promise<TeamLineup> {
+  return apiFetch(`/api/teams/events/${eventId}/lineup/`, {
     method: "POST",
-    body: { state },
+    body: { ...action, version },
   });
 }
 
-export function unlockTeamGeneratorState(eventId: number): Promise<void> {
-  return apiFetch(`/api/teams/events/${eventId}/generator-state/`, { method: "DELETE" });
+export function saveTeamLineup(eventId: number, version: number, note?: string): Promise<TeamHistoryEntry> {
+  return apiFetch(`/api/teams/events/${eventId}/lineup/save/`, {
+    method: "POST",
+    body: { version, note: note ?? "" },
+  });
+}
+
+export function publishTeamLineup(
+  eventId: number,
+  version: number,
+  note?: string,
+): Promise<TeamLineupPublishResult> {
+  return apiFetch(`/api/teams/events/${eventId}/lineup/publish/`, {
+    method: "POST",
+    body: { version, note: note ?? "" },
+  });
 }
 
 /** "Reset jerseys" — un-publish the event's team split so the player-facing
- *  "you're on Gold/Black" card disappears. Distinct from unlockTeamGeneratorState:
- *  this never touches the Lock Teams draft, only what players currently see. */
+ *  "you're on Gold/Black" card disappears. Never touches the
+ *  lineup, only what players currently see. */
 export function resetJerseys(eventId: number): Promise<{ cleared: boolean }> {
   return apiFetch(`/api/teams/events/${eventId}/reset-jerseys/`, { method: "POST" });
 }

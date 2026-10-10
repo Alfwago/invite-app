@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -8,18 +8,20 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { API_BASE, ApiError } from "@/src/api/client";
+import * as api from "@/src/api/endpoints";
 import type {
-  SaveTeamsBody,
   TeamEvent,
-  TeamGeneratorSnapshot,
-  TeamGeneratorState,
-  TeamRosterPlayer,
+  TeamLineup,
+  TeamLineupAction,
+  TeamLineupGoalie,
+  TeamLineupPlayer,
 } from "@/src/api/types";
 import { Dropdown } from "@/src/components/Dropdown";
 import { useToast } from "@/src/components/Toast";
@@ -27,73 +29,78 @@ import { Button, Card, ErrorState, Loading, Tap } from "@/src/components/ui";
 import { tapHaptic } from "@/src/haptics";
 import { useBusy } from "@/src/hooks/useBusy";
 import {
-  useLockTeamGeneratorState,
-  usePublishTeams,
+  keys,
   useResetJerseys,
-  useSaveTeamHistory,
   useTeamEvents,
-  useTeamGeneratorState,
-  useTeamRoster,
-  useUnlockTeamGeneratorState,
+  useTeamLineup,
+  useTeamLineupVersion,
 } from "@/src/hooks/queries";
 import {
-  autoBalance,
-  normalizeGoalie,
-  ppv,
-  type BalanceResult,
-  type TGPlayer,
-} from "@/src/teams/balance";
-import { balanceMessage, movedIds } from "@/src/teams/moves";
+  CONFLICT_TEXT,
+  OFFLINE_TEXT,
+  conflictLineup,
+  hasEdge,
+  lineupMoves,
+  nameOf,
+  optimisticMove,
+  partnersOf,
+  syncNote,
+  teamRows,
+  type Team,
+} from "@/src/teams/lineup";
+import { balanceMessage } from "@/src/teams/moves";
 import { colors, font, radius, spacing } from "@/src/theme";
 
-type Team = "Gold" | "Black";
-const K = (id: TeamRosterPlayer["id"]) => String(id);
+// The Team Generator shows the event's ONE lineup, which lives on the server
+// (0.34+) and is the same one the website shows: every edit is sent there
+// with the version this screen last saw, and while the screen is focused
+// and the app is in the foreground it polls the version every 5 s, so a
+// change made on the website (or another phone, or a new RSVP) shows up
+// here with an "Updated by …" toast. A stale edit comes back 409 with the
+// current teams ("Teams changed on another device — reloaded."). Nothing is
+// balanced on the phone: if the server can't be reached, the screen says so.
 
-function ratingOf(p: TeamRosterPlayer) {
-  return p.is_goalie
-    ? normalizeGoalie(p.rating_goalie)
-    : ppv({
-        hockey_sense: p.rating_hockey_sense,
-        skating: p.rating_skating,
-        defense: p.rating_defense,
-        offense: p.rating_offense,
-        goalie: p.rating_goalie,
-      });
-}
+type Opts = {
+  /** Toast after success; gets the lineup before and after. */
+  message?: string | ((before: TeamLineup, after: TeamLineup) => string);
+  /** Show this lineup right away (a hand move), roll back on failure. */
+  optimistic?: TeamLineup;
+  /** Rows to flash instead of the computed moves. */
+  flashIds?: string[];
+};
 
 export default function TeamGeneratorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ event?: string }>();
+  const qc = useQueryClient();
   const events = useTeamEvents();
   const [eventId, setEventId] = useState<number | null>(
     params.event ? Number(params.event) : null,
   );
-  const roster = useTeamRoster(eventId);
-  const save = useSaveTeamHistory(eventId ?? 0);
-  const publish = usePublishTeams(eventId ?? 0);
-  const generatorState = useTeamGeneratorState(eventId);
-  const lockMutation = useLockTeamGeneratorState(eventId ?? 0);
-  const unlockMutation = useUnlockTeamGeneratorState(eventId ?? 0);
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const lineupQ = useTeamLineup(eventId);
+  const lineup = lineupQ.data ?? null;
+  const versionQ = useTeamLineupVersion(eventId, focused && !!lineup);
   const resetJerseysMutation = useResetJerseys(eventId ?? 0);
-  const isLocked = !!generatorState.data?.locked;
-
-  const [presentOnly, setPresentOnly] = useState(false);
-  const [locks, setLocks] = useState<Record<string, Team>>({});
-  const [pairs, setPairs] = useState<[string, string][]>([]);
-  const [splits, setSplits] = useState<[string, string][]>([]);
-  const [assignment, setAssignment] = useState<Record<string, Team>>({});
-  const [goldGoalie, setGoldGoalie] = useState<BalanceResult["goldGoalie"]>(null);
-  const [blackGoalie, setBlackGoalie] = useState<BalanceResult["blackGoalie"]>(null);
   const [note, setNote] = useState("");
   const [pick, setPick] = useState<null | { mode: "pair" | "split"; first: string | null }>(null);
   const toast = useToast();
   const busy = useBusy();
+  // Edits in flight: a poll result is ignored meanwhile (the edit's own
+  // response is newer).
+  const pending = useRef(0);
 
-  // Rows that just changed team (Auto-balance, or a tap-to-move) get a brief
-  // gold highlight so the change is visible, then fade back after ~1s.
+  // Rows that just changed team get a brief gold highlight (~1 s).
   const [flash, setFlash] = useState<Set<string>>(() => new Set());
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashRows = useCallback((ids: string[]) => {
+    if (!ids.length) return;
     if (flashTimer.current) clearTimeout(flashTimer.current);
     setFlash(new Set(ids));
     flashTimer.current = setTimeout(() => setFlash(new Set()), 1000);
@@ -102,394 +109,95 @@ export default function TeamGeneratorScreen() {
     if (flashTimer.current) clearTimeout(flashTimer.current);
   }, []);
 
-  // {id: name} — see TeamGeneratorSnapshot.pairNames. A ref, not state: it's
-  // a display fallback only, never read to decide what to render on its own
-  // (nameOf reads it inline), so mutating it shouldn't itself trigger a
-  // re-render.
-  const pairNameCache = useRef<Record<string, string>>({});
-
-  // Lock Teams — see TeamGeneratorState on the server. Restoring a locked
-  // draft happens once per event, as soon as both the roster and the lock
-  // state have loaded; a roster refetch afterwards must not clobber further
-  // edits, hence the ref guard instead of an effect dependency on the data.
-  const restoredForEvent = useRef<number | null>(null);
-  const lastSavedSnapshotJson = useRef<string | null>(null);
-
-  // Shared by the initial-load effect below and the explicit Refresh button
-  // (onRefresh) — pulling the server's locked draft onto the screen. Takes
-  // the generator-state/roster data as arguments rather than reading the
-  // reactive query objects, so a manual refresh can apply the just-fetched
-  // result immediately instead of waiting a render for `.data` to update
-  // (which risks the effect re-firing on stale cached data first — see
-  // onRefresh).
-  const applyLockedState = useCallback(
-    (data: TeamGeneratorState, rosterData: TeamRosterPlayer[]) => {
-      const snap = (data.state || {}) as TeamGeneratorSnapshot;
-      const restoredAssignment = (snap.assignment ?? {}) as Record<string, Team>;
-      // A draft locked on the website stores numeric ids; the app keys
-      // everything by K(id). Normalize at load so pair/split chips, the
-      // already-paired check and nameOf all match.
-      const restoredPairs = toEdges(snap.pairs);
-      const restoredSplits = toEdges(snap.splits);
-      const restoredPresentOnly = !!snap.presentOnly;
-      Object.assign(pairNameCache.current, snap.pairNames || {});
-
-      setLocks(restoredAssignment);
-      setPairs(restoredPairs);
-      setSplits(restoredSplits);
-      setPresentOnly(restoredPresentOnly);
-
-      // Re-run the balancer directly (not runBalance(), whose memoized inputs
-      // haven't picked up the state just set above yet) so gold/black/goalies
-      // come out exactly as they were when locked.
-      const tgPlayers: TGPlayer[] = rosterData.map((r) => ({
-        id: r.id,
-        name: r.name,
-        is_goalie: r.is_goalie,
-        present: r.present,
-        ratings: {
-          hockey_sense: r.rating_hockey_sense,
-          skating: r.rating_skating,
-          defense: r.rating_defense,
-          offense: r.rating_offense,
-          goalie: r.rating_goalie,
-        },
-        locked: restoredAssignment[K(r.id)] ?? null,
-      }));
-      const result = autoBalance({
-        players: tgPlayers,
-        pairs: restoredPairs,
-        splits: restoredSplits,
-        presentOnly: restoredPresentOnly,
-        shuffle: true,
-      });
-      const nextAssignment: Record<string, Team> = {};
-      result.gold.forEach((p) => (nextAssignment[K(p.id)] = "Gold"));
-      result.black.forEach((p) => (nextAssignment[K(p.id)] = "Black"));
-      setAssignment(nextAssignment);
-      setGoldGoalie(result.goldGoalie);
-      setBlackGoalie(result.blackGoalie);
-      lastSavedSnapshotJson.current = JSON.stringify({
-        assignment: nextAssignment,
-        pairs: restoredPairs,
-        splits: restoredSplits,
-        presentOnly: restoredPresentOnly,
-        pairNames: snap.pairNames || {},
-      });
+  const setLineup = useCallback(
+    (next: TeamLineup) => {
+      if (eventId != null) qc.setQueryData(keys.teamLineup(eventId), next);
     },
-    [],
+    [qc, eventId],
   );
 
+  // Someone else changed the teams (the website, another phone, a new RSVP):
+  // reload and say who.
+  const polledVersion = versionQ.data?.version;
   useEffect(() => {
-    if (eventId == null) return;
-    if (restoredForEvent.current === eventId) return;
-    if (!generatorState.data || !roster.data) return;
-    restoredForEvent.current = eventId;
-    if (!generatorState.data.locked) return;
-    applyLockedState(generatorState.data, roster.data);
-  }, [eventId, generatorState.data, roster.data, applyLockedState]);
-
-  // Explicit "Refresh" — unlike the roster-only refetch this used to be, a
-  // director expects this to also pick up a lock/publish made elsewhere
-  // (the website, or another device) since this screen was opened. Awaits
-  // the refetch results directly rather than resetting restoredForEvent and
-  // letting the effect above re-fire: React Query keeps the previous
-  // `.data` around while a refetch is in flight, so clearing the guard
-  // first would risk the effect reapplying stale cached data a render
-  // before the fresh result lands. If the server reports unlocked, local
-  // (possibly unsaved) edits are left alone — only a locked/published
-  // server state overwrites the screen, same as the initial-load behavior.
-  async function onRefresh() {
-    await busy.run("refresh", async () => {
-      const [rosterResult, genResult] = await Promise.all([
-        roster.refetch(),
-        generatorState.refetch(),
-      ]);
-      if (rosterResult.isError || genResult.isError) {
-        toast.show("Couldn't refresh — try again", "error");
-        return;
-      }
-      if (genResult.data?.locked && rosterResult.data) {
-        applyLockedState(genResult.data, rosterResult.data);
-        toast.show("Refreshed: locked teams loaded");
-      } else {
-        toast.show(`Refreshed: ${rosterResult.data?.length ?? 0} on roster`);
-      }
+    if (polledVersion == null || !lineup || polledVersion === lineup.version || pending.current) return;
+    const before = lineup;
+    lineupQ.refetch().then((r) => {
+      if (!r.data || r.data.version === before.version || pending.current) return;
+      flashRows(lineupMoves(before, r.data));
+      toast.show(syncNote(r.data), "info");
     });
-  }
-
-  // Once locked, every further edit (move, pair/split, swap, re-balance)
-  // re-saves so nothing done after the initial lock is lost either.
-  useEffect(() => {
-    if (!isLocked || eventId == null) return;
-    if (restoredForEvent.current !== eventId) return;
-    const snap: TeamGeneratorSnapshot = {
-      assignment,
-      pairs,
-      splits,
-      presentOnly,
-      pairNames: { ...pairNameCache.current },
-    };
-    const json = JSON.stringify(snap);
-    if (json === lastSavedSnapshotJson.current) return;
-    lastSavedSnapshotJson.current = json;
-    lockMutation.mutate(snap);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLocked, eventId, assignment, pairs, splits, presentOnly]);
+  }, [polledVersion]);
 
-  const players = roster.data ?? [];
-  const balanced = Object.keys(assignment).length > 0;
-
-  const tgPlayers = useCallback(
-    (): TGPlayer[] =>
-      players.map((r) => ({
-        id: r.id,
-        name: r.name,
-        is_goalie: r.is_goalie,
-        present: r.present,
-        ratings: {
-          hockey_sense: r.rating_hockey_sense,
-          skating: r.rating_skating,
-          defense: r.rating_defense,
-          offense: r.rating_offense,
-          goalie: r.rating_goalie,
-        },
-        locked: locks[K(r.id)] ?? null,
-      })),
-    [players, locks],
-  );
-
-  const runBalance = useCallback(
-    (present = presentOnly) => {
-      const result = autoBalance({
-        players: tgPlayers(),
-        pairs,
-        splits,
-        presentOnly: present,
-        shuffle: true,
-      });
-      const next: Record<string, Team> = {};
-      result.gold.forEach((p) => (next[K(p.id)] = "Gold"));
-      result.black.forEach((p) => (next[K(p.id)] = "Black"));
-      setAssignment(next);
-      setGoldGoalie(result.goldGoalie);
-      setBlackGoalie(result.blackGoalie);
-      return next;
-    },
-    [tgPlayers, pairs, splits, presentOnly],
-  );
-
-  // Auto-balance (and Present only, which re-balances): say what happened
-  // and highlight who moved — otherwise a re-balance that shuffles two
-  // players looks like nothing happened.
-  function rebalanceWithToast(present = presentOnly, prefix?: string) {
-    const prev = assignment;
-    const hadTeams = Object.keys(prev).length > 0;
-    const next = runBalance(present);
-    const moved = movedIds(prev, next);
-    flashRows(moved);
-    const msg = balanceMessage(hadTeams, moved.length);
-    toast.show(prefix ? `${prefix} · ${msg}` : msg);
-  }
-
-  const keeperIds = useMemo(
-    () =>
-      new Set(
-        [goldGoalie?.playerId, blackGoalie?.playerId]
-          .filter((x) => x != null)
-          .map((x) => K(x as TeamRosterPlayer["id"])),
-      ),
-    [goldGoalie, blackGoalie],
-  );
-
-  const pool = (presentOnly ? players.filter((p) => p.present) : players).filter(
-    (p) => !keeperIds.has(K(p.id)),
-  );
-  const gold = pool.filter((p) => assignment[K(p.id)] === "Gold");
-  const black = pool.filter((p) => assignment[K(p.id)] === "Black");
-
-  const teamRating = (arr: TeamRosterPlayer[], goalie: BalanceResult["goldGoalie"]) =>
-    arr.reduce((a, p) => a + ratingOf(p), 0) + Number(goalie?.weight || 0);
-
-  function move(id: TeamRosterPlayer["id"]) {
-    const k = K(id);
-    const to: Team = assignment[k] === "Gold" ? "Black" : "Gold";
-    setAssignment((a) => ({ ...a, [k]: to }));
-    setLocks((l) => (l[k] ? { ...l, [k]: to } : l));
-    flashRows([k]);
-  }
-
-  function toggleLock(id: TeamRosterPlayer["id"]) {
-    const k = K(id);
-    const wasLocked = !!locks[k];
-    const team = assignment[k] ?? "Gold";
-    setLocks((l) => {
-      const c = { ...l };
-      if (c[k]) delete c[k];
-      else c[k] = team;
-      return c;
-    });
-    toast.show(wasLocked ? `Unlocked ${nameOf(k)}` : `Locked ${nameOf(k)} to ${team}`, "info");
-  }
-
-  function clearLocks() {
-    setLocks({});
-  }
-
-  function onClearLocks() {
-    const n = Object.keys(locks).length;
-    clearLocks();
-    toast.show(n ? `Cleared ${n} lock${n === 1 ? "" : "s"}` : "No locks to clear", n ? "success" : "info");
-  }
-
-  function onSwapTeams() {
-    swapTeams();
-    toast.show("Teams swapped");
-  }
-
-  function onSwapGoalies() {
-    if (!goldGoalie && !blackGoalie) return toast.show("No goalies to swap", "info");
-    swapGoalies();
-    toast.show("Goalies swapped");
-  }
-
-  function swapTeams() {
-    setAssignment((a) => {
-      const f: Record<string, Team> = {};
-      for (const k of Object.keys(a)) f[k] = a[k] === "Gold" ? "Black" : "Gold";
-      return f;
-    });
-    setLocks((l) => {
-      const f: Record<string, Team> = {};
-      for (const k of Object.keys(l)) f[k] = l[k] === "Gold" ? "Black" : "Gold";
-      return f;
-    });
-    swapGoalies();
-  }
-
-  function swapGoalies() {
-    setGoldGoalie(blackGoalie);
-    setBlackGoalie(goldGoalie);
-  }
-
-  const partnersFor = (k: string, list: [string, string][]) =>
-    list.filter((e) => e[0] === k || e[1] === k).map((e) => (e[0] === k ? e[1] : e[0]));
-
-  function onPickPlayer(id: TeamRosterPlayer["id"]) {
-    if (!pick) return;
-    const k = K(id);
-    if (!pick.first) return setPick({ ...pick, first: k });
-    if (pick.first === k) return setPick(null);
-    const edge: [string, string] = [pick.first, k];
-    const has = (l: [string, string][]) => l.some((e) => sameEdge(e, edge));
-    if (pick.mode === "pair") {
-      if (has(splits)) {
-        Alert.alert(
-          "Already split",
-          "These two are set to keep apart — remove that split first.",
-        );
-        return setPick(null);
-      }
-      if (!has(pairs)) {
-        setPairs((p) => [...p, edge]);
-        toast.show(`Paired ${nameOf(edge[0])} + ${nameOf(edge[1])} · Auto-balance to apply`);
-      } else toast.show("Already paired", "info");
-    } else {
-      if (has(pairs)) {
-        Alert.alert(
-          "Already paired",
-          "These two are set to keep together — remove that pairing first.",
-        );
-        return setPick(null);
-      }
-      if (!has(splits)) {
-        setSplits((s) => [...s, edge]);
-        toast.show(`Split ${nameOf(edge[0])} / ${nameOf(edge[1])} · Auto-balance to apply`);
-      } else toast.show("Already split", "info");
-    }
-    setPick(null);
-  }
-
-  const nameOf = (k: string) => {
-    const p = players.find((pl) => K(pl.id) === k);
-    if (p) {
-      pairNameCache.current[k] = p.name;
-      return p.name;
-    }
-    return pairNameCache.current[k] ?? "(removed)";
-  };
-
-  const splitBody = (): SaveTeamsBody => ({
-    goldPlayers: gold.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
-    blackPlayers: black.map((p) => ({ id: p.id, name: p.name, ppv: ratingOf(p), is_goalie: p.is_goalie })),
-    goldGoalie: goldGoalie
-      ? { id: goldGoalie.playerId, name: goldGoalie.name, weight: goldGoalie.weight }
-      : {},
-    blackGoalie: blackGoalie
-      ? { id: blackGoalie.playerId, name: blackGoalie.name, weight: blackGoalie.weight }
-      : {},
-    note: note.trim() || undefined,
-  });
-
-  async function onSave() {
-    if (!eventId) return;
-    await busy.run("save", async () => {
-      try {
-        await save.mutateAsync(splitBody());
-        setNote("");
-        toast.show("Saved to history");
-      } catch (e) {
-        Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : "Try again.");
-      }
-    });
-  }
-
-  async function onLock() {
-    if (!eventId || !balanced) return;
-    // Pin every currently-placed player — the same manual 🔒 already
-    // available per-player, applied to everyone at once.
-    setLocks(assignment);
-    const snap: TeamGeneratorSnapshot = {
-      assignment,
-      pairs,
-      splits,
-      presentOnly,
-      pairNames: { ...pairNameCache.current },
-    };
-    await busy.run("lock", async () => {
-      try {
-        await lockMutation.mutateAsync(snap);
-        lastSavedSnapshotJson.current = JSON.stringify(snap);
-        toast.show("Teams locked");
-      } catch (e) {
-        Alert.alert("Couldn't lock teams", e instanceof ApiError ? e.detail : "Try again.");
-      }
-    });
-  }
-
-  async function syncLockStateAfterPublish() {
+  async function act(action: TeamLineupAction, opts: Opts = {}) {
+    if (eventId == null || !lineup) return;
+    const before = lineup;
+    if (opts.optimistic) setLineup(opts.optimistic);
+    pending.current += 1;
     try {
-      const result = await generatorState.refetch();
-      const data = result.data;
-      if (data?.locked) {
-        const snap = (data.state || {}) as TeamGeneratorSnapshot;
-        setLocks((snap.assignment ?? {}) as Record<string, Team>);
-        Object.assign(pairNameCache.current, snap.pairNames || {});
+      const next = await api.postTeamLineupAction(eventId, before.version, action);
+      setLineup(next);
+      flashRows(opts.flashIds ?? lineupMoves(before, next));
+      if (opts.message) {
+        toast.show(typeof opts.message === "function" ? opts.message(before, next) : opts.message);
       }
-      lastSavedSnapshotJson.current = JSON.stringify({
-        assignment,
-        pairs,
-        splits,
-        presentOnly,
-        pairNames: { ...pairNameCache.current },
-      });
-    } catch {
-      // best-effort UI sync only — the server already locked it during publish
+    } catch (e) {
+      const current = conflictLineup(e);
+      if (current) {
+        setLineup(current);
+        toast.show(CONFLICT_TEXT, "info");
+      } else {
+        setLineup(before);
+        if (e instanceof ApiError && e.status === 400) Alert.alert("Not changed", e.detail);
+        else Alert.alert("Teams not changed", `${OFFLINE_TEXT} Check your connection and try again.`);
+      }
+    } finally {
+      pending.current -= 1;
+    }
+  }
+
+  const run = (key: string, action: TeamLineupAction, opts?: Opts) => busy.run(key, () => act(action, opts));
+  const balanced = (before: TeamLineup, after: TeamLineup) =>
+    balanceMessage(true, lineupMoves(before, after).length);
+
+  function onMove(id: string) {
+    if (!lineup) return;
+    const optimistic = optimisticMove(lineup, id);
+    flashRows([id]);
+    void act({ action: "move", player: id }, { optimistic, flashIds: [id] });
+  }
+
+  function onToggleLock(p: TeamLineupPlayer) {
+    void act(
+      { action: "set_lock", player: p.id, locked: !p.locked },
+      { message: p.locked ? `Unlocked ${p.name}` : `Locked ${p.name} to ${p.team}` },
+    );
+  }
+
+  function onPickPlayer(id: string) {
+    if (!pick || !lineup) return;
+    if (!pick.first) return setPick({ ...pick, first: id });
+    if (pick.first === id) return setPick(null);
+    const [a, b] = [pick.first, id];
+    setPick(null);
+    const label = `${nameOf(lineup, a)} ${pick.mode === "pair" ? "+" : "/"} ${nameOf(lineup, b)}`;
+    if (pick.mode === "pair") {
+      if (hasEdge(lineup.splits, a, b)) {
+        return Alert.alert("Already split", "These two are set to keep apart — remove that split first.");
+      }
+      if (hasEdge(lineup.pairs, a, b)) return toast.show("Already paired", "info");
+      void run("pair", { action: "pair_add", a, b }, { message: (x, y) => `Paired ${label} · ${balanced(x, y)}` });
+    } else {
+      if (hasEdge(lineup.pairs, a, b)) {
+        return Alert.alert("Already paired", "These two are set to keep together — remove that pairing first.");
+      }
+      if (hasEdge(lineup.splits, a, b)) return toast.show("Already split", "info");
+      void run("pair", { action: "split_add", a, b }, { message: (x, y) => `Split ${label} · ${balanced(x, y)}` });
     }
   }
 
   function onUnlock() {
-    if (!eventId) return;
     Alert.alert(
       "Unlock teams?",
       "Auto-balance and pair/split changes will be able to move players again.",
@@ -498,25 +206,35 @@ export default function TeamGeneratorScreen() {
         {
           text: "Unlock",
           style: "destructive",
-          onPress: () =>
-            busy.run("lock", async () => {
-              try {
-                await unlockMutation.mutateAsync();
-                clearLocks();
-                lastSavedSnapshotJson.current = null;
-                toast.show("Teams unlocked");
-              } catch (e) {
-                Alert.alert("Couldn't unlock teams", e instanceof ApiError ? e.detail : "Try again.");
-              }
-            }),
+          onPress: () => void run("lock", { action: "unlock_teams" }, { message: "Teams unlocked" }),
         },
       ],
     );
   }
 
+  async function onSave() {
+    if (eventId == null || !lineup) return;
+    await busy.run("save", async () => {
+      try {
+        await api.saveTeamLineup(eventId, lineup.version, note.trim());
+        qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) });
+        setNote("");
+        toast.show("Saved to history");
+      } catch (e) {
+        const current = conflictLineup(e);
+        if (current) {
+          setLineup(current);
+          Alert.alert(CONFLICT_TEXT, "Nothing was saved — check the teams and save again.");
+        } else {
+          Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : `${OFFLINE_TEXT} Try again.`);
+        }
+      }
+    });
+  }
+
   function onPush() {
-    if (!eventId) return;
-    const n = gold.length + black.length;
+    if (eventId == null || !lineup) return;
+    const n = lineup.gold.length + lineup.black.length;
     Alert.alert(
       "Push to players",
       `Push these teams to ${n} player${n === 1 ? "" : "s"}? They'll get a notification and see it on their home screen.`,
@@ -524,34 +242,37 @@ export default function TeamGeneratorScreen() {
         { text: "Cancel", style: "cancel" },
         {
           text: "Push",
-          onPress: async () => {
-            try {
-              const res = await publish.mutateAsync(splitBody());
-              Alert.alert(
-                "Teams pushed",
-                `Notified ${res.notified} of ${res.recipients} players.`,
-              );
-              // The server auto-locks the published split whether or not
-              // the director hit Lock Teams themselves — sync the
-              // button/status to match rather than re-locking (and risking
-              // a misleading error right after a successful push).
-              await syncLockStateAfterPublish();
-            } catch (e) {
-              Alert.alert("Couldn't push", e instanceof ApiError ? e.detail : "Try again.");
-            }
-          },
+          onPress: () =>
+            busy.run("push", async () => {
+              try {
+                const res = await api.publishTeamLineup(eventId, lineup.version, note.trim());
+                setLineup(res.lineup);
+                qc.invalidateQueries({ queryKey: keys.teamHistory(eventId) });
+                qc.invalidateQueries({ queryKey: keys.event(eventId) }); // team_assignment
+                qc.invalidateQueries({ queryKey: keys.home });
+                Alert.alert("Teams pushed", `Notified ${res.notified} of ${res.recipients} players.`);
+              } catch (e) {
+                const current = conflictLineup(e);
+                if (current) {
+                  setLineup(current);
+                  Alert.alert(CONFLICT_TEXT, "Nothing was pushed — check the teams and push again.");
+                } else {
+                  Alert.alert("Couldn't push", e instanceof ApiError ? e.detail : `${OFFLINE_TEXT} Try again.`);
+                }
+              }
+            }),
         },
       ],
     );
   }
 
   function onResetJerseys() {
-    if (!eventId) return;
+    if (eventId == null) return;
     Alert.alert(
       "Reset jerseys?",
       "Players who already saw their Gold/Black assignment will stop seeing it — the card just " +
         "disappears next time they open the app or refresh. No notification is sent. This doesn't " +
-        "touch your locked teams or pairs/splits in the generator; you can push again anytime.",
+        "touch your teams or pairs/splits in the generator; you can push again anytime.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -576,15 +297,16 @@ export default function TeamGeneratorScreen() {
   }
 
   async function onExportPdf() {
+    if (!lineup) return;
     const evt = events.data?.find((e) => e.id === eventId);
     const html = teamsPdfHtml({
       poolName: eventLabel(evt),
       poolDescription: evt?.date ? `Event Date: ${evt.date}` : "",
       nightImageUrl: nightArtUrl(evt),
-      goldNames: gold.map((p) => p.name),
-      blackNames: black.map((p) => p.name),
-      goldGoalie: goldGoalie?.name,
-      blackGoalie: blackGoalie?.name,
+      goldNames: teamRows(lineup, "Gold").map((p) => p.name),
+      blackNames: teamRows(lineup, "Black").map((p) => p.name),
+      goldGoalie: lineup.gold_goalie?.name,
+      blackGoalie: lineup.black_goalie?.name,
     });
     try {
       const { uri } = await Print.printToFileAsync({ html });
@@ -595,6 +317,14 @@ export default function TeamGeneratorScreen() {
       Alert.alert("PDF export failed", "Try again.");
     }
   }
+
+  const lockedCount = lineup ? lineup.players.filter((p) => p.locked).length : 0;
+  const loadError =
+    lineupQ.error instanceof ApiError && lineupQ.error.status === 404
+      ? "This server doesn't have shared teams yet — it needs the 0.34 update. Teams aren't balanced on the phone."
+      : lineupQ.error instanceof ApiError && lineupQ.error.status === 403
+        ? lineupQ.error.detail
+        : "Couldn't load the teams from the server. Check your connection and try again.";
 
   return (
     <>
@@ -608,7 +338,7 @@ export default function TeamGeneratorScreen() {
             onRetry={() => events.refetch()}
           />
         ) : (events.data ?? []).length === 0 ? (
-          <Text style={styles.hint}>No active events.</Text>
+          <Text style={styles.hint}>No active events you can balance.</Text>
         ) : (
           <>
             <View style={styles.pickerWrap}>
@@ -622,12 +352,7 @@ export default function TeamGeneratorScreen() {
                 }))}
                 onChange={(v) => {
                   setEventId(Number(v));
-                  setAssignment({});
-                  setLocks({});
-                  setPairs([]);
-                  setSplits([]);
-                  restoredForEvent.current = null;
-                  lastSavedSnapshotJson.current = null;
+                  setPick(null);
                 }}
               />
               <Button
@@ -645,66 +370,112 @@ export default function TeamGeneratorScreen() {
             </View>
 
             {eventId == null ? (
-              <Text style={styles.hint}>Pick an event to pull its Yes roster.</Text>
-            ) : roster.isLoading ? (
-              <Loading label="Loading roster…" />
-            ) : roster.isError ? (
-              <ErrorState
-                message={roster.error instanceof ApiError ? roster.error.detail : "Couldn't load roster."}
-                onRetry={() => roster.refetch()}
-              />
+              <Text style={styles.hint}>Pick an event to see its teams.</Text>
+            ) : lineupQ.isLoading ? (
+              <Loading label="Loading teams…" />
+            ) : !lineup ? (
+              <ErrorState message={loadError} onRetry={() => lineupQ.refetch()} />
             ) : (
               <>
                 <Text style={styles.count}>
-                  {players.length} on roster · {players.filter((p) => p.present).length} present
+                  {lineup.roster_count} on roster · {lineup.present_count} present
                 </Text>
-                {isLocked ? (
+                {lineup.locked ? (
                   <Text style={styles.lockStatus}>
-                    🔒 Locked
-                    {generatorState.data?.locked_by ? ` by ${generatorState.data.locked_by}` : ""} —
-                    edits are saved automatically.
+                    🔒 Teams locked{lineup.locked_by ? ` by ${lineup.locked_by}` : ""}
                   </Text>
                 ) : null}
+                <Text style={styles.syncNote}>
+                  Shared with the website — changes show on both.
+                </Text>
 
                 {/* Fixed layout: Auto-balance on its own full-width row, then
-                    Present only + Refresh; the buttons that appear after the
-                    first balance (Lock, Swap…, Clear locks) fill whole rows
-                    below, so nothing above them moves — Auto-balance stays
-                    under the finger for a second tap. */}
+                    Present only + Refresh, then Lock / Swap… / Clear locks —
+                    nothing moves under the finger between taps. */}
                 <View style={styles.toolGrid}>
-                  <BarBtn label="Auto-balance" gold grid wide onPress={() => rebalanceWithToast()} />
                   <BarBtn
-                    label={`Present only: ${presentOnly ? "On" : "Off"}`}
-                    active={presentOnly}
+                    label="Auto-balance"
+                    gold
                     grid
-                    onPress={() => {
-                      const next = !presentOnly;
-                      setPresentOnly(next);
-                      if (balanced) rebalanceWithToast(next, `Present only ${next ? "on" : "off"}`);
-                      else toast.show(`Present only ${next ? "on" : "off"}`, "info");
-                    }}
+                    wide
+                    busy={busy.isBusy("balance")}
+                    onPress={() => void run("balance", { action: "balance" }, { message: balanced })}
                   />
-                  <BarBtn label="Refresh" grid busy={busy.isBusy("refresh")} onPress={onRefresh} />
-                  {balanced ? (
-                    <>
-                      <BarBtn
-                        label={isLocked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
-                        active={isLocked}
-                        grid
-                        busy={busy.isBusy("lock")}
-                        onPress={isLocked ? onUnlock : onLock}
-                      />
-                      <BarBtn label="Swap teams" grid onPress={onSwapTeams} />
-                      <BarBtn label="Swap goalies" grid onPress={onSwapGoalies} />
-                      <BarBtn label="Clear locks" grid onPress={onClearLocks} />
-                    </>
-                  ) : null}
+                  <BarBtn
+                    label={`Present only: ${lineup.present_only ? "On" : "Off"}`}
+                    active={lineup.present_only}
+                    grid
+                    busy={busy.isBusy("present")}
+                    onPress={() =>
+                      void run(
+                        "present",
+                        { action: "present_only", on: !lineup.present_only },
+                        { message: (x, y) => `Present only ${y.present_only ? "on" : "off"} · ${balanced(x, y)}` },
+                      )
+                    }
+                  />
+                  <BarBtn
+                    label="Refresh"
+                    grid
+                    busy={busy.isBusy("refresh")}
+                    onPress={() =>
+                      void run(
+                        "refresh",
+                        { action: "refresh" },
+                        {
+                          message: (x, y) =>
+                            y.locked
+                              ? "Refreshed: teams are locked — roster changes added"
+                              : `Refreshed · ${balanced(x, y)}`,
+                        },
+                      )
+                    }
+                  />
+                  <BarBtn
+                    label={lineup.locked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
+                    active={lineup.locked}
+                    grid
+                    busy={busy.isBusy("lock")}
+                    onPress={
+                      lineup.locked
+                        ? onUnlock
+                        : () => void run("lock", { action: "lock_teams" }, { message: "Teams locked" })
+                    }
+                  />
+                  <BarBtn
+                    label="Swap teams"
+                    grid
+                    onPress={() => void act({ action: "swap_teams" }, { message: "Teams swapped" })}
+                  />
+                  <BarBtn
+                    label="Swap goalies"
+                    grid
+                    onPress={() =>
+                      !lineup.gold_goalie && !lineup.black_goalie
+                        ? toast.show("No goalies to swap", "info")
+                        : void act({ action: "swap_goalies" }, { message: "Goalies swapped" })
+                    }
+                  />
+                  <BarBtn
+                    label="Clear locks"
+                    grid
+                    onPress={() =>
+                      void act(
+                        { action: "clear_locks" },
+                        {
+                          message: lockedCount
+                            ? `Cleared ${lockedCount} lock${lockedCount === 1 ? "" : "s"}`
+                            : "No locks to clear",
+                        },
+                      )
+                    }
+                  />
                 </View>
 
                 <Card style={styles.psCard}>
                   <Text style={styles.psTitle}>Pair &amp; Split</Text>
                   <Text style={styles.psHint}>
-                    Tap Pair or Split, then tap the two players. Auto-balance again to apply.
+                    Tap Pair or Split, then tap the two players. The teams re-balance right away.
                   </Text>
                   <View style={styles.bar}>
                     <BarBtn
@@ -717,119 +488,112 @@ export default function TeamGeneratorScreen() {
                       active={pick?.mode === "split"}
                       onPress={() => setPick(pick?.mode === "split" ? null : { mode: "split", first: null })}
                     />
-                    {pairs.length + splits.length > 0 ? (
+                    {lineup.pairs.length + lineup.splits.length > 0 ? (
                       <BarBtn
                         label="Clear pairs/splits"
-                        onPress={() => {
-                          setPairs([]);
-                          setSplits([]);
-                          toast.show("Pairs and splits cleared");
-                        }}
+                        busy={busy.isBusy("pair")}
+                        onPress={() =>
+                          void run(
+                            "pair",
+                            { action: "clear_pairs_splits" },
+                            { message: (x, y) => `Pairs and splits cleared · ${balanced(x, y)}` },
+                          )
+                        }
                       />
                     ) : null}
                   </View>
                   {pick ? (
                     <Text style={styles.psPrompt}>
-                      {pick.first ? `${nameOf(pick.first)} + tap another…` : "Tap the first player…"}
+                      {pick.first ? `${nameOf(lineup, pick.first)} + tap another…` : "Tap the first player…"}
                     </Text>
                   ) : null}
-                  {pairs.map((e, i) => (
+                  {lineup.pairs.map(([a, b]) => (
                     <Chip
-                      key={`p${i}`}
-                      text={`🔗 ${nameOf(e[0])} ↔ ${nameOf(e[1])}`}
-                      onX={() => {
-                        setPairs((p) => p.filter((x) => x !== e));
-                        toast.show(`Pair removed: ${nameOf(e[0])} + ${nameOf(e[1])}`, "info");
-                      }}
+                      key={`p${a}-${b}`}
+                      text={`🔗 ${nameOf(lineup, a)} ↔ ${nameOf(lineup, b)}`}
+                      onX={() =>
+                        void run(
+                          "pair",
+                          { action: "pair_remove", a, b },
+                          { message: (x, y) => `Pair removed · ${balanced(x, y)}` },
+                        )
+                      }
                     />
                   ))}
-                  {splits.map((e, i) => (
+                  {lineup.splits.map(([a, b]) => (
                     <Chip
-                      key={`s${i}`}
-                      text={`✂️ ${nameOf(e[0])} ↔ ${nameOf(e[1])}`}
+                      key={`s${a}-${b}`}
+                      text={`✂️ ${nameOf(lineup, a)} ↔ ${nameOf(lineup, b)}`}
                       tone="split"
-                      onX={() => {
-                        setSplits((s) => s.filter((x) => x !== e));
-                        toast.show(`Split removed: ${nameOf(e[0])} / ${nameOf(e[1])}`, "info");
-                      }}
+                      onX={() =>
+                        void run(
+                          "pair",
+                          { action: "split_remove", a, b },
+                          { message: (x, y) => `Split removed · ${balanced(x, y)}` },
+                        )
+                      }
                     />
                   ))}
                 </Card>
 
-                {balanced ? (
-                  <View style={styles.teams}>
+                <View style={styles.teams}>
+                  {(["Gold", "Black"] as Team[]).map((team) => (
                     <TeamCol
-                      name="Gold"
-                      players={gold}
-                      goalie={goldGoalie}
-                      total={teamRating(gold, goldGoalie)}
-                      locks={locks}
+                      key={team}
+                      name={team}
+                      players={teamRows(lineup, team)}
+                      goalie={team === "Gold" ? lineup.gold_goalie : lineup.black_goalie}
+                      total={team === "Gold" ? lineup.gold_total : lineup.black_total}
                       pick={pick}
                       flash={flash}
-                      pairPartners={(k) => partnersFor(k, pairs)}
-                      splitPartners={(k) => partnersFor(k, splits)}
-                      onMove={move}
-                      onLock={toggleLock}
+                      pairPartners={(k) => partnersOf(lineup.pairs, k)}
+                      splitPartners={(k) => partnersOf(lineup.splits, k)}
+                      onMove={onMove}
+                      onLock={onToggleLock}
                       onPick={onPickPlayer}
                     />
-                    <TeamCol
-                      name="Black"
-                      players={black}
-                      goalie={blackGoalie}
-                      total={teamRating(black, blackGoalie)}
-                      locks={locks}
-                      pick={pick}
-                      flash={flash}
-                      pairPartners={(k) => partnersFor(k, pairs)}
-                      splitPartners={(k) => partnersFor(k, splits)}
-                      onMove={move}
-                      onLock={toggleLock}
-                      onPick={onPickPlayer}
+                  ))}
+                </View>
+
+                <Card>
+                  <TextInput
+                    style={styles.noteInput}
+                    placeholder="Note (optional)"
+                    placeholderTextColor={colors.textMuted}
+                    value={note}
+                    onChangeText={setNote}
+                  />
+                  <View style={styles.saveActions}>
+                    <Button
+                      label="Push to players"
+                      onPress={onPush}
+                      loading={busy.isBusy("push")}
+                      style={styles.wideBtn}
+                    />
+                    {lineup.published_at ? (
+                      <Button
+                        label="Reset jerseys"
+                        variant="secondary"
+                        onPress={onResetJerseys}
+                        loading={resetJerseysMutation.isPending}
+                        style={styles.wideBtn}
+                      />
+                    ) : null}
+                    <Button
+                      label="Save to history"
+                      variant="secondary"
+                      onPress={onSave}
+                      loading={busy.isBusy("save")}
+                      style={styles.wideBtn}
+                    />
+                    <Button
+                      label="Export PDF"
+                      variant="secondary"
+                      onPress={onExportPdf}
+                      style={styles.wideBtn}
                     />
                   </View>
-                ) : null}
-
-                {balanced ? (
-                  <Card>
-                    <TextInput
-                      style={styles.noteInput}
-                      placeholder="Note (optional)"
-                      placeholderTextColor={colors.textMuted}
-                      value={note}
-                      onChangeText={setNote}
-                    />
-                    <View style={styles.saveActions}>
-                      <Button
-                        label="Push to players"
-                        onPress={onPush}
-                        loading={publish.isPending}
-                        style={styles.wideBtn}
-                      />
-                      {generatorState.data?.published_at ? (
-                        <Button
-                          label="Reset jerseys"
-                          variant="secondary"
-                          onPress={onResetJerseys}
-                          loading={resetJerseysMutation.isPending}
-                          style={styles.wideBtn}
-                        />
-                      ) : null}
-                      <Button
-                        label="Save to history"
-                        variant="secondary"
-                        onPress={onSave}
-                        loading={save.isPending || busy.isBusy("save")}
-                        style={styles.wideBtn}
-                      />
-                      <Button
-                        label="Export PDF"
-                        variant="secondary"
-                        onPress={onExportPdf}
-                        style={styles.wideBtn}
-                      />
-                    </View>
-                  </Card>
-                ) : null}
+                </Card>
               </>
             )}
           </>
@@ -891,7 +655,6 @@ function TeamCol({
   players,
   goalie,
   total,
-  locks,
   pick,
   flash,
   pairPartners,
@@ -901,21 +664,18 @@ function TeamCol({
   onPick,
 }: {
   name: Team;
-  players: TeamRosterPlayer[];
-  goalie: BalanceResult["goldGoalie"];
+  /** Roster order, skating goalies first (lineup.teamRows). */
+  players: TeamLineupPlayer[];
+  goalie: TeamLineupGoalie | null;
   total: number;
-  locks: Record<string, Team>;
   pick: null | { mode: "pair" | "split"; first: string | null };
   flash: Set<string>;
   pairPartners: (k: string) => string[];
   splitPartners: (k: string) => string[];
-  onMove: (id: TeamRosterPlayer["id"]) => void;
-  onLock: (id: TeamRosterPlayer["id"]) => void;
-  onPick: (id: TeamRosterPlayer["id"]) => void;
+  onMove: (id: string) => void;
+  onLock: (p: TeamLineupPlayer) => void;
+  onPick: (id: string) => void;
 }) {
-  const goalieSkaters = players.filter((p) => p.is_goalie);
-  const others = players.filter((p) => !p.is_goalie);
-  const ordered = [...goalieSkaters, ...others];
   return (
     <View style={[styles.col, name === "Gold" ? styles.colGold : styles.colBlack]}>
       <Text style={[styles.colHead, name === "Gold" && { color: colors.gold }]}>{name} Team</Text>
@@ -926,13 +686,12 @@ function TeamCol({
           <Text style={styles.pName} numberOfLines={1}>
             {goalie.name} <Text style={styles.gBadge}>G</Text>
           </Text>
-          <Text style={styles.pRate}>{Number(goalie.weight || 0).toFixed(2)}</Text>
+          <Text style={styles.pRate}>{Number(goalie.rating || 0).toFixed(2)}</Text>
         </View>
       ) : null}
 
-      {ordered.map((p) => {
-        const k = String(p.id);
-        const locked = !!locks[k];
+      {players.map((p) => {
+        const k = p.id;
         const selected = pick?.first === k;
         const paired = pairPartners(k).length > 0;
         const split = splitPartners(k).length > 0;
@@ -944,35 +703,36 @@ function TeamCol({
             <Tap
               feedback="row"
               style={styles.pTapArea}
-              onPress={() => (pick ? onPick(p.id) : onMove(p.id))}
+              onPress={() => (pick ? onPick(k) : onMove(k))}
             >
               <Text style={styles.pName} numberOfLines={1}>
                 {p.name}
                 {p.is_goalie ? <Text style={styles.gBadge}> G</Text> : null}
                 {paired ? " 🔗" : ""}
                 {split ? " ✂️" : ""}
+                {p.is_new ? <Text style={styles.newTag}> new</Text> : null}
               </Text>
             </Tap>
-            <Text style={styles.pRate}>{ratingOf(p).toFixed(2)}</Text>
+            <Text style={styles.pRate}>{p.rating.toFixed(2)}</Text>
             <Tap
               feedback="icon"
               onPress={() => {
                 tapHaptic();
-                onLock(p.id);
+                onLock(p);
               }}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel={`${locked ? "Unlock" : "Lock"} ${p.name}`}
+              accessibilityLabel={`${p.locked ? "Unlock" : "Lock"} ${p.name}`}
             >
               <Ionicons
-                name={locked ? "lock-closed" : "lock-open-outline"}
+                name={p.locked ? "lock-closed" : "lock-open-outline"}
                 size={15}
-                color={locked ? colors.gold : colors.textMuted}
+                color={p.locked ? colors.gold : colors.textMuted}
               />
             </Tap>
             <Tap
               feedback="icon"
-              onPress={() => onMove(p.id)}
+              onPress={() => onMove(k)}
               hitSlop={6}
               accessibilityRole="button"
               accessibilityLabel={`Move ${p.name} to ${name === "Gold" ? "Black" : "Gold"}`}
@@ -1003,17 +763,6 @@ function Chip({
       </Tap>
     </View>
   );
-}
-
-function toEdges(list: unknown): [string, string][] {
-  if (!Array.isArray(list)) return [];
-  return list
-    .filter((e): e is [unknown, unknown] => Array.isArray(e) && e.length === 2)
-    .map(([a, b]) => [String(a), String(b)]);
-}
-
-function sameEdge(a: [string, string], b: [string, string]) {
-  return (a[0] === b[0] && a[1] === b[1]) || (a[0] === b[1] && a[1] === b[0]);
 }
 
 function eventLabel(evt?: TeamEvent) {
@@ -1088,6 +837,7 @@ function teamsPdfHtml(d: {
   </body></html>`;
 }
 
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.md, gap: spacing.md },
@@ -1097,6 +847,7 @@ const styles = StyleSheet.create({
   hint: { color: colors.textMuted, fontSize: font.sm, padding: spacing.md, textAlign: "center" },
   count: { color: colors.textMuted, fontSize: font.xs, textAlign: "center" },
   lockStatus: { color: colors.gold, fontSize: font.xs, fontWeight: "700", textAlign: "center" },
+  syncNote: { color: colors.textMuted, fontSize: font.xs, textAlign: "center" },
   bar: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   saveActions: { gap: spacing.sm, marginTop: spacing.xs },
   wideBtn: { alignSelf: "stretch", minHeight: 52, paddingVertical: spacing.md + 2 },
@@ -1147,6 +898,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   pRate: { color: colors.textMuted, fontSize: 10, fontVariant: ["tabular-nums"] },
+  // RSVP'd after the teams were made — the server put them on the smaller team.
+  newTag: { color: colors.green, fontSize: 9, fontWeight: "800" },
   constraint: {
     flexDirection: "row",
     alignItems: "center",
