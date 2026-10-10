@@ -39,7 +39,7 @@ export function listGoalieScore(row: PlayerRow, nightSelected: boolean): number 
 export function listText(row: PlayerRow, nightSelected: boolean): string {
   const parts: string[] = [];
   const skater = listScore(row, nightSelected);
-  const pureGoalie = row.player_type === "goalie" || (row.is_goalie && row.player_type !== "goalie_skater");
+  const pureGoalie = row.player_type === "goalie";
   if (skater != null && skater > 0 && !pureGoalie) parts.push(skater.toFixed(2));
   const goalie = listGoalieScore(row, nightSelected);
   if (goalie != null) parts.push(`G ${goalie.toFixed(2)}`);
