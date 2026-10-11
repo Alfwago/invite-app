@@ -3,17 +3,23 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-11 — 1.6.1 (iOS build 28): readable Lock Teams button
+## 2026-10-11 — 1.6.1 (iOS build 29): Lock button shows the teams' state
 
-Styling only; same server (0.34.0). Build 27 may already be on App Store
-Connect, so this is build 28; Android is a new APK (versionCode 10).
+Styling + label only; same server (0.34.0). Builds 28 may already be
+archived/uploaded, so this is build 29; Android is a new APK.
 
-- **Team generator toolbar:** Lock Teams is a dark button with white text;
-  once locked, "Unlock Teams" is solid gold with black text (before: black
-  text on near-black, unreadable). "Present only: On" is solid gold too —
-  both now match the website's buttons. Pair / Split while picking show
-  gold text on the dark gold outline (were unreadable the same way). The
-  busy spinner uses the button's text colour.
+- **Team generator lock button shows the state, not the action** (owner):
+  unlocked = dark button, white text **"Teams Unlocked"**, open padlock;
+  locked = solid gold, black text **"Teams Locked"**, closed padlock (before:
+  "🔒 Lock Teams" / "🔓 Unlock Teams", and the locked look was black text on
+  near-black, unreadable). Tapping still toggles (unlock still asks first);
+  toasts "Teams locked" / "Teams unlocked". VoiceOver: a switch, label = the
+  state, hint "Double-tap to lock/unlock teams". The website matches
+  (server 0.34.1).
+- "Present only: On" is solid gold like the website's; Pair / Split while
+  picking show gold text on the dark gold outline (were unreadable the same
+  way). The busy spinner uses the button's text colour.
+- (Build 28, 1a9525f, had the colour fix with the old labels — superseded.)
 
 ## 2026-10-10 — 1.6.1 re-cut (iOS build 27): shared teams, Acting ND / Comp, goalie ratings
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -431,9 +431,17 @@ export default function TeamGeneratorScreen() {
                       )
                     }
                   />
+                  {/* Shows the STATE (owner, 2026-10-11): dark "Teams Unlocked"
+                      with an open padlock, gold "Teams Locked" with a closed
+                      one. Tapping toggles, as before. */}
                   <BarBtn
-                    label={lineup.locked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
+                    label={lineup.locked ? "Teams Locked" : "Teams Unlocked"}
+                    icon={lineup.locked ? "lock-closed" : "lock-open"}
                     gold={lineup.locked}
+                    toggle={{
+                      checked: lineup.locked,
+                      hint: lineup.locked ? "Double-tap to unlock teams" : "Double-tap to lock teams",
+                    }}
                     grid
                     busy={busy.isBusy("lock")}
                     onPress={
@@ -607,9 +615,13 @@ export default function TeamGeneratorScreen() {
 // action is running: spinner, inert, so a second tap can't fire it again.
 // Looks: dark (white text) by default; `gold` = solid gold, black text (the
 // website's .btn.gold — Lock Teams / Present only when on); `active` = gold
-// outline on dark, gold text (Pair / Split while picking).
+// outline on dark, gold text (Pair / Split while picking). `icon` sits
+// before the label in the text colour; `toggle` makes it an a11y switch
+// (label = state, hint = what a tap does).
 function BarBtn({
   label,
+  icon,
+  toggle,
   onPress,
   active,
   gold,
@@ -618,6 +630,8 @@ function BarBtn({
   busy,
 }: {
   label: string;
+  icon?: ComponentProps<typeof Ionicons>["name"];
+  toggle?: { checked: boolean; hint: string };
   onPress: () => void;
   active?: boolean;
   gold?: boolean;
@@ -632,9 +646,10 @@ function BarBtn({
       onPress={onPress}
       haptic
       disabled={busy}
-      accessibilityRole="button"
+      accessibilityRole={toggle ? "switch" : "button"}
       accessibilityLabel={label}
-      accessibilityState={{ busy: !!busy, disabled: !!busy }}
+      accessibilityHint={toggle?.hint}
+      accessibilityState={{ busy: !!busy, disabled: !!busy, checked: toggle ? toggle.checked : undefined }}
       style={[
         styles.barBtn,
         grid && styles.barBtnGrid,
@@ -647,7 +662,10 @@ function BarBtn({
       {busy ? (
         <ActivityIndicator size="small" color={textColor} />
       ) : (
-        <Text style={[styles.barBtnText, { color: textColor }]}>{label}</Text>
+        <View style={styles.barBtnRow}>
+          {icon ? <Ionicons name={icon} size={15} color={textColor} /> : null}
+          <Text style={[styles.barBtnText, { color: textColor }]}>{label}</Text>
+        </View>
       )}
     </Tap>
   );
@@ -871,6 +889,7 @@ const styles = StyleSheet.create({
   barBtnActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
   barBtnText: { color: colors.text, fontSize: font.sm, fontWeight: "700" },
   barBtnBusy: { opacity: 0.7 },
+  barBtnRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   psCard: { gap: spacing.sm },
   psTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
   psHint: { color: colors.textMuted, fontSize: font.xs },
