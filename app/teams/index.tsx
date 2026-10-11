@@ -403,7 +403,7 @@ export default function TeamGeneratorScreen() {
                   />
                   <BarBtn
                     label={`Present only: ${lineup.present_only ? "On" : "Off"}`}
-                    active={lineup.present_only}
+                    gold={lineup.present_only}
                     grid
                     busy={busy.isBusy("present")}
                     onPress={() =>
@@ -433,7 +433,7 @@ export default function TeamGeneratorScreen() {
                   />
                   <BarBtn
                     label={lineup.locked ? "🔓 Unlock Teams" : "🔒 Lock Teams"}
-                    active={lineup.locked}
+                    gold={lineup.locked}
                     grid
                     busy={busy.isBusy("lock")}
                     onPress={
@@ -605,6 +605,9 @@ export default function TeamGeneratorScreen() {
 
 // Pressed = dimmed + shrunk with a light haptic (Tap). `busy` = a network
 // action is running: spinner, inert, so a second tap can't fire it again.
+// Looks: dark (white text) by default; `gold` = solid gold, black text (the
+// website's .btn.gold — Lock Teams / Present only when on); `active` = gold
+// outline on dark, gold text (Pair / Split while picking).
 function BarBtn({
   label,
   onPress,
@@ -623,7 +626,7 @@ function BarBtn({
   wide?: boolean;
   busy?: boolean;
 }) {
-  const on = gold || active;
+  const textColor = gold ? colors.goldText : active ? colors.gold : colors.text;
   return (
     <Tap
       onPress={onPress}
@@ -642,9 +645,9 @@ function BarBtn({
       ]}
     >
       {busy ? (
-        <ActivityIndicator size="small" color={on ? colors.goldText : colors.text} />
+        <ActivityIndicator size="small" color={textColor} />
       ) : (
-        <Text style={[styles.barBtnText, on && styles.barBtnTextOn]}>{label}</Text>
+        <Text style={[styles.barBtnText, { color: textColor }]}>{label}</Text>
       )}
     </Tap>
   );
@@ -867,7 +870,6 @@ const styles = StyleSheet.create({
   barBtnGold: { backgroundColor: colors.gold, borderColor: colors.gold },
   barBtnActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
   barBtnText: { color: colors.text, fontSize: font.sm, fontWeight: "700" },
-  barBtnTextOn: { color: colors.goldText },
   barBtnBusy: { opacity: 0.7 },
   psCard: { gap: spacing.sm },
   psTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },

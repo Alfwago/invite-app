@@ -3,6 +3,18 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-11 — 1.6.1 (iOS build 28): readable Lock Teams button
+
+Styling only; same server (0.34.0). Build 27 may already be on App Store
+Connect, so this is build 28; Android is a new APK (versionCode 10).
+
+- **Team generator toolbar:** Lock Teams is a dark button with white text;
+  once locked, "Unlock Teams" is solid gold with black text (before: black
+  text on near-black, unreadable). "Present only: On" is solid gold too —
+  both now match the website's buttons. Pair / Split while picking show
+  gold text on the dark gold outline (were unreadable the same way). The
+  busy spinner uses the button's text colour.
+
 ## 2026-10-10 — 1.6.1 re-cut (iOS build 27): shared teams, Acting ND / Comp, goalie ratings
 
 Held 1.6.1 (26, never submitted) re-cut as build 27; Android needs a new
