@@ -11,6 +11,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { retryDelay, shouldRetry } from "@/src/api/retryPolicy";
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
@@ -23,9 +24,12 @@ import { loadHapticsPref } from "@/src/hapticsSetting";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
 import { colors } from "@/src/theme";
 
+// No retries on 401/403/404 and other 4xx (a 401 signs the app out — see
+// AuthContext); network errors and 5xx retry twice with backoff. See
+// src/api/retryPolicy.ts.
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, staleTime: 15_000, refetchOnWindowFocus: true },
+    queries: { retry: shouldRetry, retryDelay: (n) => retryDelay(n), staleTime: 15_000, refetchOnWindowFocus: true },
   },
 });
 

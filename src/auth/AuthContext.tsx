@@ -8,9 +8,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { useQueryClient } from "@tanstack/react-query";
 
-import { setTokenProvider } from "@/src/api/client";
+import { setTokenProvider, setUnauthorizedHandler } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { Me } from "@/src/api/types";
 import { skateCardSignOut } from "@/modules/skate-card";
@@ -35,12 +37,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [me, setMe] = useState<Me | null>(null);
 
-  // Keep a ref so the token provider handed to the API client always sees the latest value.
+  const qc = useQueryClient();
+
+  // The token the API client sends. A ref so the provider always sees the
+  // latest value; every place that changes `token` sets it too. (Until
+  // 1.6.2 it was also copied from state on every render, which during
+  // sign-in briefly reset it to null — so the push registration that
+  // follows sign-in went out without a token and got a 401.)
   const tokenRef = useRef<string | null>(null);
-  tokenRef.current = token;
+  // True once a token is committed (restored or signed in) — a 401 during
+  // the sign-in attempt itself isn't a "you've been signed out".
+  const signedInRef = useRef(false);
   useEffect(() => {
     setTokenProvider(() => tokenRef.current);
   }, []);
+
+  // The server rejected our token (signed out on another device, token
+  // revoked): sign out here too, once, without calling the server — every
+  // further call would only be another 401. Clearing the token takes the
+  // app to the login screen (RootNavigator) and stops all queries.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      if (!signedInRef.current) return;
+      signedInRef.current = false;
+      tokenRef.current = null;
+      void (async () => {
+        await skateCardSignOut();
+        try {
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
+        } catch {
+          // best-effort; the token is already dropped in memory
+        }
+        setToken(null);
+        setMe(null);
+        qc.clear();
+        Alert.alert("Signed out", "You've been signed out. Please log in again.");
+      })();
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [qc]);
 
   const loadMe = useCallback(async () => {
     const profile = await api.fetchMe();
@@ -56,12 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (saved && !cancelled) {
           setToken(saved);
           tokenRef.current = saved;
+          signedInRef.current = true;
           try {
             await loadMe();
             registerForPush();
           } catch {
             // Stale/rejected token — drop it.
             await SecureStore.deleteItemAsync(TOKEN_KEY);
+            signedInRef.current = false;
             if (!cancelled) {
               setToken(null);
               tokenRef.current = null;
@@ -98,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
       }
       setToken(newToken);
+      signedInRef.current = true;
       registerForPush();
     },
     [loadMe],
@@ -112,10 +150,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Even if the server call fails, clear locally.
     }
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+    signedInRef.current = false;
     setToken(null);
     tokenRef.current = null;
     setMe(null);
-  }, []);
+    qc.clear(); // the next person to sign in mustn't see this one's data
+  }, [qc]);
 
   const value = useMemo<AuthState>(
     () => ({ ready, token, me, signIn, signOut, refreshMe: loadMe }),

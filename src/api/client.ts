@@ -55,6 +55,15 @@ export function setTokenProvider(fn: TokenProvider) {
   getToken = fn;
 }
 
+let onUnauthorized: (() => void) | null = null;
+
+/** Called (by the AuthProvider) when the server rejects the token a request
+ *  carried with a 401 — signed out on another device, token revoked. The
+ *  handler signs the app out; see src/api/retryPolicy.ts for why. */
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
@@ -71,9 +80,13 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
+  let sentToken: string | null = null;
   if (!anonymous) {
-    const token = getToken();
-    if (token) headers["Authorization"] = `Token ${token}`;
+    sentToken = getToken();
+    // Signed out: don't ask the server — it can only answer 401. (Before
+    // 1.6.2 the login screen's background Home query did, over and over.)
+    if (!sentToken) throw new ApiError(401, { detail: "You're signed out." });
+    headers["Authorization"] = `Token ${sentToken}`;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -87,6 +100,9 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
   const data = text ? safeJsonParse(text) : null;
 
   if (!res.ok) {
+    // Only when the token we sent is still the current one — a late reply
+    // to a request from before a fresh sign-in mustn't sign that out.
+    if (res.status === 401 && sentToken && sentToken === getToken()) onUnauthorized?.();
     throw new ApiError(res.status, data ?? text);
   }
   return data as T;

@@ -3,6 +3,34 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-12 — 1.6.2 (iOS build 30): a rejected sign-in signs out instead of retrying
+
+Reliability fix; works with any server (no server change needed — server
+0.34.2 adds its own protection). JS only, no native change. Android needs a
+new APK.
+
+- **When the server stops accepting the app's sign-in** (you logged out on
+  another device, or the token was revoked), the app now signs out once,
+  says "You've been signed out. Please log in again." and shows the login
+  screen. Before, it stayed on the signed-in screens and every screen,
+  return to the foreground and refresh asked again — on 2026-10-09 one
+  phone sent ~1,000 requests in 30 s and used up the server's database
+  connections ("too many clients").
+- **Signed out = no account requests at all.** The login screen used to
+  fetch Home, the message boards and the inbox in the background without a
+  token (each answered 401, in bursts of ~50). Requests that need an
+  account now fail on the phone without going to the server.
+- **Retries:** never on 401/403/404 or other 4xx; network errors and
+  server errors (5xx, 408, 429) retry at most twice with backoff (1 s, 2 s,
+  with jitter). Before: every error retried once, 4xx included.
+  `src/api/retryPolicy.ts` (+ tests).
+- Fixed: right after signing in, the push-notification registration could
+  go out without the token (a re-render reset the token ref to null
+  mid-sign-in; the server log shows a 401 on /api/push/register/ right
+  after a login). The ref is now only changed where the token changes.
+- Signing out (either way) clears the cached data, so the next person to
+  sign in on the phone never sees the previous one's screens.
+
 ## 2026-10-11 — 1.6.1 (iOS build 29): Lock button shows the teams' state
 
 Styling + label only; same server (0.34.0). Builds 28 may already be
