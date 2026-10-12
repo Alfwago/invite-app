@@ -8,6 +8,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { Tap } from "@/src/components/Tap";
 import { Button } from "@/src/components/ui";
 import { useRsvp } from "@/src/hooks/queries";
+import { lateChangeWarning } from "@/src/lateChange";
 import { colors, radius, spacing } from "@/src/theme";
 import { Alert } from "react-native";
 import { useMutation } from "@tanstack/react-query";
@@ -75,11 +76,32 @@ export function RsvpControls({ event }: { event: EventDetail }) {
     if (event.my_borrow && wasYes && choice !== "YES" && lockedForThem) {
       Alert.alert("Drop out of this skate?", "The roster is locked, so you won't be able to rejoin yourself.", [
         { text: "Stay in", style: "cancel" },
-        { text: "Drop out", style: "destructive", onPress: () => void submit() },
+        { text: "Drop out", style: "destructive", onPress: confirmLateChangeThenSubmit },
       ]);
       return;
     }
-    void submit();
+    confirmLateChangeThenSubmit();
+  }
+
+  // Dropping from Yes inside the late-change window: same warning as the
+  // website, with the $20 line only for players who'd owe it.
+  function confirmLateChangeThenSubmit() {
+    const warning = lateChangeWarning({
+      current,
+      choice,
+      now: new Date(),
+      fallbackHours: event.manage?.rsvp_change_warning_hours,
+      date: event.date,
+      startTime: event.start_time,
+    });
+    if (!warning) {
+      void submit();
+      return;
+    }
+    Alert.alert("Change your RSVP?", warning, [
+      { text: "Keep Yes", style: "cancel" },
+      { text: "Change RSVP", style: "destructive", onPress: () => void submit() },
+    ]);
   }
 
   async function submit() {

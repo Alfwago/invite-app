@@ -5,7 +5,13 @@ import { useMutation } from "@tanstack/react-query";
 
 import { API_BASE, ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
-import type { Me, NotificationPrefs, PlayerType, ProfilePatch } from "@/src/api/types";
+import type {
+  Me,
+  NotificationPrefs,
+  NotificationPrefsPatch,
+  PlayerType,
+  ProfilePatch,
+} from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
@@ -138,7 +144,7 @@ export default function ProfileScreen() {
 
 // ── notifications ──────────────────────────────────────────────────────
 
-const NOTIFICATION_OPTIONS: { key: Exclude<keyof NotificationPrefs, "all">; label: string }[] = [
+const NOTIFICATION_OPTIONS: { key: "invites" | "director_messages" | "president_messages"; label: string }[] = [
   { key: "invites", label: "Skate invites" },
   { key: "director_messages", label: "Director messages" },
   { key: "president_messages", label: "President messages" },
@@ -155,7 +161,7 @@ function NotificationsCard({
 }) {
   const [local, setLocal] = useState(prefs);
   const save = useMutation({
-    mutationFn: (patch: Partial<NotificationPrefs>) => api.updateMe({ notification_prefs: patch }),
+    mutationFn: (patch: NotificationPrefsPatch) => api.updateMe({ notification_prefs: patch }),
     onSuccess: () => onChanged(),
     onError: (e) => {
       setLocal(prefs);
@@ -166,9 +172,16 @@ function NotificationsCard({
     },
   });
 
-  function set(key: keyof NotificationPrefs, value: boolean) {
+  function set(key: "all" | (typeof NOTIFICATION_OPTIONS)[number]["key"], value: boolean) {
     setLocal((p) => ({ ...p, [key]: value }));
     save.mutate({ [key]: value });
+  }
+
+  // Skate groups: switch on = notified. Sends the full muted list each time.
+  function setNight(id: number, on: boolean) {
+    const nights = (local.nights ?? []).map((n) => (n.id === id ? { ...n, muted: !on } : n));
+    setLocal((p) => ({ ...p, nights }));
+    save.mutate({ muted_night_ids: nights.filter((n) => n.muted).map((n) => n.id) });
   }
 
   return (
@@ -201,6 +214,27 @@ function NotificationsCard({
               />
             </View>
           ))}
+      {local.nights && local.nights.length > 0 ? (
+        <>
+          <Text style={[styles.subLabel, { marginTop: spacing.md }]}>Skate groups</Text>
+          <Text style={styles.hint}>
+            Turn a group off to stop its invites and board posts. You&apos;ll still hear about your
+            own spot (team picks, waitlist, being added or removed). Emails still arrive.
+          </Text>
+          {local.nights.map((n) => (
+            <View key={n.id} style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>{n.name}</Text>
+              <Switch
+                value={!n.muted}
+                onValueChange={(v) => setNight(n.id, v)}
+                trackColor={{ true: colors.gold, false: colors.border }}
+                thumbColor="#fff"
+                accessibilityLabel={`${n.name} notifications`}
+              />
+            </View>
+          ))}
+        </>
+      ) : null}
     </Card>
   );
 }

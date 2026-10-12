@@ -121,7 +121,22 @@ export interface NotificationPrefs {
   invites: boolean;
   director_messages: boolean;
   president_messages: boolean;
+  /** Server 0.35.0+: the caller's skate groups and whether each is muted.
+   *  Absent on older servers — hide the "Skate groups" section. */
+  nights?: NightMute[];
 }
+
+export interface NightMute {
+  id: number;
+  name: string;
+  muted: boolean;
+}
+
+/** PATCH /api/me/ notification_prefs: the switches, plus (0.35.0+) the
+ *  full list of muted skate-group ids. */
+export type NotificationPrefsPatch = Partial<Omit<NotificationPrefs, "nights">> & {
+  muted_night_ids?: number[];
+};
 
 export interface ProfilePatch {
   email?: string;
@@ -131,7 +146,7 @@ export interface ProfilePatch {
   sms_provider?: string;
   skill_assessment?: string;
   player_type?: PlayerType;
-  notification_prefs?: Partial<NotificationPrefs>;
+  notification_prefs?: NotificationPrefsPatch;
 }
 
 export interface RosterStats {
@@ -161,6 +176,20 @@ export interface MyRsvp {
   is_beer_guy: boolean;
   is_whiskey_guy: boolean;
   responded_at: string | null;
+  /** Server 0.34.3+: the late-change window, or null when no change of
+   *  theirs could be a late drop. Absent on older servers. */
+  late_change?: LateChange | null;
+}
+
+/** `my_rsvp.late_change` — see src/lateChange.ts. */
+export interface LateChange {
+  hours: number;
+  /** ISO datetimes: warn while now is between them. */
+  window_start: string;
+  starts_at: string;
+  /** A drop now would owe the late-change fee. */
+  fee: boolean;
+  fee_amount: string;
 }
 
 export interface EventSummary {

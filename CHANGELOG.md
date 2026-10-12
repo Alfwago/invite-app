@@ -3,6 +3,28 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-12 — 1.7.0 (iOS build 31): skate-group notification switches, late-change warning
+
+**Needs `invite-server` 0.34.3 (late-change fee) and 0.35.0 (skate-group
+switches)** — they ship first. On an older server each piece hides itself.
+Based on `release/1.6.2` @ 0a2cb3b (401 retry fix, build 30), so it ships
+that fix too. No native change.
+
+- **Profile → Notifications → Skate groups** (owner 1a A / 1b ii): one
+  switch per skate group you belong to; off = no invites or board posts /
+  chirps from that group, including director and president posts. Pushes
+  about your own spot (team picks, waitlist, added/removed, borrowed) still
+  come; emails are unchanged. Hidden when the server doesn't send
+  `notification_prefs.nights` (before 0.35.0). Saves on each flip
+  (`muted_night_ids`).
+- **Late-change warning** (owner 2g): changing from Yes to No or Maybe
+  inside the skate's late-change window asks first: "You're changing within
+  N hours of the skate. You'll still owe the $20 late-change fee." — Keep
+  Yes / Change RSVP. Same words as the website. The fee line only when the
+  server says they'd owe it (`my_rsvp.late_change.fee`: not goalies, the
+  night's director, comped or borrowed players). Older server: directors
+  fall back to the event's hours and "goalies don't pay"; players get no
+  warning. Logic in `src/lateChange.ts` (+ tests).
 ## 2026-10-12 — 1.6.2 (iOS build 30): a rejected sign-in signs out instead of retrying
 
 Reliability fix; works with any server (no server change needed — server
