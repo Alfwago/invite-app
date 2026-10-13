@@ -32,6 +32,7 @@ import { BorrowPicker } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
+import { fineControl, lateDropLine, lateDropRows } from "@/src/lateDrop";
 import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
 import { useToast } from "@/src/components/Toast";
 import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented, Tap } from "@/src/components/ui";
@@ -892,6 +893,8 @@ function RosterCard({
   const { pick, modal } = useRolePicker();
 
   const going = event.players.filter((p) => p.status === "YES");
+  // Late drops (server 0.34.3+; directors only — this screen is).
+  const lateDrops = lateDropRows(event.players);
   const busy = roster.isPending || bulkBusy;
 
   // is_goalie_skater comes from the candidates endpoint, not EventDetail.waitlist.
@@ -1139,6 +1142,23 @@ function RosterCard({
             />
           ),
         )}
+
+        {lateDrops.length > 0 ? (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.subhead}>Late drops ({lateDrops.length})</Text>
+            {lateDrops.map((p) => (
+              <LateDropRow
+                key={`ld-${p.player_id}`}
+                entry={p}
+                disabled={busy}
+                tickDisabled={bulkBusy}
+                onFine={(v) => act({ action: "set_late_fine", player_id: p.player_id, fine: v })}
+                onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
+              />
+            ))}
+          </>
+        ) : null}
 
         {event.waitlist.length > 0 ? (
           <>
@@ -1512,6 +1532,57 @@ function RosterAdminRow({
           </View>
         </View>
       ))}
+    </View>
+  );
+}
+
+// A Late Drop row in Manage → Roster: when they dropped and how close to
+// the start (server-formatted), and the director's "Fine" switch — on =
+// owes the $20 late-change fee, off = waived (server 0.35.0+). Exempt rows
+// (goalie, ND, comped) say "no fee" with no switch; an older server sends no
+// late_fine, so no switch. $ shows only while the fine is owed.
+function LateDropRow({
+  entry,
+  disabled,
+  tickDisabled = disabled,
+  onFine,
+  onPaid,
+}: {
+  entry: RosterEntry;
+  disabled?: boolean;
+  tickDisabled?: boolean;
+  onFine: (fine: boolean) => void;
+  onPaid: (paid: boolean) => void;
+}) {
+  const control = fineControl(entry);
+  const owes = entry.late_fine === "owes";
+  return (
+    <View style={styles.adminRow}>
+      <View style={styles.adminLine}>
+        <Text style={styles.playerName} numberOfLines={1}>
+          {entry.name}
+        </Text>
+        {entry.is_goalie ? <Text style={styles.goldTag}>G</Text> : null}
+        <View style={styles.tinyBtns}>
+          {control === "switch" ? (
+            <View style={styles.fineSwitch}>
+              <Text style={[styles.fineLabel, owes && styles.fineLabelOn]}>Fine</Text>
+              <Switch
+                value={owes}
+                onValueChange={onFine}
+                disabled={disabled}
+                trackColor={{ true: colors.red, false: colors.border }}
+                thumbColor="#fff"
+                accessibilityLabel={`Fine ${entry.name} the $20 late-change fee`}
+              />
+            </View>
+          ) : null}
+          {owes ? (
+            <TinyBtn text="$" on={entry.paid} disabled={tickDisabled} onPress={() => onPaid(!entry.paid)} />
+          ) : null}
+        </View>
+      </View>
+      <Text style={styles.lateDropLine}>{lateDropLine(entry)}</Text>
     </View>
   );
 }
@@ -2168,6 +2239,10 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
+  lateDropLine: { color: colors.textMuted, fontSize: font.xs, marginTop: 2 },
+  fineSwitch: { flexDirection: "row", alignItems: "center", gap: 6 },
+  fineLabel: { color: colors.textMuted, fontSize: font.xs, fontWeight: "800" },
+  fineLabelOn: { color: colors.red },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
   tiny: {
     minWidth: 30,

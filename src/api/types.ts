@@ -247,9 +247,24 @@ export interface RosterEntry {
    *  missing on older servers). Shown to everyone as a "Borrowed" badge. */
   is_borrowed?: boolean;
   borrowed_from_name?: string;
+  /** Late drop (Yes → No/Maybe inside the change window). Directors only;
+   *  null / "" for players and for every other row. Server 0.34.3+
+   *  (missing before — then Manage → Roster shows no late drops).
+   *  `late_drop_label` = "6:15 PM (2h 24m before)", server-formatted local time. */
+  late_drop_at?: string | null;
+  late_drop_minutes_before?: number | null;
+  late_drop_label?: string;
+  /** The late drop's fine (server 0.35.0+, directors only): "owes" = the
+   *  Fine switch is on, "waived" = a director switched it off, "none" =
+   *  exempt (goalie, ND, comped — no switch). null when not a late drop;
+   *  missing on older servers (no switch shown). On a late-drop row
+   *  `pays` = owes. */
+  late_fine?: LateFine | null;
 }
 
 export type PayOverride = "" | "comp" | "charge";
+
+export type LateFine = "owes" | "waived" | "none";
 
 export interface DayPlayer {
   id: number;
@@ -425,6 +440,8 @@ export type RosterAction =
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
   /** Director's per-event "Comp" control (server 0.34+). */
   | { action: "set_pay_override"; pay_override: PayOverride; player_id?: number; day_player_id?: number }
+  /** A Late Drop row's "Fine" switch (server 0.35.0+): false = waived. */
+  | { action: "set_late_fine"; player_id: number; fine: boolean }
   | {
       action: "add_day_player";
       name: string;

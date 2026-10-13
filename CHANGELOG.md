@@ -3,10 +3,10 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-12 — 1.7.0 (iOS build 31): skate-group notification switches, late-change warning
+## 2026-10-12 / 13 — 1.7.0 (iOS build 31): skate-group notification switches, late-change warning, late drops on the roster
 
-**Needs `invite-server` 0.34.3 (late-change fee) and 0.35.0 (skate-group
-switches)** — they ship first. On an older server each piece hides itself.
+**Needs `invite-server` 0.34.3 (late-change fee, late-drop times) and 0.35.0
+(skate-group switches, Fine switch)** — they ship first. On an older server each piece hides itself.
 Based on `release/1.6.2` @ 0a2cb3b (401 retry fix, build 30), so it ships
 that fix too. No native change.
 
@@ -25,6 +25,16 @@ that fix too. No native change.
   night's director, comped or borrowed players). Older server: directors
   fall back to the event's hours and "goalies don't pay"; players get no
   warning. Logic in `src/lateChange.ts` (+ tests).
+- **Manage → Roster → Late drops** (directors; owner 2026-10-13): a list
+  under Going of everyone who dropped late, each with when and how close
+  to the skate — "Late drop · 6:15 PM (2h 24m before) · No" (server-formatted
+  `late_drop_label`, 0.34.3+) — and a red **Fine** switch: on = owes the
+  $20 late-change fee (with a $ to mark it paid), off = "fine waived" (no
+  $). Goalies, the night's director and comped players show "no fee" and no
+  switch. Action `set_late_fine` (0.35.0+), flipped optimistically. Older
+  server: no late-drop fields → no list; 0.34.3 → the list without the
+  switch. Logic in `src/lateDrop.ts` (+ tests). iOS build stays 31 (never
+  uploaded).
 ## 2026-10-12 — 1.6.2 (iOS build 30): a rejected sign-in signs out instead of retrying
 
 Reliability fix; works with any server (no server change needed — server

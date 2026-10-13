@@ -40,3 +40,19 @@ test("doesn't mutate the cached event", () => {
 test("other roster actions wait for the server", () => {
   assert.equal(applyOptimisticRosterAction(event(), { action: "remove", player_id: 1 }), null);
 });
+
+test("set_late_fine flips the late drop's Fine switch and its $", () => {
+  const ev = {
+    players: [
+      { player_id: 1, status: "NO", late_drop_at: "x", late_fine: "owes", pays: true, present: false, paid: false, guests: [] },
+      { player_id: 2, status: "NO", late_drop_at: "x", late_fine: "none", pays: false, present: false, paid: false, guests: [] },
+    ],
+    day_players: [],
+  } as unknown as EventDetail;
+  const off = applyOptimisticRosterAction(ev, { action: "set_late_fine", player_id: 1, fine: false })!;
+  assert.equal(off.players[0].late_fine, "waived");
+  assert.equal(off.players[0].pays, false);
+  assert.equal(off.players[1].late_fine, "none");
+  const exempt = applyOptimisticRosterAction(ev, { action: "set_late_fine", player_id: 2, fine: true })!;
+  assert.equal(exempt.players[1].late_fine, "none");
+});
