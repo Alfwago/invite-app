@@ -433,13 +433,17 @@ function SettingsCard({ event }: { event: EventDetail }) {
               <Text style={styles.label} onPress={() => setFineLateDrops(!fineLateDrops)}>
                 Fine late drops
               </Text>
-              <Switch
-                value={fineLateDrops}
-                onValueChange={setFineLateDrops}
-                trackColor={{ true: colors.gold, false: colors.border }}
-                thumbColor="#fff"
-                accessibilityLabel="Fine late drops"
-              />
+              {/* Its own box: in a row taller than the switch, iOS drew it at
+                  the row's top (~8pt above the picker's middle). */}
+              <View style={styles.fineSwitch}>
+                <Switch
+                  value={fineLateDrops}
+                  onValueChange={setFineLateDrops}
+                  trackColor={{ true: colors.gold, false: colors.border }}
+                  thumbColor="#fff"
+                  accessibilityLabel="Fine late drops"
+                />
+              </View>
             </View>
           </View>
         ) : null}
@@ -2293,6 +2297,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 44,
   },
+  fineSwitch: { height: 31 },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
   tiny: {
     minWidth: 30,
