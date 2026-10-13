@@ -1579,6 +1579,9 @@ function LateDropRow({
           ) : null}
           {owes ? (
             <TinyBtn text="$" on={entry.paid} disabled={tickDisabled} onPress={() => onPaid(!entry.paid)} />
+          ) : control === "switch" ? (
+            // Keeps the switch where it was when the $ goes away.
+            <View style={styles.tinySpacer} />
           ) : null}
         </View>
       </View>
@@ -2241,6 +2244,7 @@ const styles = StyleSheet.create({
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
   lateDropLine: { color: colors.textMuted, fontSize: font.xs, marginTop: 2 },
   fineSwitch: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tinySpacer: { width: 30 },
   fineLabel: { color: colors.textMuted, fontSize: font.xs, fontWeight: "800" },
   fineLabelOn: { color: colors.red },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
