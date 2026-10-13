@@ -299,6 +299,9 @@ function SettingsCard({ event }: { event: EventDetail }) {
   const hasSkateFee = typeof m.skate_fee === "number";
   const [fineLateDrops, setFineLateDrops] = useState(m.fine_late_drops ?? true);
   const [skateFee, setSkateFee] = useState(hasSkateFee ? String(m.skate_fee) : "");
+  // Measured so the Fine switch sits on the middle of the warning picker.
+  const [warnLabelH, setWarnLabelH] = useState(0);
+  const [warnChipH, setWarnChipH] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const numOrNull = (s: string) => (s.trim() === "" ? null : Number(s));
@@ -393,19 +396,43 @@ function SettingsCard({ event }: { event: EventDetail }) {
       </View>
 
       <View style={styles.twoCol}>
-        <Field label="Late-change warning (hours before start)" style={styles.col}>
-          <NumberField
-            value={warnHours}
-            onChange={setWarnHours}
-            min={0}
-            max={72}
-            unit="h"
-            placeholder="—"
-          />
-        </Field>
+        <View style={[styles.field, styles.col]}>
+          <Text style={styles.label} onLayout={(e) => setWarnLabelH(e.nativeEvent.layout.height)}>
+            Late-change warning (hours before start)
+          </Text>
+          <View
+            onLayout={(e) => {
+              // The picker's own height (closed): its first layout. Opening
+              // the number list grows this View; ignore that.
+              const h = e.nativeEvent.layout.height;
+              setWarnChipH((prev) => (prev == null ? h : Math.min(prev, h)));
+            }}
+          >
+            <NumberField
+              value={warnHours}
+              onChange={setWarnHours}
+              min={0}
+              max={72}
+              unit="h"
+              placeholder="—"
+            />
+          </View>
+        </View>
         {hasFineSetting ? (
-          <Field label="Fine late drops" style={styles.col}>
-            <View style={styles.fineSetting}>
+          // "Fine late drops" label + switch, centred in its half and on the
+          // middle of the warning-hours picker (owner, 2026-10-13): pushed down
+          // by the picker's label, as tall as the closed picker.
+          <View style={styles.col}>
+            <View
+              style={[
+                styles.fineSetting,
+                { marginTop: warnLabelH + spacing.xs },
+                warnChipH != null ? { height: warnChipH } : null,
+              ]}
+            >
+              <Text style={styles.label} onPress={() => setFineLateDrops(!fineLateDrops)}>
+                Fine late drops
+              </Text>
               <Switch
                 value={fineLateDrops}
                 onValueChange={setFineLateDrops}
@@ -413,9 +440,8 @@ function SettingsCard({ event }: { event: EventDetail }) {
                 thumbColor="#fff"
                 accessibilityLabel="Fine late drops"
               />
-              <Text style={styles.muted}>{fineLateDrops ? "On" : "Off"}</Text>
             </View>
-          </Field>
+          </View>
         ) : null}
       </View>
       {hasFineSetting ? (
@@ -1572,9 +1598,9 @@ function RosterAdminRow({
 
 // A Late Drop row in Manage → Roster: when they dropped and how close to
 // the start (server-formatted), and what they owe — a red "Fine $25" (the
-// skate's price) with $ to mark it paid, or "no fine" (Settings → Fine late
-// drops is off) / "no fee" (goalie, ND, comped) in the line under the name.
-// Fines are switched for the whole skate in Settings, not here.
+// skate's price) with $ to mark it paid, or "no fee" (goalie, ND, comped) in
+// the line under the name. With Settings → Fine late drops off there's no
+// fine label, $ or wording at all — just when they dropped.
 function LateDropRow({
   entry,
   skateFee,
@@ -2260,7 +2286,13 @@ const styles = StyleSheet.create({
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
   lateDropLine: { color: colors.textMuted, fontSize: font.xs, marginTop: 2 },
   fineBadge: { color: colors.red, fontSize: font.xs, fontWeight: "800" },
-  fineSetting: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
+  fineSetting: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    minHeight: 44,
+  },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
   tiny: {
     minWidth: 30,

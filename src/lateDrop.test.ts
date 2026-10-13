@@ -45,7 +45,7 @@ test("lateDropLine: time, how far before, status and fine", () => {
   assert.equal(lateDropLine(row({ ...base, late_fine: "owes" })), "Late drop · 6:15 PM (2h 24m before) · No");
   assert.equal(
     lateDropLine(row({ ...base, status: "MAYBE", late_fine: "waived" })),
-    "Late drop · 6:15 PM (2h 24m before) · Maybe · no fine",
+    "Late drop · 6:15 PM (2h 24m before) · Maybe",
   );
   assert.equal(lateDropLine(row({ ...base, late_fine: "none" })), "Late drop · 6:15 PM (2h 24m before) · No · no fee");
   // 0.34.3 server: label but no late_fine.
@@ -71,4 +71,10 @@ test("fineSettingsPatch: sends only what the server knows", () => {
   assert.deepEqual(fineSettingsPatch({}, false, "25"), {});
   // A blank or odd fee isn't sent; the switch still is.
   assert.deepEqual(fineSettingsPatch({ fine_late_drops: true, skate_fee: 20 }, true, ""), { fine_late_drops: true });
+});
+
+test("fines off for the skate: no Fine label and no fine wording on the row", () => {
+  const off = row({ late_drop_at: "x", late_drop_label: "6:15 PM (2h 24m before)", late_fine: "waived" });
+  assert.equal(fineBadge(off, 20), null);
+  assert.doesNotMatch(lateDropLine(off), /fine/i);
 });

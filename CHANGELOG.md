@@ -29,9 +29,10 @@ that fix too. No native change.
   under Going of everyone who dropped late, each with when and how close
   to the skate — "Late drop · 6:15 PM (2h 24m before) · No" (server-formatted
   `late_drop_label`, 0.34.3+). A row that owes shows a red **Fine $25** (the
-  skate's price, `manage.skate_fee`) and a $ to mark it paid; otherwise the
-  line ends "· no fine" (fines off for this skate) or "· no fee" (goalie,
-  the night's director, comped). Older server: no late-drop fields → no
+  skate's price, `manage.skate_fee`) and a $ to mark it paid; an exempt row's
+  line ends "· no fee" (goalie, the night's director, comped). With Fine
+  late drops off the rows show nothing about fines — no label, no $, no
+  "no fine" (owner 2026-10-13). Older server: no late-drop fields → no
   list; 0.34.3 → the list without fines. Logic in `src/lateDrop.ts` (+ tests).
 - **Manage → Settings → Fine late drops + Skate fee** (owner 2026-10-13:
   "the Skate drop Fine toggle should be on the Settings tab right next to
@@ -42,7 +43,10 @@ that fix too. No native change.
   `skate_fee`, sent only when the server sends them — 0.35.0+). Replaces
   the per-row Fine switch built earlier the same day (`set_late_fine`,
   never released). The late-change warning's amount comes from the server
-  (`fee_amount`). iOS build stays 31 (never uploaded).
+  (`fee_amount`). iOS build stays 31 (never uploaded). Layout (owner
+  2026-10-13): "Fine late drops" label + switch on one line, centred in
+  the right half and on the middle of the warning-hours picker (measured
+  with onLayout, so a two-line label or a larger text size still lines up).
 
 ## 2026-10-12 — 1.6.2 (iOS build 30): a rejected sign-in signs out instead of retrying
 

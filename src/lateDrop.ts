@@ -6,7 +6,8 @@
 // 0.35.0+ adds `late_fine`: "owes" (the skate's price), "waived" (the
 // event's Settings → "Fine late drops" is off) or "none" (exempt), and
 // `manage.skate_fee`. Older servers send neither, so nothing shows. Fines
-// are switched on/off for the whole skate in Settings, not per row.
+// are switched on/off for the whole skate in Settings, not per row; with
+// them off a row shows no fine wording at all (owner, 2026-10-13).
 
 import type { RosterEntry } from "./api/types.ts";
 
@@ -15,13 +16,16 @@ export function lateDropRows(players: RosterEntry[]): RosterEntry[] {
   return players.filter((p) => !!p.late_drop_at && p.status !== "YES");
 }
 
-/** "Late drop · 6:15 PM (2h 24m before) · No" + " · no fine" / " · no fee". */
+/**
+ * "Late drop · 6:15 PM (2h 24m before) · No", + " · no fee" for an exempt
+ * row (goalie, ND, comped) while fines are on. Fines off ("waived"): nothing
+ * about fines — the whole skate is off, so "no fine" on every row is noise.
+ */
 export function lateDropLine(p: RosterEntry): string {
   const parts = ["Late drop"];
   if (p.late_drop_label) parts.push(p.late_drop_label);
   parts.push(p.status === "MAYBE" ? "Maybe" : "No");
-  if (p.late_fine === "waived") parts.push("no fine");
-  else if (p.late_fine === "none") parts.push("no fee");
+  if (p.late_fine === "none") parts.push("no fee");
   return parts.join(" · ");
 }
 
