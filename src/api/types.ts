@@ -255,10 +255,10 @@ export interface RosterEntry {
   late_drop_minutes_before?: number | null;
   late_drop_label?: string;
   /** The late drop's fine (server 0.35.0+, directors only): "owes" = the
-   *  Fine switch is on, "waived" = a director switched it off, "none" =
-   *  exempt (goalie, ND, comped — no switch). null when not a late drop;
-   *  missing on older servers (no switch shown). On a late-drop row
-   *  `pays` = owes. */
+   *  skate's price (`manage.skate_fee`), "waived" = the event's Settings →
+   *  "Fine late drops" is off ("no fine"), "none" = exempt (goalie, ND,
+   *  comped — "no fee"). null when not a late drop; missing on older
+   *  servers. On a late-drop row `pays` = owes. */
   late_fine?: LateFine | null;
 }
 
@@ -348,6 +348,11 @@ export interface EventManage {
   notes: string;
   date: string;
   rsvp_change_warning_hours: number | null;
+  /** Settings → "Fine late drops", next to the warning hours (server
+   *  0.35.0+; missing on older servers → the switch is hidden). */
+  fine_late_drops?: boolean;
+  /** The skate's price in dollars — also the late-drop fine (server 0.35.0+). */
+  skate_fee?: number;
   whiskey_guy_pays: boolean;
   invite_header_image: string | null;
   invites_send_at: string | null;
@@ -440,8 +445,6 @@ export type RosterAction =
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
   /** Director's per-event "Comp" control (server 0.34+). */
   | { action: "set_pay_override"; pay_override: PayOverride; player_id?: number; day_player_id?: number }
-  /** A Late Drop row's "Fine" switch (server 0.35.0+): false = waived. */
-  | { action: "set_late_fine"; player_id: number; fine: boolean }
   | {
       action: "add_day_player";
       name: string;
@@ -654,6 +657,10 @@ export interface EventPatchBody {
   capacity?: number | null;
   goalies_needed?: number | null;
   rsvp_change_warning_hours?: number | null;
+  /** Server 0.35.0+ only — send just when `manage.fine_late_drops` exists. */
+  fine_late_drops?: boolean;
+  /** Server 0.35.0+ only — send just when `manage.skate_fee` exists. */
+  skate_fee?: number;
   allow_guests?: boolean;
   beer_guy_enabled?: boolean;
   whiskey_guy_enabled?: boolean;

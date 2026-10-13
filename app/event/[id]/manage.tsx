@@ -32,7 +32,7 @@ import { BorrowPicker } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
-import { fineControl, lateDropLine, lateDropRows } from "@/src/lateDrop";
+import { fineBadge, fineSettingsPatch, lateDropLine, lateDropRows } from "@/src/lateDrop";
 import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
 import { useToast } from "@/src/components/Toast";
 import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented, Tap } from "@/src/components/ui";
@@ -293,6 +293,12 @@ function SettingsCard({ event }: { event: EventDetail }) {
   const [beer, setBeer] = useState(event.beer_guy_enabled);
   const [whiskey, setWhiskey] = useState(event.whiskey_guy_enabled);
   const [whiskeyPays, setWhiskeyPays] = useState(m.whiskey_guy_pays);
+  // Server 0.35.0+: "Fine late drops" (next to the warning hours) and the
+  // skate fee the fine equals. Older server: both hidden, never sent.
+  const hasFineSetting = typeof m.fine_late_drops === "boolean";
+  const hasSkateFee = typeof m.skate_fee === "number";
+  const [fineLateDrops, setFineLateDrops] = useState(m.fine_late_drops ?? true);
+  const [skateFee, setSkateFee] = useState(hasSkateFee ? String(m.skate_fee) : "");
   const [error, setError] = useState<string | null>(null);
 
   const numOrNull = (s: string) => (s.trim() === "" ? null : Number(s));
@@ -322,6 +328,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
       beer_guy_enabled: beer,
       whiskey_guy_enabled: whiskey,
       whiskey_guy_pays: whiskeyPays,
+      ...fineSettingsPatch(m, fineLateDrops, skateFee),
     };
     patch.mutate(body, {
       onError: (e) => setError(errText(e)),
@@ -385,16 +392,44 @@ function SettingsCard({ event }: { event: EventDetail }) {
         </Field>
       </View>
 
-      <Field label="Late-change warning (hours before start)">
-        <NumberField
-          value={warnHours}
-          onChange={setWarnHours}
-          min={0}
-          max={72}
-          unit="h"
-          placeholder="—"
-        />
-      </Field>
+      <View style={styles.twoCol}>
+        <Field label="Late-change warning (hours before start)" style={styles.col}>
+          <NumberField
+            value={warnHours}
+            onChange={setWarnHours}
+            min={0}
+            max={72}
+            unit="h"
+            placeholder="—"
+          />
+        </Field>
+        {hasFineSetting ? (
+          <Field label="Fine late drops" style={styles.col}>
+            <View style={styles.fineSetting}>
+              <Switch
+                value={fineLateDrops}
+                onValueChange={setFineLateDrops}
+                trackColor={{ true: colors.gold, false: colors.border }}
+                thumbColor="#fff"
+                accessibilityLabel="Fine late drops"
+              />
+              <Text style={styles.muted}>{fineLateDrops ? "On" : "Off"}</Text>
+            </View>
+          </Field>
+        ) : null}
+      </View>
+      {hasFineSetting ? (
+        <Text style={styles.hint}>
+          {fineLateDrops
+            ? "A skater who drops inside the warning window owes the skate fee. Goalies, the night's director and comped players never do."
+            : "No late drop on this skate owes anything."}
+        </Text>
+      ) : null}
+      {hasSkateFee ? (
+        <Field label="Skate fee, $ (a late drop is fined the same)">
+          <NumberField value={skateFee} onChange={setSkateFee} min={0} max={100} placeholder="—" />
+        </Field>
+      ) : null}
 
       <View style={styles.divider} />
       <View style={styles.toggleGrid}>
@@ -1151,9 +1186,8 @@ function RosterCard({
               <LateDropRow
                 key={`ld-${p.player_id}`}
                 entry={p}
-                disabled={busy}
+                skateFee={event.manage?.skate_fee}
                 tickDisabled={bulkBusy}
-                onFine={(v) => act({ action: "set_late_fine", player_id: p.player_id, fine: v })}
                 onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
               />
             ))}
@@ -1537,25 +1571,22 @@ function RosterAdminRow({
 }
 
 // A Late Drop row in Manage → Roster: when they dropped and how close to
-// the start (server-formatted), and the director's "Fine" switch — on =
-// owes the $20 late-change fee, off = waived (server 0.35.0+). Exempt rows
-// (goalie, ND, comped) say "no fee" with no switch; an older server sends no
-// late_fine, so no switch. $ shows only while the fine is owed.
+// the start (server-formatted), and what they owe — a red "Fine $25" (the
+// skate's price) with $ to mark it paid, or "no fine" (Settings → Fine late
+// drops is off) / "no fee" (goalie, ND, comped) in the line under the name.
+// Fines are switched for the whole skate in Settings, not here.
 function LateDropRow({
   entry,
-  disabled,
-  tickDisabled = disabled,
-  onFine,
+  skateFee,
+  tickDisabled,
   onPaid,
 }: {
   entry: RosterEntry;
-  disabled?: boolean;
+  skateFee?: number;
   tickDisabled?: boolean;
-  onFine: (fine: boolean) => void;
   onPaid: (paid: boolean) => void;
 }) {
-  const control = fineControl(entry);
-  const owes = entry.late_fine === "owes";
+  const badge = fineBadge(entry, skateFee);
   return (
     <View style={styles.adminRow}>
       <View style={styles.adminLine}>
@@ -1563,27 +1594,12 @@ function LateDropRow({
           {entry.name}
         </Text>
         {entry.is_goalie ? <Text style={styles.goldTag}>G</Text> : null}
-        <View style={styles.tinyBtns}>
-          {control === "switch" ? (
-            <View style={styles.fineSwitch}>
-              <Text style={[styles.fineLabel, owes && styles.fineLabelOn]}>Fine</Text>
-              <Switch
-                value={owes}
-                onValueChange={onFine}
-                disabled={disabled}
-                trackColor={{ true: colors.red, false: colors.border }}
-                thumbColor="#fff"
-                accessibilityLabel={`Fine ${entry.name} the $20 late-change fee`}
-              />
-            </View>
-          ) : null}
-          {owes ? (
+        {badge ? (
+          <View style={styles.tinyBtns}>
+            <Text style={styles.fineBadge}>{badge}</Text>
             <TinyBtn text="$" on={entry.paid} disabled={tickDisabled} onPress={() => onPaid(!entry.paid)} />
-          ) : control === "switch" ? (
-            // Keeps the switch where it was when the $ goes away.
-            <View style={styles.tinySpacer} />
-          ) : null}
-        </View>
+          </View>
+        ) : null}
       </View>
       <Text style={styles.lateDropLine}>{lateDropLine(entry)}</Text>
     </View>
@@ -2243,10 +2259,8 @@ const styles = StyleSheet.create({
   },
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
   lateDropLine: { color: colors.textMuted, fontSize: font.xs, marginTop: 2 },
-  fineSwitch: { flexDirection: "row", alignItems: "center", gap: 6 },
-  tinySpacer: { width: 30 },
-  fineLabel: { color: colors.textMuted, fontSize: font.xs, fontWeight: "800" },
-  fineLabelOn: { color: colors.red },
+  fineBadge: { color: colors.red, fontSize: font.xs, fontWeight: "800" },
+  fineSetting: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
   tiny: {
     minWidth: 30,

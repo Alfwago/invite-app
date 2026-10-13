@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import type { RosterEntry } from "./api/types.ts";
-import { fineControl, lateDropLine, lateDropRows, withLateFine } from "./lateDrop.ts";
+import { fineBadge, fineSettingsPatch, lateDropLine, lateDropRows } from "./lateDrop.ts";
 
 function row(over: Partial<RosterEntry>): RosterEntry {
   return {
@@ -45,7 +45,7 @@ test("lateDropLine: time, how far before, status and fine", () => {
   assert.equal(lateDropLine(row({ ...base, late_fine: "owes" })), "Late drop · 6:15 PM (2h 24m before) · No");
   assert.equal(
     lateDropLine(row({ ...base, status: "MAYBE", late_fine: "waived" })),
-    "Late drop · 6:15 PM (2h 24m before) · Maybe · fine waived",
+    "Late drop · 6:15 PM (2h 24m before) · Maybe · no fine",
   );
   assert.equal(lateDropLine(row({ ...base, late_fine: "none" })), "Late drop · 6:15 PM (2h 24m before) · No · no fee");
   // 0.34.3 server: label but no late_fine.
@@ -53,22 +53,22 @@ test("lateDropLine: time, how far before, status and fine", () => {
   assert.equal(lateDropLine(row({ late_drop_at: "x" })), "Late drop · No");
 });
 
-test("fineControl: switch for owes/waived, exempt for none, hidden on older servers", () => {
-  assert.equal(fineControl(row({ late_fine: "owes" })), "switch");
-  assert.equal(fineControl(row({ late_fine: "waived" })), "switch");
-  assert.equal(fineControl(row({ late_fine: "none" })), "exempt");
-  assert.equal(fineControl(row({ late_fine: null })), "hidden");
-  assert.equal(fineControl(row({})), "hidden");
+test("fineBadge: the skate's price on rows that owe, nothing otherwise", () => {
+  assert.equal(fineBadge(row({ late_fine: "owes" }), 25), "Fine $25");
+  assert.equal(fineBadge(row({ late_fine: "owes" }), 0), "Fine $0");
+  assert.equal(fineBadge(row({ late_fine: "owes" }), undefined), "Fine");
+  assert.equal(fineBadge(row({ late_fine: "waived" }), 20), null);
+  assert.equal(fineBadge(row({ late_fine: "none" }), 20), null);
+  assert.equal(fineBadge(row({}), 20), null);
 });
 
-test("withLateFine: flips owes <-> waived and pays; leaves exempt rows alone", () => {
-  const owes = row({ late_fine: "owes", pays: true });
-  const off = withLateFine(owes, false);
-  assert.equal(off.late_fine, "waived");
-  assert.equal(off.pays, false);
-  const on = withLateFine(off, true);
-  assert.equal(on.late_fine, "owes");
-  assert.equal(on.pays, true);
-  const exempt = row({ late_fine: "none", pays: false });
-  assert.equal(withLateFine(exempt, true), exempt);
+test("fineSettingsPatch: sends only what the server knows", () => {
+  assert.deepEqual(fineSettingsPatch({ fine_late_drops: true, skate_fee: 20 }, false, "25"), {
+    fine_late_drops: false,
+    skate_fee: 25,
+  });
+  // Older server: neither field in manage → nothing sent.
+  assert.deepEqual(fineSettingsPatch({}, false, "25"), {});
+  // A blank or odd fee isn't sent; the switch still is.
+  assert.deepEqual(fineSettingsPatch({ fine_late_drops: true, skate_fee: 20 }, true, ""), { fine_late_drops: true });
 });

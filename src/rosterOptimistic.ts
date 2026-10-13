@@ -2,10 +2,9 @@
 // imports, so it runs under `npm test`.
 
 import type { EventDetail, RosterAction } from "./api/types.ts";
-import { withLateFine } from "./lateDrop.ts";
 
 /**
- * Present / paid ticks (and a late drop's Fine switch) applied to the
+ * Present / paid ticks applied to the
  * cached event right away, so the box flips under the director's finger
  * instead of after the round trip.
  * Returns null for every other roster action (those wait for the server).
@@ -45,11 +44,6 @@ export function applyOptimisticRosterAction(event: EventDetail, body: RosterActi
         ),
       };
     }
-    case "set_late_fine":
-      return {
-        ...event,
-        players: event.players.map((p) => (p.player_id === body.player_id ? withLateFine(p, body.fine) : p)),
-      };
     default:
       return null;
   }
