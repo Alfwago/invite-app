@@ -463,7 +463,13 @@ function SheetButton({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyText: { color: colors.textMuted, fontSize: font.base, fontWeight: "600" },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: font.base,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingHorizontal: spacing.xl,
+  },
 
   list: { flex: 1 },
   listContent: { padding: spacing.md, gap: 2 },
