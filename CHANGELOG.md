@@ -3,7 +3,7 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-12 / 13 — 1.7.0 (iOS build 31): skate-group notification switches, late-change warning, late drops on the roster
+## 2026-10-12 / 14 — 1.7.0 (iOS build 31): skate-group notification switches, late-change warning, late drops on the roster
 
 **Needs `invite-server` 0.34.3 (late-change fee, late-drop times) and 0.35.0
 (skate-group switches, Fine late drops, skate fee)** — they ship first. On an older server each piece hides itself.
@@ -25,6 +25,18 @@ that fix too. No native change.
   night's director, comped or borrowed players). Older server: directors
   fall back to the event's hours and "goalies don't pay"; players get no
   warning. Logic in `src/lateChange.ts` (+ tests).
+- **Late drop, then No ↔ Maybe** (owner 2026-10-14): a player who dropped
+  late and still owes gets "You dropped late — You still owe the $20
+  late-change fee — only changing back to Yes clears it." (Cancel / Change
+  RSVP) when switching between No and Maybe. Text from the server
+  (`my_rsvp.late_drop_owed`, 0.35.0 build 89+), sent only when they owe
+  (fines on, not exempt); an older server sends nothing → no note.
+  `lateDropOwedNote` in `src/lateChange.ts` (+ tests).
+- **Manage → Settings on an archived skate** (owner 2026-10-14): only an
+  "After the skate" card — Fine late drops + Skate fee + Save — so fines
+  can be settled after the skate; everything else is locked (the server
+  refuses other changes once archived). Older server (no fine fields): just
+  the "locked" note.
 - **Manage → Roster → Late drops** (directors; owner 2026-10-13): a list
   under Going of everyone who dropped late, each with when and how close
   to the skate — "Late drop · 6:15 PM (2h 24m before) · No" (server-formatted

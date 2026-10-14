@@ -8,7 +8,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { Tap } from "@/src/components/Tap";
 import { Button } from "@/src/components/ui";
 import { useRsvp } from "@/src/hooks/queries";
-import { lateChangeWarning } from "@/src/lateChange";
+import { lateChangeWarning, lateDropOwedNote } from "@/src/lateChange";
 import { colors, radius, spacing } from "@/src/theme";
 import { Alert } from "react-native";
 import { useMutation } from "@tanstack/react-query";
@@ -84,8 +84,18 @@ export function RsvpControls({ event }: { event: EventDetail }) {
   }
 
   // Dropping from Yes inside the late-change window: same warning as the
-  // website, with the $20 line only for players who'd owe it.
+  // website, with the $20 line only for players who'd owe it. A late
+  // dropper switching No ↔ Maybe who still owes gets the server's note
+  // instead ("only changing back to Yes clears it").
   function confirmLateChangeThenSubmit() {
+    const owedNote = lateDropOwedNote({ current, choice });
+    if (owedNote) {
+      Alert.alert("You dropped late", owedNote, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Change RSVP", onPress: () => void submit() },
+      ]);
+      return;
+    }
     const warning = lateChangeWarning({
       current,
       choice,

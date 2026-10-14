@@ -78,3 +78,21 @@ export function lateChangeWarning(args: {
   }
   return lateChangeMessage(window.hours, window.fee, window.amount || LATE_CHANGE_FEE);
 }
+
+/**
+ * A late dropper switching No ↔ Maybe (owner, 2026-10-14): the server's
+ * note "You still owe the $X late-change fee — only changing back to Yes
+ * clears it.", else null. Only when the server says they owe
+ * (`my_rsvp.late_drop_owed`, 0.35.0+ — fines on, not exempt); an older
+ * server never sends it, so no note.
+ */
+export function lateDropOwedNote(args: {
+  current: MyRsvp | null | undefined;
+  choice: string;
+}): string | null {
+  const { current, choice } = args;
+  if (!current || current.status === "YES" || choice === "YES" || choice === current.status) {
+    return null;
+  }
+  return current.late_drop_owed?.message || null;
+}

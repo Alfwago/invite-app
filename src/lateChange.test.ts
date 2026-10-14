@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { MyRsvp } from "./api/types.ts";
-import { lateChangeMessage, lateChangeWarning, localStart } from "./lateChange.ts";
+import { lateChangeMessage, lateChangeWarning, lateDropOwedNote, localStart } from "./lateChange.ts";
 
 const now = new Date("2026-10-14T20:00:00Z");
 const base: MyRsvp = {
@@ -60,4 +60,27 @@ test("older server: falls back to the director-only hours; goalies see no fee", 
   );
   // A player on an older server has no hours → no confirm.
   assert.equal(lateChangeWarning({ ...args, fallbackHours: undefined, current: base }), null);
+});
+
+const owed = {
+  fee_amount: "$26",
+  message: "You still owe the $26 late-change fee — only changing back to Yes clears it.",
+};
+
+test("owed note: a late dropper switching No ↔ Maybe who owes", () => {
+  const no = { ...base, status: "NO" as const, late_drop_owed: owed };
+  assert.equal(lateDropOwedNote({ current: no, choice: "MAYBE" }), owed.message);
+  const maybe = { ...base, status: "MAYBE" as const, late_drop_owed: owed };
+  assert.equal(lateDropOwedNote({ current: maybe, choice: "NO" }), owed.message);
+});
+
+test("owed note: none when going back to Yes, unchanged, not owed or an older server", () => {
+  const no = { ...base, status: "NO" as const, late_drop_owed: owed };
+  assert.equal(lateDropOwedNote({ current: no, choice: "YES" }), null);
+  assert.equal(lateDropOwedNote({ current: no, choice: "NO" }), null);
+  assert.equal(lateDropOwedNote({ current: { ...no, late_drop_owed: null }, choice: "MAYBE" }), null);
+  const { late_drop_owed: _, ...older } = no;
+  assert.equal(lateDropOwedNote({ current: older, choice: "MAYBE" }), null);
+  assert.equal(lateDropOwedNote({ current: { ...base, late_drop_owed: owed }, choice: "NO" }), null);
+  assert.equal(lateDropOwedNote({ current: null, choice: "NO" }), null);
 });

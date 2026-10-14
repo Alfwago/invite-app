@@ -264,10 +264,79 @@ function CountCell({ label, value }: { label: string; value: number }) {
 // ====================================================================
 
 function SettingsPanel({ event }: { event: EventDetail }) {
+  // An archived skate (6 h after the start) is locked like the website's,
+  // except "After the skate": fines get settled after the skate (owner,
+  // 2026-10-14).
+  if (event.is_past) return <AfterSkateCard event={event} />;
   return (
     <>
       <SettingsCard event={event} />
     </>
+  );
+}
+
+// Fine late drops + skate fee on an archived skate. Server 0.35.0+ allows
+// just these (and director notes) once a skate is archived; an older server
+// sends neither field, so only the "locked" note shows.
+function AfterSkateCard({ event }: { event: EventDetail }) {
+  const patch = usePatchEvent(event.id);
+  const m = event.manage!;
+  const hasFineSetting = typeof m.fine_late_drops === "boolean";
+  const hasSkateFee = typeof m.skate_fee === "number";
+  const [fineLateDrops, setFineLateDrops] = useState(m.fine_late_drops ?? true);
+  const [skateFee, setSkateFee] = useState(hasSkateFee ? String(m.skate_fee) : "");
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+
+  function save() {
+    setError(null);
+    patch.mutate(fineSettingsPatch(m, fineLateDrops, skateFee), {
+      onSuccess: () => toast.show("Fine settings saved", "success"),
+      onError: (e) => setError(errText(e)),
+    });
+  }
+
+  return (
+    <Card>
+      <Text style={styles.heading}>After the skate</Text>
+      <Text style={styles.hint}>
+        This skate is over, so its other settings are locked. Fines can still be settled.
+      </Text>
+      {hasFineSetting ? (
+        <>
+          <View style={styles.afterSkateRow}>
+            <Text style={styles.label} onPress={() => setFineLateDrops(!fineLateDrops)}>
+              Fine late drops
+            </Text>
+            <View style={styles.fineSwitch}>
+              <Switch
+                value={fineLateDrops}
+                onValueChange={setFineLateDrops}
+                trackColor={{ true: colors.gold, false: colors.border }}
+                thumbColor="#fff"
+                accessibilityLabel="Fine late drops"
+              />
+            </View>
+          </View>
+          <Text style={styles.hint}>
+            {fineLateDrops
+              ? "A skater who dropped inside the warning window owes the skate fee."
+              : "No late drop on this skate owes anything. Nobody is notified."}
+          </Text>
+        </>
+      ) : null}
+      {hasSkateFee ? (
+        <Field label="Skate fee, $ (a late drop is fined the same)">
+          <NumberField value={skateFee} onChange={setSkateFee} min={0} max={100} placeholder="—" />
+        </Field>
+      ) : null}
+      {hasFineSetting || hasSkateFee ? (
+        <>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button label="Save fine settings" onPress={save} loading={patch.isPending} />
+        </>
+      ) : null}
+    </Card>
   );
 }
 
@@ -2298,6 +2367,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   fineSwitch: { height: 31 },
+  afterSkateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
   grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
   tiny: {
     minWidth: 30,

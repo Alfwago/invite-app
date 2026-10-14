@@ -179,6 +179,17 @@ export interface MyRsvp {
   /** Server 0.34.3+: the late-change window, or null when no change of
    *  theirs could be a late drop. Absent on older servers. */
   late_change?: LateChange | null;
+  /** Server 0.35.0+: they dropped late, aren't a Yes and still owe the fine
+   *  — the note for switching No ↔ Maybe. Null otherwise; absent on older
+   *  servers. */
+  late_drop_owed?: LateDropOwed | null;
+}
+
+/** `my_rsvp.late_drop_owed` — see src/lateChange.ts. */
+export interface LateDropOwed {
+  fee_amount: string;
+  /** "You still owe the $20 late-change fee — only changing back to Yes clears it." */
+  message: string;
 }
 
 /** `my_rsvp.late_change` — see src/lateChange.ts. */
