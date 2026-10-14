@@ -3,6 +3,36 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-14 — 1.7.1 (iOS build 32): dark skate-group tiles on Messages
+
+**Pairs with `invite-server` 0.35.1** (`tile_image_url`, `short_label` on
+`/api/boards/`) — it ships first. On an older server the tiles fall back to
+the original white-background logos (fitted whole, not cropped) and the
+label is worked out in the app. Based on `release/1.7.0` @ 5fb43f7.
+Native change: the Live Activity's bundled logos — needs a prebuild.
+
+- **Messages → skate-group tiles** (owner chose "Option 1", 2026-10-14):
+  each group's logo on a dark rounded tile (#161616, radius 10, 1px border),
+  with a short label underneath ("Mon", "Sundae"; 11pt grey). The open board
+  gets a gold border and gold wash, and its label turns gold — padding
+  shrinks by the border's extra point so nothing shifts. Logos use
+  `resizeMode="contain"` (a big custom upload was cropped before). Tiles
+  never go below a 44pt tap target; a very narrow screen wraps. A group
+  without a logo gets the same tile with its short label in gold, instead of
+  the old half-width text chip.
+- **Unread badge** (Amy): darker red (#d93a3f — white digits at 4.5:1), a
+  2px black ring so it stands off the tile edge, bolder number.
+- **Accessibility**: tiles and the Main chip are buttons with a selected
+  state and labels like "Monday Mules board, 3 unread".
+- **Empty board** (Amy): "Nothing on the <group> board yet. Say hi to the
+  group." Main keeps "No messages".
+- **Live Activity skate card**: the logo now sits on a dark tile
+  (#161616 + 1px border) instead of a white plate, with dark-tile versions
+  of the seven bundled logos (156px; made by invite-server
+  `scripts/make_dark_logos.py --widget`).
+- Logic in `src/boardTiles.ts` (+ tests: label rule = the server's
+  `Night.short_label`, tile URL fallback, a11y label).
+
 ## 2026-10-12 / 14 — 1.7.0 (iOS build 31): skate-group notification switches, late-change warning, late drops on the roster
 
 **Needs `invite-server` 0.34.3 (late-change fee, late-drop times) and 0.35.0

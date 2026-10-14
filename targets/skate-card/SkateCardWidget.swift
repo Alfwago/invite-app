@@ -22,6 +22,8 @@ struct SkateCardBundle: WidgetBundle {
 
 private enum Palette {
     static let card = Color(hex: 0x0a0a0a)
+    static let tile = Color(hex: 0x161616) // board / logo tile (Messages tab)
+    static let border = Color(hex: 0x1a1a1a)
     static let text = Color.white
     static let textMuted = Color(hex: 0x9aa0a6)
     static let gold = Color(hex: 0xd4af37)
@@ -252,8 +254,10 @@ private struct LockScreenCard: View {
 
 // MARK: - Pieces
 
-/// The night logo. The art is full color on a white square, so it sits on a
-/// white rounded tile (radius.md) rather than being cropped.
+/// The night logo on a dark rounded tile (radius.md) — the same look as the
+/// Messages tab's board tiles (app 1.7.1). The bundled logo-*.png are the
+/// dark tile versions (transparent, grey edge; invite-server
+/// scripts/make_dark_logos.py --widget), so no white plate is needed.
 private struct LogoTile: View {
     let asset: String
     let size: CGFloat
@@ -264,7 +268,11 @@ private struct LogoTile: View {
             .scaledToFit()
             .padding(size >= 52 ? 4 : 3)
             .frame(width: size, height: size)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(Palette.tile, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Palette.border, lineWidth: 1)
+            )
     }
 }
 

@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
+import { boardA11yLabel, boardTileImage, nightShortLabel } from "@/src/boardTiles";
 import { Tap } from "@/src/components/Tap";
 import { ChatThread } from "@/src/components/chat/ChatThread";
 import {
@@ -15,10 +16,12 @@ import {
   usePostMessage,
   useReactMessage,
 } from "@/src/hooks/queries";
-import { colors, radius, spacing } from "@/src/theme";
+import { colors, font, radius, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const MAIN = null;
+const TILE_BG = "#161616"; // board tile, a step above colors.cardRaised
+const BADGE_RED = "#d93a3f"; // white on it = 4.5:1
 
 export default function MessagesScreen() {
   const qc = useQueryClient();
@@ -44,12 +47,14 @@ export default function MessagesScreen() {
   }, [messagesQuery.dataUpdatedAt, messagesQuery.isSuccess, qc]);
 
   const canEmail = !!data?.can_email;
+  const activeNight = board === MAIN ? null : boards.find((b) => b.id === board);
 
   // Size the night tiles so exactly 6 fit one row edge-to-edge: strip the
   // board-bar padding and the 5 inter-tile gaps, divide by 6. Fewer than 6
-  // groups stay this size and center (boardRow wraps + centers).
+  // groups stay this size and center (boardRow wraps + centers). Never below
+  // a 44pt tap target — a very narrow screen wraps instead.
   const { width } = useWindowDimensions();
-  const tileSize = Math.floor((width - spacing.md * 2 - spacing.sm * 5) / 6);
+  const tileSize = Math.max(44, Math.floor((width - spacing.md * 2 - spacing.sm * 5) / 6));
 
   return (
     <View style={styles.screen}>
@@ -59,14 +64,14 @@ export default function MessagesScreen() {
           active={board === MAIN}
           onPress={() => setBoard(MAIN)}
           badge={boardsQuery.data?.unread_main ?? 0}
-          full
         />
         <View style={styles.boardRow}>
           {boards.map((b) => (
-            <BoardChip
+            <BoardTile
               key={b.id}
-              label={b.name}
-              imageUrl={b.image_url}
+              name={b.name}
+              shortLabel={nightShortLabel(b)}
+              imageUrl={boardTileImage(b)}
               active={board === b.id}
               badge={b.unread ?? 0}
               size={tileSize}
@@ -89,7 +94,11 @@ export default function MessagesScreen() {
         onRefresh={pull.onRefresh}
         onRetry={messagesQuery.refetch}
         sending={post.isPending || edit.isPending}
-        emptyLabel="No messages"
+        emptyLabel={
+          activeNight
+            ? `Nothing on the ${activeNight.name} board yet. Say hi to the group.`
+            : "No messages"
+        }
         mentionBoard={board}
         accessory={
           canEmail ? (
@@ -131,51 +140,82 @@ function UnreadDot({ count, style }: { count: number; style?: object }) {
   );
 }
 
+/**
+ * A skate group's board: its logo on a dark rounded tile (gold border + gold
+ * wash when open) with a short day label underneath. A group with no logo
+ * gets the same tile with its short label in gold. Logos come from the
+ * server's tile_image_url (made for dark backgrounds) — on an older server,
+ * the original white-background art, still fitted whole ("contain").
+ */
+function BoardTile({
+  name,
+  shortLabel,
+  imageUrl,
+  active,
+  badge,
+  size,
+  onPress,
+}: {
+  name: string;
+  shortLabel: string;
+  imageUrl: string | null;
+  active: boolean;
+  badge: number;
+  size: number;
+  onPress: () => void;
+}) {
+  return (
+    <Tap
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={boardA11yLabel(name, badge)}
+      style={{ width: size, alignItems: "center" }}
+    >
+      <View style={{ width: size, height: size }}>
+        <View style={[styles.boardTile, active && styles.boardTileActive]}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="contain" />
+          ) : (
+            <Text style={styles.boardTileText} numberOfLines={1} adjustsFontSizeToFit>
+              {shortLabel}
+            </Text>
+          )}
+        </View>
+        <UnreadDot count={badge} style={styles.unreadDotCorner} />
+      </View>
+      <Text style={[styles.boardTileLabel, active && styles.boardTileLabelActive]} numberOfLines={1}>
+        {shortLabel}
+      </Text>
+    </Tap>
+  );
+}
+
+/** The Main board: a full-width chip above the group tiles. */
 function BoardChip({
   label,
   active,
   onPress,
-  full,
-  imageUrl,
   badge = 0,
-  size = 56,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
-  full?: boolean;
-  imageUrl?: string | null;
   badge?: number;
-  size?: number;
 }) {
-  if (!full && imageUrl) {
-    return (
-      <Tap
-        onPress={onPress}
-        accessibilityLabel={label}
-        style={{ width: size, height: size }}
-      >
-        <View style={[styles.boardTile, active && styles.boardTileActive]}>
-          <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="cover" />
-        </View>
-        <UnreadDot count={badge} style={styles.unreadDotCorner} />
-      </Tap>
-    );
-  }
   return (
     <Tap
       onPress={onPress}
-      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={boardA11yLabel(label, badge)}
       style={[
         styles.chip,
-        full ? styles.chipFull : styles.chipHalf,
+        styles.chipFull,
         active && { backgroundColor: colors.gold, borderColor: colors.gold },
       ]}
     >
-      <Text
-        style={[styles.chipText, full && styles.chipTextFull, active && { color: colors.goldText }]}
-        numberOfLines={1}
-      >
+      <Text style={[styles.chipText, styles.chipTextFull, active && { color: colors.goldText }]} numberOfLines={1}>
         {label}
       </Text>
       <UnreadDot count={badge} />
@@ -211,31 +251,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   chipFull: { width: "100%", paddingVertical: spacing.md },
-  chipHalf: { flexGrow: 1, flexBasis: "45%" },
+  // Option 1 (owner, 2026-10-14). Active swaps 1px border + 4 padding for
+  // 2px + 3, so the logo doesn't move when a tile is picked.
   boardTile: {
     width: "100%",
     height: "100%",
-    borderRadius: radius.sm,
-    borderWidth: 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
     borderColor: colors.border,
+    padding: 4,
     overflow: "hidden",
-    backgroundColor: colors.cardRaised,
-  },
-  boardTileActive: { borderColor: colors.gold },
-  boardTileImg: { width: "100%", height: "100%" },
-  chipText: { color: colors.text, fontWeight: "600", fontSize: 13, flexShrink: 1 },
-  chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
-  unreadDot: {
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    backgroundColor: colors.red,
+    backgroundColor: TILE_BG,
     alignItems: "center",
     justifyContent: "center",
   },
-  unreadDotText: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  unreadDotCorner: { position: "absolute", top: -6, right: -6 },
+  boardTileActive: {
+    borderWidth: 2,
+    borderColor: colors.gold,
+    padding: 3,
+    backgroundColor: colors.goldDim,
+  },
+  boardTileImg: { width: "100%", height: "100%" },
+  boardTileText: { color: colors.gold, fontSize: 15, fontWeight: "800", paddingHorizontal: 2 },
+  boardTileLabel: { marginTop: 4, color: colors.textMuted, fontSize: font.xs, fontWeight: "600" },
+  boardTileLabelActive: { color: colors.gold },
+  chipText: { color: colors.text, fontWeight: "600", fontSize: 13, flexShrink: 1 },
+  chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
+  // 2px ring in the page colour so the badge reads apart from the tile's
+  // edge; darker red than colors.red so white digits pass 4.5:1 (Amy).
+  unreadDot: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 5,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.bg,
+    backgroundColor: BADGE_RED,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unreadDotText: { color: "#fff", fontSize: 11, fontWeight: "900" },
+  unreadDotCorner: { position: "absolute", top: -7, right: -7 },
 
   emailToggle: {
     flexDirection: "row",

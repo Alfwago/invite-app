@@ -10,6 +10,11 @@ export interface Night {
   weekday: number; // 1=Sun … 7=Sat
   /** Night's board/header art, or null. Present on /api/boards/ and /api/nights/. */
   image_url?: string | null;
+  /** Server 0.35.1+: the same art made for a dark tile (transparent, grey
+   * edge, 256px), or null — fall back to image_url. */
+  tile_image_url?: string | null;
+  /** Server 0.35.1+: "Mon" / "Sundae" for under the board tile. */
+  short_label?: string;
   /** Unread messages on this board for the caller. Present on /api/boards/. */
   unread?: number;
   // Present on GET /api/nights/ (the create-event picker); absent from board lists.
