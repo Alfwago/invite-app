@@ -27,9 +27,6 @@ import { colors, font, radius, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const MAIN = null;
-// The OBH bear on its dark tile: invite-server static/invitations/tiles/
-// Main-tile.png (scripts/make_dark_logos.py), 256px = 68pt @3x+.
-const MAIN_TILE = require("@/assets/brand/obh-bear-tile.png");
 const TILE_BG = "#161616"; // board tile, a step above colors.cardRaised
 const BADGE_RED = "#d93a3f"; // white on it = 4.5:1
 
@@ -59,33 +56,24 @@ export default function MessagesScreen() {
   const canEmail = !!data?.can_email;
   const activeNight = board === MAIN ? null : boards.find((b) => b.id === board);
 
-  // Owner's "Option A" (2026-10-15): Main is the first tile (the OBH
-  // bear, owner's "B"), then one per skate group — equal tiles spread evenly across
-  // the bar, wrapping into balanced, grid-aligned rows (boardTileLayout).
+  // Main is the full-width bar across the top (owner, 2026-10-15: the app
+  // keeps the bar; the website has the Main tile). Below it, one tile per
+  // skate group, equal size, spread evenly across the screen and wrapping
+  // into balanced, grid-aligned rows (boardTileLayout).
   const { width } = useWindowDimensions();
-  const tiles: TileProps[] = [
-    {
-      key: "main",
-      name: "Main",
-      shortLabel: "Main",
-      image: MAIN_TILE,
-      active: board === MAIN,
-      badge: boardsQuery.data?.unread_main ?? 0,
-      onPress: () => setBoard(MAIN),
-    },
-    ...boards.map((b) => {
-      const url = boardTileImage(b);
-      return {
-        key: String(b.id),
-        name: b.name,
-        shortLabel: nightShortLabel(b),
-        image: url ? { uri: url } : null,
-        active: board === b.id,
-        badge: b.unread ?? 0,
-        onPress: () => setBoard(b.id),
-      };
-    }),
-  ];
+  const mainUnread = boardsQuery.data?.unread_main ?? 0;
+  const tiles: TileProps[] = boards.map((b) => {
+    const url = boardTileImage(b);
+    return {
+      key: String(b.id),
+      name: b.name,
+      shortLabel: nightShortLabel(b),
+      image: url ? { uri: url } : null,
+      active: board === b.id,
+      badge: b.unread ?? 0,
+      onPress: () => setBoard(b.id),
+    };
+  });
   const layout = boardTileLayout(width - spacing.md * 2, tiles.length);
   const rows: TileProps[][] = [];
   for (let i = 0; i < tiles.length; i += layout.columns) rows.push(tiles.slice(i, i + layout.columns));
@@ -93,6 +81,16 @@ export default function MessagesScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.boardBar}>
+        <Tap
+          onPress={() => setBoard(MAIN)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: board === MAIN }}
+          accessibilityLabel={boardA11yLabel("Main", mainUnread)}
+          style={[styles.mainBar, board === MAIN && styles.mainBarActive]}
+        >
+          <Text style={[styles.mainBarText, board === MAIN && styles.mainBarTextActive]}>Main</Text>
+          {mainUnread > 0 ? <UnreadDot count={mainUnread} style={styles.unreadDotMain} /> : null}
+        </Tap>
         {rows.map((row, i) => (
           <View
             key={i}
@@ -175,8 +173,8 @@ type TileProps = {
 };
 
 /**
- * A board: its logo on a dark rounded tile (gold border + gold wash when
- * open) with a short label underneath — Main shows the OBH bear. A group
+ * A skate group's board: its logo on a dark rounded tile (gold border + gold
+ * wash when open) with a short label underneath. A group
  * with no logo gets the same tile with its short label in gold. Logos come
  * from the server's tile_image_url (made for dark backgrounds) — on an older
  * server, the original white-background art, still fitted whole ("contain").
@@ -228,6 +226,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   boardRow: { flexDirection: "row" },
+  // Main: the full-width bar, in the tiles' language — dark with a 1px
+  // border; open = 2px gold border, gold wash, gold text (padding gives
+  // back the extra point so the text doesn't move).
+  mainBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: TILE_BG,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  mainBarActive: {
+    borderWidth: 2,
+    borderColor: colors.gold,
+    backgroundColor: colors.goldDim,
+    paddingVertical: spacing.md - 1,
+    paddingHorizontal: spacing.md - 1,
+  },
+  mainBarText: { color: colors.text, fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
+  mainBarTextActive: { color: colors.gold },
   // Option 1 (owner, 2026-10-14). Active swaps 1px border + 4 padding for
   // 2px + 3, so the logo doesn't move when a tile is picked.
   boardTile: {
@@ -267,6 +288,7 @@ const styles = StyleSheet.create({
   },
   unreadDotText: { color: "#fff", fontSize: 11, fontWeight: "900" },
   unreadDotCorner: { position: "absolute", top: -7, right: -7 },
+  unreadDotMain: { position: "absolute", right: spacing.md },
 
   emailToggle: {
     flexDirection: "row",

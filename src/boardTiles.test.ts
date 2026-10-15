@@ -80,7 +80,18 @@ test("tile layout: never under 44pt, never wider than the screen", () => {
   assert.equal(boardTileLayout(296, 5).columns, 5);
 });
 
-test("a11y label: Main board too", () => {
+test("a11y label: the Main bar", () => {
   assert.equal(boardA11yLabel("Main", 0), "Main board");
   assert.equal(boardA11yLabel("Main", 4), "Main board, 4 unread");
+});
+
+test("tile layout: counts night tiles only (Main is the bar above)", () => {
+  // OBH's 6 skate groups: one row of 6 under the Main bar, not 4 + 3.
+  const l = boardTileLayout(369, 6);
+  assert.equal(l.columns, 6);
+  assert.ok(l.size >= TILE_MIN);
+  // A single group: one tile at the cap, centred (equal gaps both sides).
+  const one = boardTileLayout(369, 1);
+  assert.deepEqual([one.size, one.columns], [TILE_MAX, 1]);
+  assert.equal(one.gap, Math.floor((369 - TILE_MAX) / 2));
 });

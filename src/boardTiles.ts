@@ -56,8 +56,9 @@ export type BoardTileLayout = {
 };
 
 /**
- * Owner's "Option A" (2026-10-15): Main + the skate groups as equal tiles
- * spread evenly across `width`. As few rows as fit (up to 6 a row, fewer
+ * The skate groups as equal tiles spread evenly across `width` (`count` =
+ * night tiles only — in the app Main is the full-width bar above them,
+ * owner 2026-10-15; the website's Main is a tile and counts there). As few rows as fit (up to 6 a row, fewer
  * when a narrow screen can't fit 6 at 44pt), the tiles shared out evenly
  * over them (7 = 4 + 3, 8 = 4 + 4), as big as the row allows up to
  * TILE_MAX, and the leftover space shared out as equal gaps.

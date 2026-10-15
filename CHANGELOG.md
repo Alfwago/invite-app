@@ -19,21 +19,20 @@ Native change: the Live Activity's bundled logos — needs a prebuild.
   `resizeMode="contain"` (a big custom upload was cropped before). A group
   without a logo gets the same tile with its short label in gold, instead of
   the old half-width text chip.
-- **Main is a tile too** (owner chose "Option A", 2026-10-15): the
-  full-width Main chip is gone. Main is the first tile in the row, the OBH
-  bear logo on the same dark tile (owner chose "B" 2026-10-15: the wide
-  wordmark looked off squeezed into a square; `assets/brand/obh-bear-tile.png`
-  = the server's `tiles/Main-tile.png`, 256px, same as the website's),
-  "Main" under it; gold border, wash and label when open, unread badge on its corner like the groups. All tiles are
-  one size and spread evenly across the screen (equal gaps, no big empty
-  margins): as big as fits up to 68pt, never under 44pt, up to 6 a row (5 on
-  an iPhone SE), and more wrap into balanced rows on the same grid (7 = 4 +
-  3, 8 = 4 + 4). Pure layout maths in `src/boardTiles.ts`
-  (`boardTileLayout`, tested). Server 0.35.1 build 92 does the same on the
-  website.
+- **Main stays the full-width bar** (owner, 2026-10-15: "I liked the bar
+  button across the top better" — 1.7.1's Main tile with the OBH bear was
+  tried and dropped; the website keeps its bear Main tile). The bar now
+  speaks the tiles' language: dark with a 1px border; when open, a gold
+  border, gold wash and gold "Main"; its unread count in the same red badge,
+  on the bar's right. Below it the skate-group tiles are all one size and
+  spread evenly across the screen (equal gaps, no big empty margins): as big
+  as fits up to 68pt, never under 44pt, up to 6 a row (5 on an iPhone SE),
+  and more wrap into balanced rows on the same grid (7 = 4 + 3, 8 = 4 + 4).
+  Pure layout maths in `src/boardTiles.ts` (`boardTileLayout`, tested;
+  counts the night tiles only).
 - **Unread badge** (Amy): darker red (#d93a3f — white digits at 4.5:1), a
   2px black ring so it stands off the tile edge, bolder number.
-- **Accessibility**: every tile, Main included, is a button with a selected
+- **Accessibility**: the Main bar and every tile are buttons with a selected
   state and a label like "Monday Mules board, 3 unread" / "Main board, 2
   unread".
 - **Empty board** (Amy): "Nothing on the <group> board yet. Say hi to the
