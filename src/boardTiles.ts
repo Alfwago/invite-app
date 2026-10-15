@@ -37,3 +37,41 @@ export function boardA11yLabel(name: string, unread: number): string {
   const base = `${name} board`;
   return unread > 0 ? `${base}, ${unread} unread` : base;
 }
+
+/** Board tiles: never under a 44pt tap target, never over this. */
+export const TILE_MIN = 44;
+export const TILE_MAX = 68;
+/** Most tiles in one row on a phone (the website uses the same 6). */
+const MAX_COLUMNS = 6;
+/** Smallest space between tiles and at the row ends. */
+const MIN_GAP = 8;
+
+export type BoardTileLayout = {
+  /** Tile width = height, in points. */
+  size: number;
+  /** Tiles per row; the last row may be short, left-aligned to the grid. */
+  columns: number;
+  /** Space between tiles and at both row ends (spread evenly). */
+  gap: number;
+};
+
+/**
+ * Owner's "Option A" (2026-10-15): Main + the skate groups as equal tiles
+ * spread evenly across `width`. As few rows as fit (up to 6 a row, fewer
+ * when a narrow screen can't fit 6 at 44pt), the tiles shared out evenly
+ * over them (7 = 4 + 3, 8 = 4 + 4), as big as the row allows up to
+ * TILE_MAX, and the leftover space shared out as equal gaps.
+ */
+export function boardTileLayout(width: number, count: number): BoardTileLayout {
+  const n = Math.max(1, count);
+  const fit = Math.floor((width - MIN_GAP) / (TILE_MIN + MIN_GAP));
+  const most = Math.max(1, Math.min(MAX_COLUMNS, fit));
+  const rows = Math.ceil(n / most);
+  const columns = Math.ceil(n / rows);
+  const size = Math.max(
+    TILE_MIN,
+    Math.min(TILE_MAX, Math.floor((width - MIN_GAP * (columns + 1)) / columns)),
+  );
+  const gap = Math.max(0, Math.floor((width - size * columns) / (columns + 1)));
+  return { size, columns, gap };
+}

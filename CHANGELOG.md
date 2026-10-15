@@ -16,14 +16,24 @@ Native change: the Live Activity's bundled logos — needs a prebuild.
   with a short label underneath ("Mon", "Sundae"; 11pt grey). The open board
   gets a gold border and gold wash, and its label turns gold — padding
   shrinks by the border's extra point so nothing shifts. Logos use
-  `resizeMode="contain"` (a big custom upload was cropped before). Tiles
-  never go below a 44pt tap target; a very narrow screen wraps. A group
+  `resizeMode="contain"` (a big custom upload was cropped before). A group
   without a logo gets the same tile with its short label in gold, instead of
   the old half-width text chip.
+- **Main is a tile too** (owner chose "Option A", 2026-10-15): the
+  full-width Main chip is gone. Main is the first tile in the row, the OBH
+  wordmark on the same dark tile, "Main" under it; gold border, wash and
+  label when open, unread badge on its corner like the groups. All tiles are
+  one size and spread evenly across the screen (equal gaps, no big empty
+  margins): as big as fits up to 68pt, never under 44pt, up to 6 a row (5 on
+  an iPhone SE), and more wrap into balanced rows on the same grid (7 = 4 +
+  3, 8 = 4 + 4). Pure layout maths in `src/boardTiles.ts`
+  (`boardTileLayout`, tested). Server 0.35.1 build 92 does the same on the
+  website.
 - **Unread badge** (Amy): darker red (#d93a3f — white digits at 4.5:1), a
   2px black ring so it stands off the tile edge, bolder number.
-- **Accessibility**: tiles and the Main chip are buttons with a selected
-  state and labels like "Monday Mules board, 3 unread".
+- **Accessibility**: every tile, Main included, is a button with a selected
+  state and a label like "Monday Mules board, 3 unread" / "Main board, 2
+  unread".
 - **Empty board** (Amy): "Nothing on the <group> board yet. Say hi to the
   group." Main keeps "No messages".
 - **Live Activity skate card**: the logo now sits on a dark tile

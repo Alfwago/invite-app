@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  Image,
+  type ImageSourcePropType,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
-import { boardA11yLabel, boardTileImage, nightShortLabel } from "@/src/boardTiles";
+import { boardA11yLabel, boardTileImage, boardTileLayout, nightShortLabel } from "@/src/boardTiles";
 import { Tap } from "@/src/components/Tap";
 import { ChatThread } from "@/src/components/chat/ChatThread";
 import {
@@ -20,6 +27,7 @@ import { colors, font, radius, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const MAIN = null;
+const WORDMARK = require("@/assets/brand/wordmark.png");
 const TILE_BG = "#161616"; // board tile, a step above colors.cardRaised
 const BADGE_RED = "#d93a3f"; // white on it = 4.5:1
 
@@ -49,36 +57,50 @@ export default function MessagesScreen() {
   const canEmail = !!data?.can_email;
   const activeNight = board === MAIN ? null : boards.find((b) => b.id === board);
 
-  // Size the night tiles so exactly 6 fit one row edge-to-edge: strip the
-  // board-bar padding and the 5 inter-tile gaps, divide by 6. Fewer than 6
-  // groups stay this size and center (boardRow wraps + centers). Never below
-  // a 44pt tap target — a very narrow screen wraps instead.
+  // Owner's "Option A" (2026-10-15): Main is the first tile (the OBH
+  // wordmark), then one per skate group — equal tiles spread evenly across
+  // the bar, wrapping into balanced, grid-aligned rows (boardTileLayout).
   const { width } = useWindowDimensions();
-  const tileSize = Math.max(44, Math.floor((width - spacing.md * 2 - spacing.sm * 5) / 6));
+  const tiles: TileProps[] = [
+    {
+      key: "main",
+      name: "Main",
+      shortLabel: "Main",
+      image: WORDMARK,
+      active: board === MAIN,
+      badge: boardsQuery.data?.unread_main ?? 0,
+      onPress: () => setBoard(MAIN),
+    },
+    ...boards.map((b) => {
+      const url = boardTileImage(b);
+      return {
+        key: String(b.id),
+        name: b.name,
+        shortLabel: nightShortLabel(b),
+        image: url ? { uri: url } : null,
+        active: board === b.id,
+        badge: b.unread ?? 0,
+        onPress: () => setBoard(b.id),
+      };
+    }),
+  ];
+  const layout = boardTileLayout(width - spacing.md * 2, tiles.length);
+  const rows: TileProps[][] = [];
+  for (let i = 0; i < tiles.length; i += layout.columns) rows.push(tiles.slice(i, i + layout.columns));
 
   return (
     <View style={styles.screen}>
       <View style={styles.boardBar}>
-        <BoardChip
-          label="Main"
-          active={board === MAIN}
-          onPress={() => setBoard(MAIN)}
-          badge={boardsQuery.data?.unread_main ?? 0}
-        />
-        <View style={styles.boardRow}>
-          {boards.map((b) => (
-            <BoardTile
-              key={b.id}
-              name={b.name}
-              shortLabel={nightShortLabel(b)}
-              imageUrl={boardTileImage(b)}
-              active={board === b.id}
-              badge={b.unread ?? 0}
-              size={tileSize}
-              onPress={() => setBoard(b.id)}
-            />
-          ))}
-        </View>
+        {rows.map((row, i) => (
+          <View
+            key={i}
+            style={[styles.boardRow, { gap: layout.gap, paddingHorizontal: layout.gap }]}
+          >
+            {row.map(({ key, ...tile }) => (
+              <BoardTile key={key} {...tile} size={layout.size} />
+            ))}
+          </View>
+        ))}
       </View>
 
       <ChatThread
@@ -140,30 +162,32 @@ function UnreadDot({ count, style }: { count: number; style?: object }) {
   );
 }
 
+type TileProps = {
+  key: string;
+  name: string;
+  shortLabel: string;
+  image: ImageSourcePropType | null;
+  active: boolean;
+  badge: number;
+  onPress: () => void;
+};
+
 /**
- * A skate group's board: its logo on a dark rounded tile (gold border + gold
- * wash when open) with a short day label underneath. A group with no logo
- * gets the same tile with its short label in gold. Logos come from the
- * server's tile_image_url (made for dark backgrounds) — on an older server,
- * the original white-background art, still fitted whole ("contain").
+ * A board: its logo on a dark rounded tile (gold border + gold wash when
+ * open) with a short label underneath — Main shows the OBH wordmark. A group
+ * with no logo gets the same tile with its short label in gold. Logos come
+ * from the server's tile_image_url (made for dark backgrounds) — on an older
+ * server, the original white-background art, still fitted whole ("contain").
  */
 function BoardTile({
   name,
   shortLabel,
-  imageUrl,
+  image,
   active,
   badge,
   size,
   onPress,
-}: {
-  name: string;
-  shortLabel: string;
-  imageUrl: string | null;
-  active: boolean;
-  badge: number;
-  size: number;
-  onPress: () => void;
-}) {
+}: Omit<TileProps, "key"> & { size: number }) {
   return (
     <Tap
       onPress={onPress}
@@ -174,8 +198,8 @@ function BoardTile({
     >
       <View style={{ width: size, height: size }}>
         <View style={[styles.boardTile, active && styles.boardTileActive]}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.boardTileImg} resizeMode="contain" />
+          {image ? (
+            <Image source={image} style={styles.boardTileImg} resizeMode="contain" />
           ) : (
             <Text style={styles.boardTileText} numberOfLines={1} adjustsFontSizeToFit>
               {shortLabel}
@@ -191,66 +215,17 @@ function BoardTile({
   );
 }
 
-/** The Main board: a full-width chip above the group tiles. */
-function BoardChip({
-  label,
-  active,
-  onPress,
-  badge = 0,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  badge?: number;
-}) {
-  return (
-    <Tap
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={boardA11yLabel(label, badge)}
-      style={[
-        styles.chip,
-        styles.chipFull,
-        active && { backgroundColor: colors.gold, borderColor: colors.gold },
-      ]}
-    >
-      <Text style={[styles.chipText, styles.chipTextFull, active && { color: colors.goldText }]} numberOfLines={1}>
-        {label}
-      </Text>
-      <UnreadDot count={badge} />
-    </Tap>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
   boardBar: {
-    padding: spacing.md,
-    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
   },
-  boardRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: spacing.sm,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  chipFull: { width: "100%", paddingVertical: spacing.md },
+  boardRow: { flexDirection: "row" },
   // Option 1 (owner, 2026-10-14). Active swaps 1px border + 4 padding for
   // 2px + 3, so the logo doesn't move when a tile is picked.
   boardTile: {
@@ -275,8 +250,6 @@ const styles = StyleSheet.create({
   boardTileText: { color: colors.gold, fontSize: 15, fontWeight: "800", paddingHorizontal: 2 },
   boardTileLabel: { marginTop: 4, color: colors.textMuted, fontSize: font.xs, fontWeight: "600" },
   boardTileLabelActive: { color: colors.gold },
-  chipText: { color: colors.text, fontWeight: "600", fontSize: 13, flexShrink: 1 },
-  chipTextFull: { fontSize: 15, fontWeight: "800", letterSpacing: 0.5 },
   // 2px ring in the page colour so the badge reads apart from the tile's
   // edge; darker red than colors.red so white digits pass 4.5:1 (Amy).
   unreadDot: {
