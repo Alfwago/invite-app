@@ -27,7 +27,9 @@ import { colors, font, radius, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const MAIN = null;
-const WORDMARK = require("@/assets/brand/wordmark.png");
+// The OBH bear on its dark tile: invite-server static/invitations/tiles/
+// Main-tile.png (scripts/make_dark_logos.py), 256px = 68pt @3x+.
+const MAIN_TILE = require("@/assets/brand/obh-bear-tile.png");
 const TILE_BG = "#161616"; // board tile, a step above colors.cardRaised
 const BADGE_RED = "#d93a3f"; // white on it = 4.5:1
 
@@ -58,7 +60,7 @@ export default function MessagesScreen() {
   const activeNight = board === MAIN ? null : boards.find((b) => b.id === board);
 
   // Owner's "Option A" (2026-10-15): Main is the first tile (the OBH
-  // wordmark), then one per skate group — equal tiles spread evenly across
+  // bear, owner's "B"), then one per skate group — equal tiles spread evenly across
   // the bar, wrapping into balanced, grid-aligned rows (boardTileLayout).
   const { width } = useWindowDimensions();
   const tiles: TileProps[] = [
@@ -66,7 +68,7 @@ export default function MessagesScreen() {
       key: "main",
       name: "Main",
       shortLabel: "Main",
-      image: WORDMARK,
+      image: MAIN_TILE,
       active: board === MAIN,
       badge: boardsQuery.data?.unread_main ?? 0,
       onPress: () => setBoard(MAIN),
@@ -174,7 +176,7 @@ type TileProps = {
 
 /**
  * A board: its logo on a dark rounded tile (gold border + gold wash when
- * open) with a short label underneath — Main shows the OBH wordmark. A group
+ * open) with a short label underneath — Main shows the OBH bear. A group
  * with no logo gets the same tile with its short label in gold. Logos come
  * from the server's tile_image_url (made for dark backgrounds) — on an older
  * server, the original white-background art, still fitted whole ("contain").

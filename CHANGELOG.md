@@ -21,8 +21,10 @@ Native change: the Live Activity's bundled logos — needs a prebuild.
   the old half-width text chip.
 - **Main is a tile too** (owner chose "Option A", 2026-10-15): the
   full-width Main chip is gone. Main is the first tile in the row, the OBH
-  wordmark on the same dark tile, "Main" under it; gold border, wash and
-  label when open, unread badge on its corner like the groups. All tiles are
+  bear logo on the same dark tile (owner chose "B" 2026-10-15: the wide
+  wordmark looked off squeezed into a square; `assets/brand/obh-bear-tile.png`
+  = the server's `tiles/Main-tile.png`, 256px, same as the website's),
+  "Main" under it; gold border, wash and label when open, unread badge on its corner like the groups. All tiles are
   one size and spread evenly across the screen (equal gaps, no big empty
   margins): as big as fits up to 68pt, never under 44pt, up to 6 a row (5 on
   an iPhone SE), and more wrap into balanced rows on the same grid (7 = 4 +
