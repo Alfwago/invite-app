@@ -7,6 +7,7 @@ import { ApiError } from "@/src/api/client";
 import type { DayPlayer, EventDetail, RosterEntry, RsvpStatus } from "@/src/api/types";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { PenaltyBoxCard } from "@/src/components/PenaltyBoxCard";
+import { PromotionCard } from "@/src/components/PromotionCard";
 import { RsvpControls } from "@/src/components/RsvpControls";
 import { Tap } from "@/src/components/Tap";
 import { TEAM_TINT, TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
@@ -69,6 +70,10 @@ export default function EventDetailScreen() {
 
   const goingCount =
     event.players.filter((p) => p.status === "YES").length + event.day_players.length;
+  // Promoted off the waitlist and not answered (server 0.36.0+): the card
+  // goes right under the header and the RSVP buttons are hidden until they
+  // answer — two clear choices, nothing else to edit (owner 2026-10-15).
+  const promotion = !event.is_past ? event.my_rsvp?.promotion ?? null : null;
 
   return (
     <>
@@ -96,6 +101,8 @@ export default function EventDetailScreen() {
             {roster.rsvp_locked ? <Badge text="RSVP LOCKED" tone="bad" /> : null}
           </View>
         </Card>
+
+        {promotion ? <PromotionCard eventId={event.id} promotion={promotion} /> : null}
 
         {event.director_message ? (
           <Card accent="public">
@@ -146,7 +153,7 @@ export default function EventDetailScreen() {
           <Card>
             <Text style={styles.muted}>This skate is over.</Text>
           </Card>
-        ) : event.status === "OPEN" ? (
+        ) : promotion ? null : event.status === "OPEN" ? (
           <CollapsibleCard title="Your RSVP" defaultOpen>
             {event.my_borrow ? (
               <Text style={styles.borrowNote}>

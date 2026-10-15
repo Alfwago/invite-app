@@ -188,6 +188,27 @@ export interface MyRsvp {
    *  — the note for switching No ↔ Maybe. Null otherwise; absent on older
    *  servers. */
   late_drop_owed?: LateDropOwed | null;
+  /** Server 0.36.0+: promoted off the waitlist and not answered yet — the
+   *  Confirm / Can't make it card replaces the RSVP buttons. Null otherwise;
+   *  absent on older servers (their RSVP Yes/No answers it). */
+  promotion?: PromotionInfo | null;
+}
+
+/** `my_rsvp.promotion` / Home `pending_promotions[]` — see src/promotion.ts. */
+export interface PromotionInfo {
+  pending: true;
+  promoted_at: string;
+  /** "You've been promoted to the roster for Thu Oct 16 · 8:30 PM. Can you make it?" */
+  prompt: string;
+  when_label: string;
+  confirm_label: string;
+  decline_label: string;
+}
+
+/** Home `pending_promotions[]` rows (server 0.36.0+). */
+export interface PendingPromotion extends PromotionInfo {
+  event_id: number;
+  event_name: string;
 }
 
 /** `my_rsvp.late_drop_owed` — see src/lateChange.ts. */
@@ -276,6 +297,9 @@ export interface RosterEntry {
    *  comped — "no fee"). null when not a late drop; missing on older
    *  servers. On a late-drop row `pays` = owes. */
   late_fine?: LateFine | null;
+  /** Promoted off the waitlist, hasn't answered (server 0.36.0+, directors
+   *  only): the roster's "Pending" badge. Missing on older servers. */
+  promotion_pending?: boolean;
 }
 
 export type PayOverride = "" | "comp" | "charge";
@@ -413,6 +437,9 @@ export interface EventDetail extends EventSummary {
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
   my_borrow?: MyBorrow | null; // set when the viewer was borrowed onto this skate
+  /** Server 0.36.0+: the skate's header art (event upload → night upload →
+   *  night logo → default), same as the invite email. */
+  header_image_url?: string | null;
   /** Present on a `borrow` roster action's response. */
   borrow_result?: { name: string; role: "goalie" | "skater"; pushed: boolean };
   /** Present on a `make_permanent` response: false = already a member. */
@@ -573,6 +600,8 @@ export interface HomeData {
    *  SiteConfiguration.latest_app_version. "" when nothing's configured.
    *  Since 1.6.0 only the fallback for servers without /api/app-version/. */
   latest_app_version: string;
+  /** Server 0.36.0+: waitlist promotions to answer — the Home card. */
+  pending_promotions?: PendingPromotion[];
 }
 
 /** GET /api/app-version/ (server 0.33+): newest version per platform. iOS =
@@ -775,6 +804,9 @@ export interface TeamEvent {
   date: string;
   start_time: string | null;
   status: string;
+  /** Server 0.36.0+: the skate's header art (the invite email's image) for
+   *  the team sheet PDF. Missing on older servers. */
+  header_image_url?: string | null;
 }
 
 export interface TeamHistoryPlayer {
@@ -823,12 +855,16 @@ export interface TeamLineupPlayer {
   locked: boolean;
   /** RSVP'd after the teams were made — the server added them to the smaller team. */
   is_new: boolean;
+  /** Promoted off the waitlist, not confirmed yet — shown with a "?"
+   *  (server 0.36.0+; missing before). */
+  pending?: boolean;
 }
 
 export interface TeamLineupGoalie {
   id: string;
   name: string;
   rating: number;
+  pending?: boolean;
 }
 
 /** The event's one lineup, shared by the website and the app (server 0.34+).
@@ -957,6 +993,13 @@ export interface PollQuestion {
   choices: PollChoice[];
 }
 
+/** A skate group a poll is for (server 0.36.0+). */
+export interface PollNight {
+  id: number;
+  name: string;
+  short_label: string;
+}
+
 export interface Poll {
   id: number;
   title: string;
@@ -966,7 +1009,24 @@ export interface Poll {
   answered_q: number;
   all_answered: boolean;
   dismissed: boolean;
+  /** Server 0.36.0+: [] = everyone (Global). Missing on older servers. */
+  nights?: PollNight[];
+  /** "Everyone" or "Monday Mules, Thursday Night". */
+  audience_label?: string;
   questions: PollQuestion[];
+}
+
+/** GET /api/polls/closed/ rows and /api/polls/<id>/results/ (server 0.36.0+):
+ *  a closed poll's results for the players who could vote. */
+export interface ClosedPoll {
+  id: number;
+  title: string;
+  description: string;
+  closes_at: string | null;
+  created_at: string;
+  nights: PollNight[];
+  audience_label: string;
+  questions: (PollResultQuestion & { my_choice_id: number | null })[];
 }
 
 // ---- Direct messages / inbox (player) ----------------------------
@@ -1013,6 +1073,16 @@ export interface PollSummary {
   total_votes: number;
   created_at: string;
   closes_at: string | null;
+  nights?: PollNight[];
+  audience_label?: string;
+}
+
+/** GET /api/director/polls/. `pickable_nights` / `can_create_global` are
+ *  server 0.36.0+ — absent before, so the app hides the group picker. */
+export interface ManagePollsResponse {
+  polls: PollSummary[];
+  pickable_nights?: PollNight[];
+  can_create_global?: boolean;
 }
 
 export interface PollResultChoice {
@@ -1036,7 +1106,11 @@ export interface PollResults {
   status: "ACTIVE" | "CLOSED";
   is_open: boolean;
   closes_at: string | null;
+  nights?: PollNight[];
+  audience_label?: string;
   questions: PollResultQuestion[];
+  /** Present when the request asked to notify (server 0.36.0+). */
+  notified?: { recipients: number; emailed: number; pushed: number };
 }
 
 export interface NewPoll {
@@ -1044,4 +1118,8 @@ export interface NewPoll {
   description?: string;
   closes_at?: string | null;
   questions: { text: string; choices: string[] }[];
+  /** Server 0.36.0+: [] / missing = everyone. Older servers ignore it. */
+  night_ids?: number[];
+  /** Server 0.36.0+: email + push + inbox to everyone who can vote. */
+  notify?: boolean;
 }

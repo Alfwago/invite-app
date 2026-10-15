@@ -1204,6 +1204,7 @@ function RosterCard({
               }
               borrowed={!!p.is_borrowed}
               borrowedFrom={p.borrowed_from_name}
+              promotionPending={!!p.promotion_pending}
               makePermanentLabel={event.night ? `Add to ${event.night.name}` : undefined}
               onMakePermanent={event.night ? () => confirmMakePermanent(p) : undefined}
               team={p.team}
@@ -1506,6 +1507,7 @@ function RosterAdminRow({
   onPayOverride,
   borrowed,
   borrowedFrom,
+  promotionPending,
   makePermanentLabel,
   onMakePermanent,
   team,
@@ -1543,6 +1545,9 @@ function RosterAdminRow({
   /** Borrowed from another skate group — its own badge after the role tag. */
   borrowed?: boolean;
   borrowedFrom?: string;
+  /** Promoted off the waitlist, hasn't answered (server 0.36.0+). Marking
+   *  them Present confirms them. */
+  promotionPending?: boolean;
   makePermanentLabel?: string;
   onMakePermanent?: () => void;
   team?: "Gold" | "Black" | null;
@@ -1598,6 +1603,14 @@ function RosterAdminRow({
             accessibilityLabel={borrowedFrom ? `Borrowed from ${borrowedFrom}` : "Borrowed"}
           >
             borrowed
+          </Text>
+        ) : null}
+        {promotionPending ? (
+          <Text
+            style={styles.pendingTag}
+            accessibilityLabel="Pending: promoted from the waitlist, hasn't confirmed"
+          >
+            Pending
           </Text>
         ) : null}
         {team ? (
@@ -2350,6 +2363,17 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   // "comp" / "charge" — the director's pay override for this skate.
+  pendingTag: {
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: radius.sm,
+    paddingHorizontal: 4,
+    overflow: "hidden",
+  },
   payTag: {
     color: colors.gold,
     fontSize: 10,

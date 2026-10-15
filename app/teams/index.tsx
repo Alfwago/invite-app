@@ -48,6 +48,7 @@ import {
   teamRows,
   type Team,
 } from "@/src/teams/lineup";
+import { PDF_GOLD, asImageDataUri, imageMime, pdfLogoCandidates } from "@/src/pdfLogo";
 import { balanceMessage } from "@/src/teams/moves";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -299,10 +300,12 @@ export default function TeamGeneratorScreen() {
   async function onExportPdf() {
     if (!lineup) return;
     const evt = events.data?.find((e) => e.id === eventId);
+    // Embedded, not a remote <img>: expo-print doesn't wait for remote images.
+    const logo = await fetchPdfLogo(pdfLogoCandidates(evt, API_BASE));
     const html = teamsPdfHtml({
       poolName: eventLabel(evt),
       poolDescription: evt?.date ? `Event Date: ${evt.date}` : "",
-      nightImageUrl: nightArtUrl(evt),
+      nightImageUrl: logo,
       goldNames: teamRows(lineup, "Gold").map((p) => p.name),
       blackNames: teamRows(lineup, "Black").map((p) => p.name),
       goldGoalie: lineup.gold_goalie?.name,
@@ -706,6 +709,7 @@ function TeamCol({
         <View style={styles.pRow}>
           <Text style={styles.pName} numberOfLines={1}>
             {goalie.name} <Text style={styles.gBadge}>G</Text>
+            {goalie.pending ? <Text style={styles.pendingTag}> ?</Text> : null}
           </Text>
           <Text style={styles.pRate}>{Number(goalie.rating || 0).toFixed(2)}</Text>
         </View>
@@ -731,6 +735,8 @@ function TeamCol({
                 {p.is_goalie ? <Text style={styles.gBadge}> G</Text> : null}
                 {paired ? " 🔗" : ""}
                 {split ? " ✂️" : ""}
+                {/* Promoted off the waitlist, not confirmed yet (server 0.36.0+). */}
+                {p.pending ? <Text style={styles.pendingTag} accessibilityLabel="not confirmed yet"> ?</Text> : null}
                 {p.is_new ? <Text style={styles.newTag}> new</Text> : null}
               </Text>
             </Tap>
@@ -804,10 +810,27 @@ function eventLabel(evt?: TeamEvent) {
   return `${evt.display_name}${when ? ` — ${when}` : ""}`;
 }
 
-function nightArtUrl(evt?: TeamEvent): string {
-  if (!evt?.display_name) return "";
-  const first = evt.display_name.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9_-]/g, "");
-  return first ? `${API_BASE}/static/invitations/${first}.png` : "";
+/** The first candidate that downloads as an image, as a base64 data URI —
+ *  "" when none does (the PDF then has no logo, as before). */
+async function fetchPdfLogo(urls: string[]): Promise<string> {
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+      const uri = asImageDataUri(dataUrl, imageMime(blob.type, url));
+      if (uri) return uri;
+    } catch {
+      // try the next one
+    }
+  }
+  return "";
 }
 
 /** Matches the website's jsPDF export: centered night art, event title +
@@ -845,7 +868,7 @@ function teamsPdfHtml(d: {
       white-space: normal; word-wrap: break-word; overflow-wrap: anywhere;
     }
     th { font-size: 14pt; }
-    th.gold { color: #ffd54a; }
+    th.gold { color: ${PDF_GOLD}; }
   </style></head><body>
     ${d.nightImageUrl ? `<div class="hdr"><img src="${esc(d.nightImageUrl)}"></div>` : ""}
     <h1>${esc(d.poolName)}</h1>
@@ -921,6 +944,7 @@ const styles = StyleSheet.create({
   pRate: { color: colors.textMuted, fontSize: 10, fontVariant: ["tabular-nums"] },
   // RSVP'd after the teams were made — the server put them on the smaller team.
   newTag: { color: colors.green, fontSize: 9, fontWeight: "800" },
+  pendingTag: { color: colors.gold, fontSize: 12, fontWeight: "800" },
   constraint: {
     flexDirection: "row",
     alignItems: "center",

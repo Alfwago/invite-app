@@ -11,13 +11,14 @@ import {
   usePollAdminMutations,
   usePollResults,
 } from "@/src/hooks/queries";
+import { audienceLabel } from "@/src/polls";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function ManagePollsScreen() {
   const router = useRouter();
   const query = useManagePolls();
   const [open, setOpen] = useState<number | null>(null);
-  const polls = query.data ?? [];
+  const polls = query.data?.polls ?? [];
 
   return (
     <>
@@ -77,6 +78,11 @@ function PollCard({
             {poll.question_count} question{poll.question_count === 1 ? "" : "s"} ·{" "}
             {poll.total_votes} vote{poll.total_votes === 1 ? "" : "s"}
           </Text>
+          {audienceLabel(poll) ? (
+            <Text style={styles.audience} numberOfLines={1}>
+              For: {audienceLabel(poll)}
+            </Text>
+          ) : null}
         </View>
         <Badge
           text={poll.is_open ? "OPEN" : "CLOSED"}
@@ -139,6 +145,7 @@ const styles = StyleSheet.create({
   headMain: { flex: 1, gap: 2 },
   title: { color: colors.text, fontSize: font.base, fontWeight: "700" },
   meta: { color: colors.textMuted, fontSize: font.sm },
+  audience: { color: colors.gold, fontSize: font.xs, fontWeight: "700" },
   body: { gap: spacing.md, marginTop: spacing.md },
   q: { gap: 4 },
   qText: { color: colors.text, fontSize: font.sm, fontWeight: "700" },

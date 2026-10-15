@@ -15,12 +15,14 @@ import { retryDelay, shouldRetry } from "@/src/api/retryPolicy";
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
-import { ToastHost, ToastProvider } from "@/src/components/Toast";
+import { ToastHost, ToastProvider, useToast } from "@/src/components/Toast";
 import { Loading } from "@/src/components/ui";
 import { keys, useAppVersion } from "@/src/hooks/queries";
 import { useSkateCard } from "@/src/hooks/useSkateCard";
 import { useWatchConnectivity } from "@/src/hooks/useWatchConnectivity";
 import { loadHapticsPref } from "@/src/hapticsSetting";
+import { handlePromotionResponse } from "@/src/promotion";
+import { clearHandledResponse, promotionDeps, registerPromotionCategory } from "@/src/promotionNative";
 import { configureAndroidChannels, pushSupported } from "@/src/push";
 import { colors } from "@/src/theme";
 
@@ -68,8 +70,15 @@ type PushData = {
   eventId?: number | string;
   kind?: string;
   type?: string;
+  action?: string;
+  pollId?: number | string;
   from?: number | string;
 } | null;
+
+type PushResponse = {
+  actionIdentifier: string;
+  notification: { request: { identifier: string; content: { data: unknown } } };
+};
 
 /**
  * Tapping a push opens what it's about; a push that lands while the app is
@@ -78,18 +87,23 @@ type PushData = {
 function useNotificationHandling() {
   const router = useRouter();
   const qc = useQueryClient();
+  const toast = useToast();
 
   useEffect(() => {
     // expo-notifications isn't available on web or in Expo Go (SDK 53+).
     if (!pushSupported) return;
     const Notifications = require("expo-notifications");
 
-    // Make sure the Android channels exist before any notification lands.
+    // Make sure the Android channels exist before any notification lands,
+    // and the promotion push's Confirm / Can't make it buttons (1.7.1).
     configureAndroidChannels();
+    void registerPromotionCategory();
 
     function open(data: unknown) {
       const d = data as PushData;
-      if (d?.kind === "board") {
+      if (d?.type === "poll" && d.pollId != null) {
+        router.push(`/polls/${d.pollId}` as never);
+      } else if (d?.kind === "board") {
         router.push("/(tabs)/messages");
       } else if (d?.kind === "dm") {
         router.push(d.from != null ? `/inbox/${d.from}` : "/inbox");
@@ -112,16 +126,38 @@ function useNotificationHandling() {
       }
     }
 
+    /** A tap on a notification or one of its buttons. A waitlist promotion's
+     *  "Confirm" confirms with the saved login (src/promotion.ts); anything
+     *  else just opens what the push is about. */
+    async function respond(r: PushResponse) {
+      const data = r.notification.request.content.data;
+      const outcome = await handlePromotionResponse(
+        {
+          actionIdentifier: r.actionIdentifier,
+          notificationId: r.notification.request.identifier,
+          data: data as PushData,
+        },
+        promotionDeps,
+      );
+      if (outcome === "ignored") {
+        open(data);
+        return;
+      }
+      if (outcome === "duplicate") return;
+      void clearHandledResponse();
+      if (outcome === "confirmed") toast.show("You're confirmed. See you there!", "success");
+      refresh(data);
+      open(data); // the skate — its card shows what's left to answer, if anything
+    }
+
     Notifications.getLastNotificationResponseAsync().then((response: unknown) => {
-      const r = response as { notification: { request: { content: { data: unknown } } } } | null;
-      if (r) open(r.notification.request.content.data);
+      const r = response as PushResponse | null;
+      if (r) void respond(r);
     });
 
-    const tapSub = Notifications.addNotificationResponseReceivedListener(
-      (response: { notification: { request: { content: { data: unknown } } } }) => {
-        open(response.notification.request.content.data);
-      },
-    );
+    const tapSub = Notifications.addNotificationResponseReceivedListener((response: PushResponse) => {
+      void respond(response);
+    });
     const recvSub = Notifications.addNotificationReceivedListener(
       (notification: { request: { content: { data: unknown } } }) => {
         refresh(notification.request.content.data);
@@ -131,7 +167,7 @@ function useNotificationHandling() {
       tapSub.remove();
       recvSub.remove();
     };
-  }, [router, qc]);
+  }, [router, qc, toast]);
 }
 
 function RootNavigator() {
@@ -185,6 +221,7 @@ function RootNavigator() {
       <Stack.Screen name="director" options={{ title: "Director dashboard" }} />
       <Stack.Screen name="polls/index" options={{ title: "Polls" }} />
       <Stack.Screen name="polls/[id]" options={{ title: "Poll" }} />
+      <Stack.Screen name="polls/results/[id]" options={{ title: "Results" }} />
       <Stack.Screen name="polls/manage" options={{ title: "Polls" }} />
       <Stack.Screen name="polls/new" options={{ title: "New poll", presentation: "modal" }} />
       <Stack.Screen name="inbox/index" options={{ title: "Inbox" }} />

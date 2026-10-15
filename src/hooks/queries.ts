@@ -52,6 +52,7 @@ export const keys = {
   inbox: ["inbox"] as const,
   managePolls: ["polls", "manage"] as const,
   pollResults: (id: number) => ["poll-results", id] as const,
+  closedPolls: ["polls", "closed"] as const,
   dmThread: (who: number | "system") => ["dm", who] as const,
   messages: (board: number | null) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
@@ -295,6 +296,17 @@ export function useRsvp(id: number | string) {
   return useMutation({
     mutationFn: (body: RsvpBody) => api.submitRsvp(id, body),
     onSuccess: (fresh) => invalidate(fresh),
+  });
+}
+
+/** Confirm / Can't make it on a waitlist promotion (server 0.36.0+). A 409
+ *  ("already answered" / off the roster) still refreshes the event. */
+export function useAnswerPromotion(id: number | string) {
+  const invalidate = useInvalidateEvent(id);
+  return useMutation({
+    mutationFn: (action: "confirm" | "decline") => api.answerPromotion(id, action),
+    onSuccess: (fresh) => invalidate(fresh),
+    onError: () => invalidate(),
   });
 }
 
@@ -684,6 +696,11 @@ export function useDecideUsernameChange() {
 
 export function usePolls() {
   return useQuery({ queryKey: keys.polls, queryFn: ({ signal }) => api.fetchPolls(signal) });
+}
+
+/** Closed polls with results (server 0.36.0+; [] on an older server). */
+export function useClosedPolls() {
+  return useQuery({ queryKey: keys.closedPolls, queryFn: ({ signal }) => api.fetchClosedPolls(signal) });
 }
 
 export function usePollActions() {

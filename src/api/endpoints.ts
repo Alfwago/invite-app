@@ -27,7 +27,8 @@ import type {
   MessageReaction,
   NewPoll,
   PollResults,
-  PollSummary,
+  ManagePollsResponse,
+  ClosedPoll,
   PendingApproval,
   SiteInviteOptions,
   SiteInviteResendResponse,
@@ -712,6 +713,26 @@ export function dismissPoll(pollId: number): Promise<{ ok: boolean }> {
   return apiFetch(`/api/polls/${pollId}/dismiss/`, { method: "POST", body: {} });
 }
 
+/** Closed polls' results (server 0.36.0+). An older server 404s — the
+ *  caller treats that as "no closed polls". */
+export async function fetchClosedPolls(signal?: AbortSignal): Promise<ClosedPoll[]> {
+  try {
+    const data = await apiFetch<{ polls: ClosedPoll[] }>("/api/polls/closed/", { signal });
+    return data.polls;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return [];
+    throw e;
+  }
+}
+
+/** Answer a waitlist promotion (server 0.36.0+): "confirm" | "decline". */
+export function answerPromotion(
+  eventId: number | string,
+  action: "confirm" | "decline",
+): Promise<EventDetail & { notices?: string[] }> {
+  return apiFetch(`/api/events/${eventId}/promotion/`, { method: "POST", body: { action } });
+}
+
 // ---- Direct messages / inbox (player) ---------------------------
 
 export async function fetchInbox(
@@ -773,9 +794,9 @@ export function messageNightDirectors(
 
 // ---- Poll authoring (director) ---------------------------------
 
-export async function fetchManagePolls(signal?: AbortSignal): Promise<PollSummary[]> {
-  const data = await apiFetch<{ polls: PollSummary[] }>("/api/director/polls/", { signal });
-  return data.polls;
+/** The director's polls + (server 0.36.0+) the skate groups they can pick. */
+export function fetchManagePolls(signal?: AbortSignal): Promise<ManagePollsResponse> {
+  return apiFetch<ManagePollsResponse>("/api/director/polls/", { signal });
 }
 
 export function createPoll(body: NewPoll): Promise<PollResults> {

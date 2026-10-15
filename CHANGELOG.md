@@ -3,6 +3,51 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-15 — 1.7.1 (iOS build 32): polls by group, "Can you make it?", PDF logo
+
+**Pairs with `invite-server` 0.36.0** (with 0.35.2) — it ships first. On an
+older server every new piece hides itself: no group picker / Notify switch,
+no closed-poll results, no promotion card (the RSVP buttons answer it as
+before), no Pending badge or "?", and the PDF falls back to the old logo
+guess. No native change (expo-notifications was already in) — no new
+prebuild needed beyond the usual `--clean` before archiving.
+
+- **Polls by skate group** (owner 1a/1b): Director → Polls → New poll has
+  "Who can vote" — Everyone, or Skate groups with a checkbox per group you
+  run (presidents/admins: every group) — and a **Notify players** switch
+  (on by default: email, phone notification and an OBH Notifications
+  message). The toast says how many players it went to. Poll lists show
+  "For: Monday Mules" / "For: Everyone". Logic in `src/polls.ts` (tested).
+- **Closed polls show results** (owner 1d C): Polls lists "Closed polls";
+  tapping one opens Results (bars, counts, percentages, a check on your own
+  vote). New screen `app/polls/results/[id].tsx`. A "New poll" push opens
+  the poll.
+- **"Can you make it?"** (owner 4a–4g): a player promoted off the waitlist
+  sees a gold card at the top of the skate — "You've been promoted to the
+  roster for Thu Oct 16 · 8:30 PM. Can you make it?" — with **Confirm** and
+  **Can't make it**, instead of the RSVP buttons, until they answer. Home
+  shows the same card. Can't make it asks once ("Give up your spot?") since
+  it gives the spot away; it's never a late drop. `src/components/
+  PromotionCard.tsx`; labels in `src/promotion.ts`.
+- **Buttons on the notification** (owner 4h C): the promotion push (and its
+  reminder) shows Confirm / Can't make it. **Both open the app**: Confirm
+  confirms straight away with the saved login and lands on the skate with
+  "You're confirmed"; if anything fails (offline, signed out, expired) the
+  app posts "Couldn't confirm your spot — tap to open" and opens the card.
+  Can't make it only opens the card. Why not confirm silently in the
+  background: with expo-notifications on SDK 54 a button that doesn't open
+  the app never reaches the app's code when it was swiped away (iOS), and
+  Android would need a separate background-task module. Handler logic in
+  `src/promotion.ts` (tested), device glue in `src/promotionNative.ts`.
+- **Directors:** a promoted player who hasn't answered shows **PENDING** on
+  Manage → Roster, and a gold "?" after their name in the Team Generator.
+- **Team sheet PDF**: the logo is now the skate's own header art from the
+  server (`header_image_url`: the event's upload, else the group's upload,
+  else its logo, else the OBH header), downloaded and embedded in the PDF
+  (expo-print didn't wait for remote images, so it often came out blank);
+  then the old name guess, then the OBH header. The Gold heading is a darker
+  gold (#b8860b) that reads on paper. `src/pdfLogo.ts` (tested).
+
 ## 2026-10-14 — 1.7.1 (iOS build 32): dark skate-group tiles on Messages
 
 **Pairs with `invite-server` 0.35.1** (`tile_image_url`, `short_label` on

@@ -20,6 +20,7 @@ import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { Tap } from "@/src/components/Tap";
 import { TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
+import { PromotionCard } from "@/src/components/PromotionCard";
 import { UpdatePill } from "@/src/components/UpdatePill";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
@@ -103,6 +104,11 @@ export default function HomeScreen() {
         </View>
 
         <VerifyBanner />
+
+        {/* Waitlist promotions to answer (server 0.36.0+): first, they hold a spot. */}
+        {(query.data.pending_promotions ?? []).map((p) => (
+          <PromotionCard key={p.event_id} eventId={p.event_id} promotion={p} eventName={p.event_name} />
+        ))}
 
         <InboxRow />
 

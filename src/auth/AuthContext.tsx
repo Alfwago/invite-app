@@ -18,7 +18,7 @@ import type { Me } from "@/src/api/types";
 import { skateCardSignOut } from "@/modules/skate-card";
 import { registerForPush, unregisterForPush } from "@/src/push";
 
-const TOKEN_KEY = "obh.authToken";
+export const TOKEN_KEY = "obh.authToken";
 
 interface AuthState {
   /** null while restoring from storage on cold start. */
