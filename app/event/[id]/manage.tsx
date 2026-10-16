@@ -33,6 +33,7 @@ import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
 import { fineBadge, fineSettingsPatch, lateDropLine, lateDropRows } from "@/src/lateDrop";
+import { LATE_SCRATCHES_TITLE, lateScratchControl, postConfirmCopy } from "@/src/lateScratch";
 import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
 import { useToast } from "@/src/components/Toast";
 import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented, Tap } from "@/src/components/ui";
@@ -1289,6 +1290,21 @@ function RosterCard({
                 skateFee={event.manage?.skate_fee}
                 tickDisabled={bulkBusy}
                 onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
+                isPast={!!event.is_past}
+                postDisabled={busy}
+                onPost={(posted) => {
+                  const send = () =>
+                    act(
+                      { action: "set_late_drop_posted", player_id: p.player_id, posted },
+                      posted ? `Posted ${p.name} to ${LATE_SCRATCHES_TITLE}` : `Took ${p.name} off ${LATE_SCRATCHES_TITLE}`,
+                    );
+                  if (!posted) return send();
+                  const copy = postConfirmCopy(p.name);
+                  Alert.alert(copy.title, copy.body, [
+                    { text: "Cancel", style: "cancel" },
+                    { text: copy.button, onPress: send },
+                  ]);
+                }}
               />
             ))}
           </>
@@ -1692,13 +1708,21 @@ function LateDropRow({
   skateFee,
   tickDisabled,
   onPaid,
+  isPast,
+  postDisabled,
+  onPost,
 }: {
   entry: RosterEntry;
   skateFee?: number;
   tickDisabled?: boolean;
   onPaid: (paid: boolean) => void;
+  isPast: boolean;
+  postDisabled?: boolean;
+  onPost: (posted: boolean) => void;
 }) {
   const badge = fineBadge(entry, skateFee);
+  // Late Scratches: private until a director posts it (server 0.36.0 b97+).
+  const board = lateScratchControl(entry, isPast);
   return (
     <View style={styles.adminRow}>
       <View style={styles.adminLine}>
@@ -1714,6 +1738,14 @@ function LateDropRow({
         ) : null}
       </View>
       <Text style={styles.lateDropLine}>{lateDropLine(entry)}</Text>
+      {board ? (
+        <View style={styles.boardLine}>
+          <Text style={[styles.boardTag, board.posted && styles.boardTagOn]}>{board.tag}</Text>
+          <Tap feedback="icon" hitSlop={6} disabled={postDisabled} onPress={() => onPost(!board.posted)}>
+            <Text style={styles.linkText}>{board.button}</Text>
+          </Tap>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -2382,6 +2414,19 @@ const styles = StyleSheet.create({
   },
   tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto" },
   lateDropLine: { color: colors.textMuted, fontSize: font.xs, marginTop: 2 },
+  boardLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 4 },
+  boardTag: {
+    color: colors.textMuted,
+    fontSize: font.xs,
+    fontWeight: "700",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
+    overflow: "hidden",
+  },
+  boardTagOn: { color: colors.gold, borderColor: colors.gold },
   fineBadge: { color: colors.red, fontSize: font.xs, fontWeight: "800" },
   fineSetting: {
     flexDirection: "row",

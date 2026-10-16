@@ -439,6 +439,22 @@ export function useTaunts(id: number | string) {
   };
 }
 
+/** Chirps on the Late Scratches board (server 0.36.0 build 97+). */
+export function useLateScratchTaunts(id: number | string) {
+  const invalidate = useInvalidateEvent(id);
+  return {
+    post: useMutation({
+      mutationFn: (v: { entryId: number; text: string; preset?: boolean }) =>
+        api.postLateScratchTaunt(id, v.entryId, v.text, v.preset ?? false),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+    remove: useMutation({
+      mutationFn: (tauntId: number) => api.deleteLateScratchTaunt(id, tauntId),
+      onSuccess: (fresh) => invalidate(fresh),
+    }),
+  };
+}
+
 export function useInviteSchedule(id: number | string) {
   const invalidate = useInvalidateEvent(id);
   return {

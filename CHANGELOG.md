@@ -54,6 +54,21 @@ prebuild needed beyond the usual `--clean` before archiving.
   together on one line (server 0.36.0 build 96 joins them with no-break
   spaces). Notification buttons need a real device to check.
 
+- **Late Scratches** (server 0.36.0 build 97; owner 2026-10-16, LD1–LD14):
+  late drops a director posts show on a "Late Scratches" card above the
+  roster — name, No / Maybe / Waitlisted, "Dropped Tue 6:15 PM · 2h 24m
+  before", never any money — and everyone invited can chirp them (late-drop
+  preset chips from `/api/chirps/` `late_drop_presets`, or free text); the
+  dropper sees "You're on the board…" and can chirp back. Manage → Roster →
+  Late drops: each row shows **Not posted** + **Post to board** (asks first)
+  or **On Late Scratches** + **Un-post**; hidden on a past skate. The
+  Penalty Box card moved above the roster too (LD11), matching the website.
+  The chirp list + composer is one shared component
+  (`src/components/ChirpThread.tsx`); board logic in `src/lateScratch.ts`
+  (tested). "You got chirped" / "You're on the Late Scratches board"
+  pushes carry `eventId`, so they open the skate. Older server: no
+  `late_scratches` / `late_drop_posted` keys → no card, no Post control.
+
 ## 2026-10-14 — 1.7.1 (iOS build 32): dark skate-group tiles on Messages
 
 **Pairs with `invite-server` 0.35.1** (`tile_image_url`, `short_label` on

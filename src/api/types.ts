@@ -300,6 +300,9 @@ export interface RosterEntry {
   /** Promoted off the waitlist, hasn't answered (server 0.36.0+, directors
    *  only): the roster's "Pending" badge. Missing on older servers. */
   promotion_pending?: boolean;
+  /** The late drop is on the public Late Scratches board (server 0.36.0
+   *  build 97+, directors only). Missing on older servers → no Post control. */
+  late_drop_posted?: boolean;
 }
 
 export type PayOverride = "" | "comp" | "charge";
@@ -363,6 +366,23 @@ export interface PlayerPenaltyEntry {
   severity: PenaltySeverity;
   reason: string;
   eligible_at: string | null;
+  can_taunt: boolean;
+  taunts: Taunt[];
+}
+
+/** A late drop a director posted to the public Late Scratches board
+ *  (EventDetail.late_scratches, server 0.36.0 build 97+). Never carries money.
+ *  `label` = "Dropped Tue 6:15 PM · 2h 24m before". `id` = the invitation. */
+export interface LateScratchEntry {
+  id: number;
+  player_id: number;
+  name: string;
+  is_me: boolean;
+  status: RsvpStatus;
+  dropped_at: string;
+  drop_label: string;
+  lead: string;
+  label: string;
   can_taunt: boolean;
   taunts: Taunt[];
 }
@@ -433,6 +453,10 @@ export interface EventDetail extends EventSummary {
   team_assignment: TeamAssignment | null; // set once a director publishes teams
   penalty_box: PlayerPenaltyEntry[]; // active entries + chirps, visible to all
   my_penalty: MyPenalty | null; // the viewer's own box status, or null
+  /** Late Scratches board (server 0.36.0 build 97+; missing → no card). */
+  late_scratches?: LateScratchEntry[];
+  /** Set while the viewer is on that board. */
+  my_late_scratch?: { on_board: boolean } | null;
   night_directors: { id: number; name: string }[]; // [] if none / can't message
   manage: EventManage | null; // director view only; null for players
   notices?: string[]; // present on the RSVP response
@@ -488,6 +512,8 @@ export type RosterAction =
   | { action: "set_paid"; paid: boolean; player_id?: number; day_player_id?: number }
   /** Director's per-event "Comp" control (server 0.34+). */
   | { action: "set_pay_override"; pay_override: PayOverride; player_id?: number; day_player_id?: number }
+  /** Post a late drop to the Late Scratches board / take it off (server 0.36.0 b97+). */
+  | { action: "set_late_drop_posted"; player_id: number; posted: boolean }
   | {
       action: "add_day_player";
       name: string;

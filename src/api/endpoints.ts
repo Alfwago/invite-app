@@ -456,7 +456,7 @@ export function removePenaltyBox(
 
 export function fetchChirpOptions(
   signal?: AbortSignal,
-): Promise<{ presets: string[]; options: string[] }> {
+): Promise<{ presets: string[]; options: string[]; late_drop_presets?: string[] }> {
   return apiFetch("/api/chirps/", { signal });
 }
 
@@ -477,6 +477,29 @@ export function deleteTaunt(
   tauntId: number,
 ): Promise<EventDetail> {
   return apiFetch(`/api/events/${eventId}/penalty-box/taunts/${tauntId}/`, {
+    method: "DELETE",
+  });
+}
+
+// ---- Late Scratches chirps (server 0.36.0 build 97+) ------------------
+
+export function postLateScratchTaunt(
+  eventId: number | string,
+  invitationId: number,
+  text: string,
+  preset = false,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${eventId}/late-scratches/${invitationId}/taunts/`, {
+    method: "POST",
+    body: { text, preset },
+  });
+}
+
+export function deleteLateScratchTaunt(
+  eventId: number | string,
+  tauntId: number,
+): Promise<EventDetail> {
+  return apiFetch(`/api/events/${eventId}/late-scratches/taunts/${tauntId}/`, {
     method: "DELETE",
   });
 }
