@@ -47,6 +47,12 @@ prebuild needed beyond the usual `--clean` before archiving.
   (expo-print didn't wait for remote images, so it often came out blank);
   then the old name guess, then the OBH header. The Gold heading is a darker
   gold (#b8860b) that reads on paper. `src/pdfLogo.ts` (tested).
+- **Checked (2026-10-16, simulator vs TEST, not a device):** Home and event
+  promotion cards, Manage → Roster PENDING, team generator "?", New poll
+  with groups + Notify, Polls list "For:" + Closed polls, Results screen, an
+  exported PDF with the logo embedded. The prompt's date and time now stay
+  together on one line (server 0.36.0 build 96 joins them with no-break
+  spaces). Notification buttons need a real device to check.
 
 ## 2026-10-14 — 1.7.1 (iOS build 32): dark skate-group tiles on Messages
 
