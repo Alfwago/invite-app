@@ -48,7 +48,7 @@ import {
   teamRows,
   type Team,
 } from "@/src/teams/lineup";
-import { PDF_GOLD, asImageDataUri, imageMime, pdfLogoCandidates } from "@/src/pdfLogo";
+import { PDF_GOLD, asImageDataUri, firstLogo, imageMime, pdfLogoCandidates } from "@/src/pdfLogo";
 import { balanceMessage } from "@/src/teams/moves";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -810,27 +810,24 @@ function eventLabel(evt?: TeamEvent) {
   return `${evt.display_name}${when ? ` — ${when}` : ""}`;
 }
 
-/** The first candidate that downloads as an image, as a base64 data URI —
- *  "" when none does (the PDF then has no logo, as before). */
+/** The first candidate that downloads as an image within 5 s, as a base64
+ *  data URI (src/pdfLogo.firstLogo) — "" only when even the OBH default
+ *  fails (offline). */
 async function fetchPdfLogo(urls: string[]): Promise<string> {
-  for (const url of urls) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const blob = await res.blob();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(String(reader.result || ""));
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(blob);
-      });
-      const uri = asImageDataUri(dataUrl, imageMime(blob.type, url));
-      if (uri) return uri;
-    } catch {
-      // try the next one
-    }
-  }
-  return "";
+  return firstLogo(urls, loadImageDataUri, { warn: __DEV__ ? (m) => console.warn(m) : undefined });
+}
+
+async function loadImageDataUri(url: string, signal?: AbortSignal): Promise<string> {
+  const res = await fetch(url, { signal });
+  if (!res.ok) return "";
+  const blob = await res.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+  return asImageDataUri(dataUrl, imageMime(blob.type, url)) ?? "";
 }
 
 /** Matches the website's jsPDF export: centered night art, event title +

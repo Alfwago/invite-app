@@ -12,11 +12,20 @@ export type LogoEvent = { display_name?: string; header_image_url?: string | nul
 /** Gold for the "Gold" heading on white paper (#b8860b, darker than the UI gold). */
 export const PDF_GOLD = "#b8860b";
 
+/** Give an http:// URL https when the API itself is https: iOS blocks
+ *  plain http, and TEST (server ≤ build 98) handed out http:// header URLs. */
+export function secureUrl(url: string, apiBase: string): string {
+  if (/^https:\/\//i.test(apiBase) && /^http:\/\//i.test(url)) return `https://${url.slice("http://".length)}`;
+  return url;
+}
+
 /** URLs to try, best first, without duplicates. */
 export function pdfLogoCandidates(evt: LogoEvent, apiBase: string): string[] {
   const out: string[] = [];
   const add = (u: string | null | undefined) => {
-    if (u && !out.includes(u)) out.push(u);
+    if (!u) return;
+    const url = secureUrl(u, apiBase);
+    if (!out.includes(url)) out.push(url);
   };
   add(evt?.header_image_url ?? null);
   const first = (evt?.display_name ?? "").trim().split(/\s+/)[0]?.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -44,4 +53,42 @@ export function asImageDataUri(dataUrl: string, mime: string | null): string | n
   const type = m[1].startsWith("image/") ? m[1] : mime;
   if (!type) return null;
   return `data:${type};base64,${m[3]}`;
+}
+
+/** How long one logo download may take before the next candidate is tried. */
+export const PDF_LOGO_TIMEOUT_MS = 5000;
+
+/** The first candidate ``load`` turns into an image data URI within
+ *  ``timeoutMs`` — "" when none does. ``load`` returns "" (or throws) for a
+ *  failure; ``warn`` hears about each one (dev builds log it). */
+export async function firstLogo(
+  urls: string[],
+  load: (url: string, signal?: AbortSignal) => Promise<string>,
+  opts: { timeoutMs?: number; warn?: (msg: string) => void } = {},
+): Promise<string> {
+  const timeoutMs = opts.timeoutMs ?? PDF_LOGO_TIMEOUT_MS;
+  for (const url of urls) {
+    const ctl = typeof AbortController !== "undefined" ? new AbortController() : undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
+    try {
+      const timeout = new Promise<string>((resolve) => {
+        timer = setTimeout(() => {
+          timedOut = true; // before abort(): whatever the aborted load returns is ignored
+          resolve("");
+          ctl?.abort();
+          opts.warn?.(`PDF logo: timed out after ${timeoutMs} ms: ${url}`);
+        }, timeoutMs);
+      });
+      const uri = await Promise.race([load(url, ctl?.signal), timeout]);
+      if (timedOut) continue;
+      if (uri) return uri;
+      opts.warn?.(`PDF logo: no image from ${url}`);
+    } catch (e) {
+      opts.warn?.(`PDF logo: ${url} failed: ${String(e)}`);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  return "";
 }
