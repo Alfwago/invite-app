@@ -14,7 +14,8 @@ import type { PlayerRow } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { Badge, ErrorState, Loading } from "@/src/components/ui";
 import { usePlayers } from "@/src/hooks/queries";
-import { listText, NOT_RATED, roleTag, sortByScore } from "@/src/ratings";
+import { PLAYER_SORTS, sortDetail, sortPlayers, type PlayerSortKey } from "@/src/playerSort";
+import { listText, NOT_RATED, roleTag } from "@/src/ratings";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function PlayersScreen() {
@@ -22,12 +23,14 @@ export default function PlayersScreen() {
   const [q, setQ] = useState("");
   const [night, setNight] = useState<number | null>(null);
   const [goaliesOnly, setGoaliesOnly] = useState(false);
+  // 0.38.0 #6/#7: by name ("Lastname, Firstname") unless picked otherwise.
+  const [sort, setSort] = useState<PlayerSortKey>("name");
 
   const query = usePlayers({ night, goalies: goaliesOnly, q });
   const nights = query.data?.nights ?? [];
   const players = query.data?.players ?? [];
 
-  const sorted = useMemo(() => sortByScore(players, night != null), [players, night]);
+  const sorted = useMemo(() => sortPlayers(players, sort, night != null), [players, sort, night]);
 
   return (
     <>
@@ -68,6 +71,28 @@ export default function PlayersScreen() {
             }}
           />
 
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+            data={PLAYER_SORTS}
+            keyExtractor={(s) => s.key}
+            ListHeaderComponent={<Text style={styles.sortLabel}>Sort</Text>}
+            renderItem={({ item }) => {
+              const active = sort === item.key;
+              return (
+                <Tap
+                  onPress={() => setSort(item.key)}
+                  style={[styles.chip, styles.sortChip, active && styles.chipOn]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextOn]}>{item.label}</Text>
+                </Tap>
+              );
+            }}
+          />
+
           <Tap
             feedback="row"
             style={styles.toggleRow}
@@ -103,6 +128,7 @@ export default function PlayersScreen() {
             renderItem={({ item }) => (
               <PlayerListRow
                 row={item}
+                detail={sortDetail(item, sort)}
                 nightSelected={night != null}
                 onPress={() => router.push(`/players/${item.id}` as never)}
               />
@@ -119,10 +145,12 @@ export default function PlayersScreen() {
 
 function PlayerListRow({
   row,
+  detail,
   nightSelected,
   onPress,
 }: {
   row: PlayerRow;
+  detail: string | null;
   nightSelected: boolean;
   onPress: () => void;
 }) {
@@ -131,7 +159,10 @@ function PlayerListRow({
   return (
     <Tap feedback="row" style={styles.row} onPress={onPress}>
       <View style={styles.rowMain}>
-        <Text style={styles.name}>{row.name}</Text>
+        <View style={styles.nameCol}>
+          <Text style={styles.name}>{row.name}</Text>
+          {detail ? <Text style={styles.detail}>{detail}</Text> : null}
+        </View>
         {tag ? <Badge text={tag} tone="goalie" /> : null}
       </View>
       <View style={styles.rowRight}>
@@ -143,6 +174,10 @@ function PlayerListRow({
 }
 
 const styles = StyleSheet.create({
+  sortLabel: { color: colors.textMuted, fontSize: font.xs, fontWeight: "700", alignSelf: "center", marginRight: 4 },
+  sortChip: { paddingHorizontal: 10 },
+  nameCol: { flexShrink: 1, gap: 1 },
+  detail: { color: colors.textMuted, fontSize: font.xs },
   screen: { flex: 1, backgroundColor: colors.bg },
   controls: {
     padding: spacing.md,

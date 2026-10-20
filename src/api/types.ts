@@ -777,9 +777,16 @@ export interface PlayerRow {
   rating_source: "night" | "none";
   global_score: number | null;
   global_goalie_score: number | null;
+  /** Server 0.38.0+ sort fields (#6/#7). ISO dates; null = none. */
+  join_date?: string | null;
+  last_skated?: string | null;
+  /** Position of the player's first skate group in the usual order (999 = none). */
+  group_rank?: number;
 }
 
 export interface PlayersResponse {
+  /** Server 0.38.0+: the sort options, default first. */
+  sorts?: { key: string; label: string }[];
   night: { id: number; name: string } | null;
   nights: { id: number; name: string }[];
   players: PlayerRow[];
