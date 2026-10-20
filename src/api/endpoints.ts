@@ -3,6 +3,7 @@ import type { BorrowPanel } from "../borrow";
 import type { SiteInvitePayload } from "../siteInvites";
 import type {
   AppVersions,
+  DirectoryEntry,
   BoardMessage,
   BoardsResponse,
   CreateNextEventBody,
@@ -862,4 +863,10 @@ export async function decideUsernameChange(
     { method: "POST", body: { decision } },
   );
   return data.pending;
+}
+
+/** Skate Directors and their groups (server 0.38.0+). */
+export async function fetchDirectors(signal?: AbortSignal): Promise<DirectoryEntry[]> {
+  const data = await apiFetch<{ directors: DirectoryEntry[] }>("/api/directors/", { signal });
+  return data.directors;
 }

@@ -45,6 +45,7 @@ export const keys = {
   teamLineup: (id: number) => ["team-lineup", id] as const,
   teamLineupVersion: (id: number) => ["team-lineup-version", id] as const,
   approvals: ["approvals"] as const,
+  directors: ["directors"] as const,
   siteInviteOptions: ["site-invite-options"] as const,
   nameChangeApprovals: ["name-change-approvals"] as const,
   usernameChangeApprovals: ["username-change-approvals"] as const,
@@ -845,4 +846,13 @@ export function usePollAdminMutations() {
     }),
     remove: useMutation({ mutationFn: (id: number) => api.deletePoll(id), onSuccess: refresh }),
   };
+}
+
+/** Skate Directors and their groups (server 0.38.0+). */
+export function useDirectors() {
+  return useQuery({
+    queryKey: keys.directors,
+    queryFn: ({ signal }) => api.fetchDirectors(signal),
+    staleTime: 5 * 60_000,
+  });
 }

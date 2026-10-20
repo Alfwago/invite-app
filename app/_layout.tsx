@@ -219,6 +219,7 @@ function RootNavigator() {
       <Stack.Screen name="approvals" options={{ title: "Invites & approvals" }} />
       <Stack.Screen name="delete-account" options={{ title: "Delete account" }} />
       <Stack.Screen name="director" options={{ title: "Directors" }} />
+      <Stack.Screen name="directors" options={{ title: "Skate Directors" }} />
       <Stack.Screen name="polls/index" options={{ title: "Polls" }} />
       <Stack.Screen name="polls/[id]" options={{ title: "Poll" }} />
       <Stack.Screen name="polls/results/[id]" options={{ title: "Results" }} />

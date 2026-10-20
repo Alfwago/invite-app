@@ -1182,3 +1182,14 @@ export interface NewPoll {
   /** Server 0.36.2+: Names shown (directors see who picked what). Default Anonymous. */
   show_names?: boolean;
 }
+
+/** GET /api/directors/ (server 0.38.0+): who the Skate Directors are and
+ *  which skate groups each runs. */
+export interface DirectoryEntry {
+  id: number;
+  name: string;
+  role: "Director" | "President" | "Site Director";
+  nights: { id: number; name: string; role: "Night Director" | "Assistant Director" | "Director" }[];
+  email: string;
+  phone: string;
+}

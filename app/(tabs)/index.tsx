@@ -175,6 +175,8 @@ export default function HomeScreen() {
           </>
         ) : null}
 
+        <SkateDirectorsRow />
+
         <DirectorToolsCard />
 
         <Button label="Sign out" variant="secondary" onPress={confirmSignOut} style={styles.signOut} />
@@ -182,6 +184,20 @@ export default function HomeScreen() {
         <AppFooter />
       </View>
     </ScrollView>
+  );
+}
+
+/** Who runs which skate group (1.8.0) — app/directors.tsx. */
+function SkateDirectorsRow() {
+  const router = useRouter();
+  return (
+    <Card>
+      <Tap feedback="row" style={styles.inboxRow} onPress={() => router.push("/directors" as never)}>
+        <Ionicons name="people-outline" size={20} color={colors.gold} />
+        <Text style={styles.inboxLabel}>Skate Directors</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Tap>
+    </Card>
   );
 }
 

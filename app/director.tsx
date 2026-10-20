@@ -95,6 +95,7 @@ export default function DirectorDashboard() {
                 onPress={() => router.push("/approvals" as never)}
               />
               <ToolRow icon="people-outline" label="Skate-group members" onPress={() => router.push("/skate-groups" as never)} />
+              <ToolRow icon="id-card-outline" label="Skate Directors" onPress={() => router.push("/directors" as never)} />
               <ToolRow
                 icon="bar-chart-outline"
                 label={openPolls > 0 ? `Polls (${openPolls} open)` : "Polls"}
