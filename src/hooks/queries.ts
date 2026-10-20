@@ -322,7 +322,10 @@ export function usePatchEvent(id: number | string) {
 export function useSendInvites(id: number | string) {
   const invalidate = useInvalidateEvent(id);
   return useMutation({
-    mutationFn: (directorMessage?: string) => api.sendInvites(id, directorMessage),
+    mutationFn: (arg?: string | { directorMessage?: string; sendTo?: "new" | "all" }) =>
+      typeof arg === "object"
+        ? api.sendInvites(id, arg.directorMessage, arg.sendTo)
+        : api.sendInvites(id, arg),
     onSuccess: () => invalidate(),
   });
 }

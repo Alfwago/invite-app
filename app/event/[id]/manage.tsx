@@ -766,6 +766,7 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
                 candidates.data.invite_groups,
                 candidates.data.invited_ids,
               )}
+              ownKey={candidates.data.own_group_id != null ? String(candidates.data.own_group_id) : null}
               picked={picked}
               onChange={setPicked}
             />
@@ -796,17 +797,34 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
   const [batchEnabled, setBatchEnabled] = useState(manage.batch_invites_enabled);
   const [batchDelay, setBatchDelay] = useState(String(manage.batch_invites_delay_hours ?? 24));
 
+  function send(sendTo?: "new" | "all") {
+    sendInvites.mutate(sendTo ? { sendTo } : undefined, {
+      onSuccess: (r) => Alert.alert("Invites sent", `${r.notified} notified.`),
+      onError: (e) => Alert.alert("Send failed", errText(e)),
+    });
+  }
+
   function confirmSend() {
-    Alert.alert("Send invites now?", "Emails everyone on the invite list now (not the rest of the skate group).", [
+    const c = manage.invite_send_counts;
+    // Owner 2026-10-20: once invites are out, only the newly added or everyone.
+    if (c?.sent_before) {
+      const buttons: { text: string; style?: "cancel"; onPress?: () => void }[] = [];
+      if (c.new > 0) buttons.push({ text: `Only newly added (${c.new})`, onPress: () => send("new") });
+      buttons.push({ text: `Send to all on the list (${c.all})`, onPress: () => send("all") });
+      buttons.push({ text: "Cancel", style: "cancel" });
+      Alert.alert(
+        "Send invites again?",
+        c.new > 0
+          ? `Invites already went out. ${c.new} on the list haven't been sent one yet.`
+          : "Invites already went out, and everyone on the list got one.",
+        buttons,
+      );
+      return;
+    }
+    const who = c ? `the ${c.all} player${c.all === 1 ? "" : "s"}` : "everyone";
+    Alert.alert("Send invites now?", `Emails ${who} on the invite list (not the rest of the skate group).`, [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Send",
-        onPress: () =>
-          sendInvites.mutate(undefined, {
-            onSuccess: (r) => Alert.alert("Invites sent", `${r.notified} notified.`),
-            onError: (e) => Alert.alert("Send failed", errText(e)),
-          }),
-      },
+      { text: "Send", onPress: () => send(c ? "all" : undefined) },
     ]);
   }
 
@@ -2317,13 +2335,18 @@ function InvitePicker({
   groups,
   picked,
   onChange,
+  ownKey = null,
 }: {
   groups: InviteGroup[];
   picked: number[];
   onChange: (next: number[]) => void;
+  /** This skate's own group: hidden unless searching (owner 2026-10-20). */
+  ownKey?: string | null;
 }) {
   const [term, setTerm] = useState("");
-  const [open, setOpen] = useState<Set<string>>(() => new Set(groups.slice(0, 1).map((g) => g.key)));
+  const [open, setOpen] = useState<Set<string>>(
+    () => new Set(groups.filter((g) => g.key !== ownKey && g.members.length > 0).slice(0, 1).map((g) => g.key)),
+  );
   const pickedSet = new Set(picked);
   const searching = term.trim().length > 0;
   const toggleOne = (id: number) =>
@@ -2347,10 +2370,12 @@ function InvitePicker({
       {groups.map((g) => {
         const shown = g.members.filter((m) => matches(m, term));
         const state = groupState(g.members, pickedSet);
-        const expanded = searching || open.has(g.key);
+        const expanded = (searching || open.has(g.key)) && g.members.length > 0;
         const count = g.members.filter((m) => pickedSet.has(m.id)).length;
-        const invitedShown = g.invited.filter((m) => !searching || m.name.toLowerCase().includes(term.trim().toLowerCase()));
-        if (searching && shown.length === 0 && invitedShown.length === 0) return null;
+        // Owner 2026-10-20: the skate's own group stays out of the way, and
+        // people already on the invite list aren't listed.
+        if (g.key === ownKey && !searching) return null;
+        if (searching && shown.length === 0) return null;
         return (
           <View key={g.key} style={styles.pickerGroup}>
             <View style={styles.pickerHead}>
@@ -2387,9 +2412,7 @@ function InvitePicker({
                 accessibilityLabel={expanded ? `Hide ${g.name}` : `Show ${g.name}`}
               >
                 <Text style={styles.muted}>
-                  {g.members.length === 0
-                    ? "everyone's invited"
-                    : `${count} of ${g.members.length}${g.invited.length ? ` · ${g.invited.length} invited` : ""}`}
+                  {g.members.length === 0 ? "everyone's invited" : `${count} of ${g.members.length}`}
                 </Text>
                 <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
               </Tap>
@@ -2404,18 +2427,7 @@ function InvitePicker({
                   />
                 ))
               : null}
-            {expanded
-              ? invitedShown.map((m) => (
-                  <View key={`${g.key}-inv-${m.id}`} style={[styles.checkRow, styles.invitedRow]}>
-                    <View style={[styles.checkbox, styles.checkboxOn]}>
-                      <Text style={styles.checkboxMark}>✓</Text>
-                    </View>
-                    <Text style={styles.checkLabel} numberOfLines={1}>
-                      {m.name} <Text style={styles.muted}>· invited</Text>
-                    </Text>
-                  </View>
-                ))
-              : null}
+
           </View>
         );
       })}
@@ -2752,7 +2764,6 @@ const styles = StyleSheet.create({
 
   walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
   pickerWrap: { gap: spacing.sm },
-  invitedRow: { opacity: 0.5 },
   pickerGroup: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.sm },
   pickerHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
   pickerAll: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 8 },

@@ -432,6 +432,8 @@ export interface EventManage {
   can_borrow?: boolean;
   /** Director-reserved spots (server 0.38.0+; missing → no Reserve mode). */
   can_reserve?: boolean;
+  /** Server 0.38.0+: for the "Only newly added / Send to all" prompt. */
+  invite_send_counts?: { sent_before: boolean; all: number; new: number };
 }
 
 /** The viewer's "You're filling in for <Night>" card (server 0.33+). */
@@ -493,8 +495,10 @@ export interface EventCandidates {
   waitlist: WaitlistEntry[];
   /** Server 0.38.0+: skate groups for the invite picker, this skate's first. */
   invite_groups?: { id: number | null; name: string; member_ids: number[]; members?: { id: number; name: string }[] }[];
-  /** Server 0.38.0+: already on the invite list (shown greyed in the picker). */
+  /** Server 0.38.0+: already on the invite list (not shown in the picker). */
   invited_ids?: number[];
+  /** Server 0.38.0+: this skate's own group — hidden in the picker unless searching. */
+  own_group_id?: number | null;
 }
 
 /** Body for POST /events/<id>/roster/ — one director roster edit. */

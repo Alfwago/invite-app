@@ -394,11 +394,13 @@ export function patchEvent(id: number | string, body: EventPatchBody): Promise<E
 export function sendInvites(
   id: number | string,
   directorMessage?: string,
+  /** Server 0.38.0+: "new" = only people on the list not sent it yet. */
+  sendTo?: "new" | "all",
 ): Promise<SendInvitesResult> {
-  return apiFetch(`/api/events/${id}/send-invites/`, {
-    method: "POST",
-    body: directorMessage !== undefined ? { director_message: directorMessage } : {},
-  });
+  const body: Record<string, string> = {};
+  if (directorMessage !== undefined) body.director_message = directorMessage;
+  if (sendTo) body.send_to = sendTo;
+  return apiFetch(`/api/events/${id}/send-invites/`, { method: "POST", body });
 }
 
 export function sendBatch(id: number | string): Promise<SendInvitesResult> {
