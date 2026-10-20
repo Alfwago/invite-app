@@ -46,3 +46,6 @@ yarn-error.*
 
 # Design canvas working files (not part of the build)
 design/obh-design/
+
+# A worktree can link node_modules from the main checkout (a symlink, not a folder).
+node_modules
