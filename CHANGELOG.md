@@ -3,6 +3,34 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-20 — 1.8.0 (iOS build 33): Directors tab, invite picker, reserved spots, team order, names, poll privacy
+
+**Pairs with `invite-server` 0.38.0**, which ships first. Folds in 1.7.1
+(never released). On an older server each new piece hides itself (no
+Reserve mode, no group headers in the invite picker, no sort fields, no
+Responses switch). No native change.
+
+- **Directors tab** (#8): directors get a fifth bottom-bar tab, Directors
+  (the dashboard), badged with players waiting for approval. League notices
+  for presidents. `src/navTabs.ts` (tested).
+- **Invite picker by skate group** (#3): Add to invite list shows each skate
+  group with "All of <group>" (all / some / none) and its people, plus a
+  search and a count. Anyone can be invited; other groups' players come in as
+  Borrowed. `src/invitePicker.ts` (tested).
+- **Reserved spots** (#5): Manage → Roster → Add a player → Reserve holds 1-10
+  skater or goalie spots with a note only directors see. Reserved rows have
+  Fill (pick a player from the group) and Release. Players see "Reserved by
+  Director" on the Going list.
+- **Team order** (#4): once teams are published the Going list splits into
+  Gold Team, Black Team, Not on a team, then reserved spots.
+  `src/rosterGroups.ts` (tested).
+- **Player profiles sort** (#6/#7): names read "Lastname, Firstname" and sort
+  by last name; Sort chips for Name A–Z/Z–A, Rating, Skate group, Join date,
+  Last skated. `src/playerSort.ts` (tested).
+- **Polls: Anonymous or Names shown** (#1): New poll has a Names shown switch;
+  director results list who picked each choice on a Names shown poll and have
+  a Responses switch; the poll page tells players which kind it is.
+
 ## 2026-10-15 — 1.7.1 (iOS build 32): polls by group, "Can you make it?", PDF logo
 
 **Pairs with `invite-server` 0.36.0** (with 0.35.2) — it ships first. On an
