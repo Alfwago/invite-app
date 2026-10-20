@@ -1054,11 +1054,15 @@ function RosterCard({
   // directors/beer-or-whiskey guys from Paid, same as their row hides $.
   const presentEligible = [
     ...going.map((p) => ({ player_id: p.player_id, present: p.present })),
-    ...event.day_players.map((dp) => ({ day_player_id: dp.id, present: dp.present })),
+    ...event.day_players
+      .filter((dp) => !dp.is_reservation)
+      .map((dp) => ({ day_player_id: dp.id, present: dp.present })),
   ];
   const paidEligible = [
     ...going.filter((p) => p.pays).map((p) => ({ player_id: p.player_id, paid: p.paid })),
-    ...event.day_players.filter((dp) => dp.pays).map((dp) => ({ day_player_id: dp.id, paid: dp.paid })),
+    ...event.day_players
+      .filter((dp) => dp.pays && !dp.is_reservation)
+      .map((dp) => ({ day_player_id: dp.id, paid: dp.paid })),
   ];
   const presentAllOn = presentEligible.length > 0 && presentEligible.every((t) => t.present);
   const paidAllOn = paidEligible.length > 0 && paidEligible.every((t) => t.paid);
@@ -1159,6 +1163,7 @@ function RosterCard({
     status: event.status,
     isPast: event.is_past,
     canBorrow: event.manage?.can_borrow,
+    canReserve: event.manage?.can_reserve,
   });
   const mode = resolveAddMode(addMode, modes);
   const current = modes.find((m) => m.key === mode)!;
@@ -1242,7 +1247,30 @@ function RosterCard({
         )}
 
         {event.day_players.map((dp: DayPlayer) =>
-          editWalkOn?.id === dp.id ? (
+          dp.is_reservation ? (
+            <ReservedSpotRow
+              key={`dp-${dp.id}`}
+              dp={dp}
+              eventId={event.id}
+              busy={busy}
+              onFill={(player) =>
+                act(
+                  { action: "fill_reservation", day_player_id: dp.id, player_id: player.id },
+                  `${player.name} is in the reserved spot`,
+                )
+              }
+              onRelease={() =>
+                Alert.alert("Release this spot?", "It opens up for players again (and the waitlist, if that's on).", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Release",
+                    style: "destructive",
+                    onPress: () => act({ action: "release_reservation", day_player_id: dp.id }, "Spot released"),
+                  },
+                ])
+              }
+            />
+          ) : editWalkOn?.id === dp.id ? (
             <WalkOnEditor
               key={`dp-${dp.id}`}
               dp={dp}
@@ -1431,8 +1459,155 @@ function RosterCard({
             />
           </>
         ) : null}
+
+        {mode === "reserve" ? (
+          <ReserveSpotsForm
+            busy={busy}
+            onReserve={(count, isGoalie, note) =>
+              act(
+                { action: "reserve_spots", count, is_goalie: isGoalie, note },
+                `Reserved ${count} ${isGoalie ? "goalie" : "skater"} spot${count === 1 ? "" : "s"}`,
+              )
+            }
+          />
+        ) : null}
       </Card>
     </>
+  );
+}
+
+/** Director-reserved spots (server 0.38.0 #5): how many, goalie or skater,
+ *  and a note only directors see. */
+function ReserveSpotsForm({
+  busy,
+  onReserve,
+}: {
+  busy: boolean;
+  onReserve: (count: number, isGoalie: boolean, note: string) => void;
+}) {
+  const [count, setCount] = useState(1);
+  const [goalie, setGoalie] = useState(false);
+  const [note, setNote] = useState("");
+  const noteFocus = useFocusScroll();
+  return (
+    <>
+      <View style={styles.walkOnRow}>
+        <Tap
+          onPress={() => setCount((c) => Math.max(1, c - 1))}
+          style={styles.stepBtn}
+          accessibilityLabel="One fewer"
+          disabled={count <= 1}
+        >
+          <Ionicons name="remove" size={18} color={colors.text} />
+        </Tap>
+        <Text style={styles.stepValue} accessibilityLabel={`${count} spots`}>
+          {count}
+        </Text>
+        <Tap
+          onPress={() => setCount((c) => Math.min(10, c + 1))}
+          style={styles.stepBtn}
+          accessibilityLabel="One more"
+          disabled={count >= 10}
+        >
+          <Ionicons name="add" size={18} color={colors.text} />
+        </Tap>
+        <Text style={[styles.muted, styles.grow]}>spot{count === 1 ? "" : "s"}</Text>
+        <Tap
+          onPress={() => setGoalie((g) => !g)}
+          style={[styles.goaliePick, goalie && styles.goaliePickOn]}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: goalie }}
+          accessibilityLabel="Goalie spots"
+        >
+          <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
+        </Tap>
+      </View>
+      <TextInput
+        {...noteFocus}
+        style={styles.input}
+        value={note}
+        onChangeText={setNote}
+        maxLength={200}
+        placeholder="Note (only directors see it)"
+        placeholderTextColor={colors.textMuted}
+        accessibilityLabel="Reservation note"
+      />
+      <Button
+        label={`Reserve ${count} ${goalie ? "goalie" : "skater"} spot${count === 1 ? "" : "s"}`}
+        variant="secondary"
+        onPress={() => {
+          onReserve(count, goalie, note.trim());
+          setCount(1);
+          setGoalie(false);
+          setNote("");
+        }}
+        disabled={busy}
+      />
+    </>
+  );
+}
+
+/** A reserved spot on the director roster: Fill it with a player from this
+ *  skate group, or Release it. */
+function ReservedSpotRow({
+  dp,
+  eventId,
+  busy,
+  onFill,
+  onRelease,
+}: {
+  dp: DayPlayer;
+  eventId: number;
+  busy: boolean;
+  onFill: (player: { id: number; name: string }) => void;
+  onRelease: () => void;
+}) {
+  const [picking, setPicking] = useState(false);
+  const candidates = useCandidates(eventId, picking);
+  const choices = (candidates.data?.addable ?? []).filter((c) =>
+    dp.is_goalie ? c.is_goalie || c.is_goalie_skater : !c.is_goalie || c.is_goalie_skater,
+  );
+  return (
+    <View style={styles.reservedRow}>
+      <View style={styles.reservedHead}>
+        <View style={styles.grow}>
+          <Text style={styles.reservedName}>{dp.name}</Text>
+          <Text style={styles.muted}>
+            {dp.is_goalie ? "Goalie spot" : "Skater spot"}
+            {dp.reservation_note ? ` · ${dp.reservation_note}` : ""}
+          </Text>
+        </View>
+        <Tap onPress={() => setPicking((p) => !p)} style={styles.reservedBtn} disabled={busy}>
+          <Text style={styles.reservedBtnText}>{picking ? "Cancel" : "Fill"}</Text>
+        </Tap>
+        <Tap onPress={onRelease} style={styles.reservedBtn} disabled={busy}>
+          <Text style={styles.reservedBtnText}>Release</Text>
+        </Tap>
+      </View>
+      {picking ? (
+        candidates.isLoading ? (
+          <Loading label="Loading players…" />
+        ) : choices.length === 0 ? (
+          <Text style={styles.muted}>Nobody left in this skate group to put here.</Text>
+        ) : (
+          <View style={styles.reservedList}>
+            {choices.map((c) => (
+              <Tap
+                key={c.id}
+                feedback="row"
+                style={styles.reservedChoice}
+                onPress={() => {
+                  setPicking(false);
+                  onFill(c);
+                }}
+              >
+                <Text style={styles.reservedChoiceText}>{c.name}</Text>
+              </Tap>
+            ))}
+          </View>
+        )
+      ) : null}
+    </View>
   );
 }
 
@@ -2463,6 +2638,35 @@ const styles = StyleSheet.create({
   makePermanent: { alignSelf: "flex-start", paddingTop: 2 },
 
   walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  stepBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepValue: { color: colors.text, fontSize: font.base, fontWeight: "800", minWidth: 22, textAlign: "center" },
+  reservedRow: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  reservedHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  reservedName: { color: colors.gold, fontSize: font.sm, fontWeight: "800" },
+  reservedBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  reservedBtnText: { color: colors.text, fontSize: font.xs, fontWeight: "700" },
+  reservedList: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
+  reservedChoice: { paddingVertical: 10, paddingHorizontal: spacing.md },
+  reservedChoiceText: { color: colors.text, fontSize: font.sm },
   goaliePick: {
     width: 44,
     height: 44,

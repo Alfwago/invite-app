@@ -2,7 +2,7 @@
 // (members of this skate's night), Borrow (another skate group, this skate
 // only) and Walk-On (no account). Pure so it can be unit-tested.
 
-export type AddMode = "group" | "borrow" | "walkon";
+export type AddMode = "group" | "borrow" | "walkon" | "reserve";
 
 export interface AddModeOption {
   key: AddMode;
@@ -19,6 +19,8 @@ export interface AddModeInput {
   isPast?: boolean;
   /** `manage.can_borrow`: undefined on servers before 0.33 → no Borrow at all. */
   canBorrow?: boolean;
+  /** `manage.can_reserve`: undefined before server 0.38.0 → no Reserve. */
+  canReserve?: boolean;
 }
 
 /**
@@ -57,6 +59,14 @@ export function addModeOptions(input: AddModeInput): AddModeOption[] {
     description: "Someone without an account. No emails sent.",
     disabledReason: null,
   });
+  if (input.canReserve !== undefined) {
+    options.push({
+      key: "reserve",
+      label: "Reserve",
+      description: "Hold spots as \"Reserved by Director\" until you fill or release them.",
+      disabledReason: input.canReserve ? null : "This skate is over.",
+    });
+  }
   return options;
 }
 

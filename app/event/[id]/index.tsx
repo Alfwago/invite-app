@@ -24,6 +24,7 @@ import {
 import { formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
 import { useEvent } from "@/src/hooks/queries";
+import { goingSections } from "@/src/rosterGroups";
 import { colors, font, radius, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
@@ -263,15 +264,21 @@ function RosterTabs({ event }: { event: EventDetail }) {
       <View style={styles.tabBody}>
         {rows.length === 0 && !showDayPlayers ? (
           <Text style={styles.muted}>Nobody here.</Text>
+        ) : tab === "YES" ? (
+          // 0.38.0: team sections once teams are published; reserved spots last.
+          goingSections(rows, event.day_players).map((section, i) => (
+            <View key={section.title ?? `s${i}`} style={styles.rosterSection}>
+              {section.title ? <Text style={styles.rosterSectionTitle}>{section.title}</Text> : null}
+              {section.players.map((p) => (
+                <PlayerLine key={p.player_id} entry={p} />
+              ))}
+              {section.dayPlayers.map((dp) => (
+                <DayPlayerLine key={`dp-${dp.id}`} dp={dp} />
+              ))}
+            </View>
+          ))
         ) : (
-          <>
-            {rows.map((p) => (
-              <PlayerLine key={p.player_id} entry={p} />
-            ))}
-            {showDayPlayers
-              ? event.day_players.map((dp) => <DayPlayerLine key={`dp-${dp.id}`} dp={dp} />)
-              : null}
-          </>
+          rows.map((p) => <PlayerLine key={p.player_id} entry={p} />)
         )}
       </View>
     </View>
@@ -328,6 +335,16 @@ function RoleTag({
 }
 
 function DayPlayerLine({ dp }: { dp: DayPlayer }) {
+  if (dp.is_reservation) {
+    return (
+      <View style={styles.playerRow}>
+        <View style={styles.playerNameWrap}>
+          <Text style={[styles.playerName, styles.reservedName]}>{dp.name}</Text>
+          <Text style={styles.walkOn}>{dp.is_goalie ? "goalie spot" : "skater spot"}</Text>
+        </View>
+      </View>
+    );
+  }
   return (
     <View style={styles.playerRow}>
       <View style={styles.playerNameWrap}>
@@ -402,6 +419,17 @@ const styles = StyleSheet.create({
   },
   dirMessage: { color: colors.text, fontSize: font.base, fontStyle: "italic" },
   teamSection: { gap: spacing.sm },
+  rosterSection: { gap: 0, marginBottom: spacing.sm },
+  rosterSectionTitle: {
+    color: colors.gold,
+    fontSize: font.xs,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginTop: spacing.sm,
+    marginBottom: 2,
+  },
+  reservedName: { color: colors.textMuted, fontStyle: "italic" },
   sectionLabel: {
     color: colors.textMuted,
     fontSize: font.xs,

@@ -321,6 +321,11 @@ export interface DayPlayer {
   /** One score, interpreted by is_goalie: 0-3 goalie, 0-5 skater. Feeds
    *  Team Generator. Director view only — null for players. */
   rating_ppv: string | null;
+  /** Server 0.38.0+: a spot a director is holding ("Reserved by Director").
+   *  Counts toward the limit; no Present/Paid; not in the Team Generator. */
+  is_reservation?: boolean;
+  /** Directors only ("" for players). */
+  reservation_note?: string;
 }
 
 export interface WaitlistEntry {
@@ -425,6 +430,8 @@ export interface EventManage {
   penalty_box: PenaltyBoxEntry[];
   /** Show "Borrow a Goalie or Skater" (server 0.33+; missing → hide it). */
   can_borrow?: boolean;
+  /** Director-reserved spots (server 0.38.0+; missing → no Reserve mode). */
+  can_reserve?: boolean;
 }
 
 /** The viewer's "You're filling in for <Night>" card (server 0.33+). */
@@ -539,7 +546,11 @@ export type RosterAction =
   /** A player from another skate group, this skate only (server 0.33+). */
   | { action: "borrow"; player_id: number; role: "goalie" | "skater" }
   /** A borrowed player joins this skate group for good. */
-  | { action: "make_permanent"; player_id: number };
+  | { action: "make_permanent"; player_id: number }
+  /** Director-reserved spots (server 0.38.0+). */
+  | { action: "reserve_spots"; count: number; is_goalie?: boolean; note?: string }
+  | { action: "release_reservation"; day_player_id: number }
+  | { action: "fill_reservation"; day_player_id: number; player_id: number };
 
 export interface NightMember {
   id: number;
