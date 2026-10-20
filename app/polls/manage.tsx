@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
 import type { PollSummary } from "@/src/api/types";
+import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import {
   useManagePolls,
@@ -105,17 +106,32 @@ function PollCard({
                 <View key={q.id} style={styles.q}>
                   <Text style={styles.qText}>{q.text}</Text>
                   {q.choices.map((c) => (
-                    <View key={c.id} style={styles.choiceRow}>
-                      <View style={[styles.bar, { width: `${Math.max(c.pct, 2)}%` }]} />
-                      <Text style={styles.choiceLabel}>
-                        {c.text} — {c.count} ({c.pct}%)
-                      </Text>
+                    <View key={c.id} style={styles.choiceWrap}>
+                      <View style={styles.choiceRow}>
+                        <View style={[styles.bar, { width: `${Math.max(c.pct, 2)}%` }]} />
+                        <Text style={styles.choiceLabel}>
+                          {c.text} — {c.count} ({c.pct}%)
+                        </Text>
+                      </View>
+                      {/* Names shown polls (server 0.36.2+): who picked it. */}
+                      {results.data?.show_names && c.voters?.length ? (
+                        <Text style={styles.voters}>{c.voters.join(" · ")}</Text>
+                      ) : null}
                     </View>
                   ))}
                   <Text style={styles.qTotal}>{q.total} responses</Text>
                 </View>
               ))}
               <View style={styles.actions}>
+                {results.data.show_names !== undefined ? (
+                  <ResponsesSwitch
+                    showNames={!!results.data.show_names}
+                    busy={update.isPending}
+                    onChange={(showNames) =>
+                      update.mutate({ id: poll.id, body: { show_names: showNames } })
+                    }
+                  />
+                ) : null}
                 <Button
                   label={poll.is_open ? "Close poll" : "Reopen poll"}
                   variant="secondary"
@@ -134,6 +150,45 @@ function PollCard({
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/** Anonymous ⇄ Names shown (server 0.36.2+). Never touches the votes. */
+function ResponsesSwitch({
+  showNames,
+  busy,
+  onChange,
+}: {
+  showNames: boolean;
+  busy: boolean;
+  onChange: (showNames: boolean) => void;
+}) {
+  return (
+    <View style={styles.responses}>
+      <Text style={styles.responsesLabel}>Responses</Text>
+      <View style={styles.segment}>
+        {[
+          { key: false, label: "Anonymous" },
+          { key: true, label: "Names shown" },
+        ].map((o) => {
+          const on = o.key === showNames;
+          return (
+            <Tap
+              key={o.label}
+              onPress={() => !on && !busy && onChange(o.key)}
+              style={[styles.segBtn, on && styles.segBtnOn]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on, disabled: busy }}
+            >
+              <Text style={[styles.segText, on && styles.segTextOn]}>{o.label}</Text>
+            </Tap>
+          );
+        })}
+      </View>
+      <Text style={styles.responsesHint}>
+        {showNames ? "You can see who voted for what. Players only see counts." : "Results show counts only."}
+      </Text>
+    </View>
   );
 }
 
@@ -169,4 +224,20 @@ const styles = StyleSheet.create({
   choiceLabel: { color: colors.text, fontSize: font.xs, fontWeight: "600" },
   qTotal: { color: colors.textMuted, fontSize: font.xs },
   actions: { gap: spacing.sm },
+  choiceWrap: { gap: 2 },
+  voters: { color: colors.textMuted, fontSize: font.xs, lineHeight: 16, paddingHorizontal: spacing.sm },
+  responses: { gap: 6 },
+  responsesLabel: { color: colors.text, fontSize: font.sm, fontWeight: "700" },
+  responsesHint: { color: colors.textMuted, fontSize: font.xs },
+  segment: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    overflow: "hidden",
+  },
+  segBtn: { flex: 1, paddingVertical: 8, alignItems: "center", backgroundColor: colors.card },
+  segBtnOn: { backgroundColor: colors.gold },
+  segText: { color: colors.text, fontSize: font.sm, fontWeight: "700" },
+  segTextOn: { color: colors.bg },
 });

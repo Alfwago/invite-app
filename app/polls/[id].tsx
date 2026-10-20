@@ -46,6 +46,14 @@ export default function PollDetailScreen() {
       <Stack.Screen options={{ title: poll.title }} />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         {poll.description ? <Text style={styles.desc}>{poll.description}</Text> : null}
+        {/* Server 0.36.2+: tell the voter whether directors see names. */}
+        {poll.show_names !== undefined ? (
+          <Text style={styles.privacy}>
+            {poll.show_names
+              ? "Names shown: directors can see how you voted."
+              : "Anonymous: directors see counts only, not who voted for what."}
+          </Text>
+        ) : null}
 
         {poll.questions.map((q) => {
           const locked = q.my_choice_id != null;
@@ -104,6 +112,7 @@ export default function PollDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  privacy: { color: colors.gold, fontSize: font.xs, fontWeight: "700" },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md },
   desc: { color: colors.textMuted, fontSize: font.sm, lineHeight: 20 },

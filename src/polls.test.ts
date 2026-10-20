@@ -54,3 +54,10 @@ test("notifiedText", () => {
   assert.equal(notifiedText({ recipients: 1 }), "Sent to 1 player.");
   assert.equal(notifiedText({ recipients: 23 }), "Sent to 23 players.");
 });
+
+test("newPollBody: Names shown only sent when on", () => {
+  const on = newPollBody(BASE, { groupsSupported: true, audience: "everyone", picked: [], notify: false, showNames: true });
+  assert.equal(on.show_names, true);
+  const off = newPollBody(BASE, { groupsSupported: true, audience: "everyone", picked: [], notify: false, showNames: false });
+  assert.equal("show_names" in off, false);
+});

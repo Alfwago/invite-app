@@ -42,14 +42,16 @@ export function audienceValid(audience: Audience, picked: number[]): boolean {
  * have happened.
  */
 export function newPollBody(
-  base: Omit<NewPoll, "night_ids" | "notify">,
-  opts: { groupsSupported: boolean; audience: Audience; picked: number[]; notify: boolean },
+  base: Omit<NewPoll, "night_ids" | "notify" | "show_names">,
+  opts: { groupsSupported: boolean; audience: Audience; picked: number[]; notify: boolean; showNames?: boolean },
 ): NewPoll {
   if (!opts.groupsSupported) return base;
   return {
     ...base,
     night_ids: opts.audience === "groups" ? [...opts.picked].sort((a, b) => a - b) : [],
     notify: opts.notify,
+    // Names shown (server 0.36.2+); Anonymous is the default, so only sent when on.
+    ...(opts.showNames ? { show_names: true } : {}),
   };
 }
 

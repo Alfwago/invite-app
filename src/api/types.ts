@@ -1039,6 +1039,8 @@ export interface Poll {
   nights?: PollNight[];
   /** "Everyone" or "Monday Mules, Thursday Night". */
   audience_label?: string;
+  /** Server 0.36.2+: true = directors can see who picked what ("Names shown"). */
+  show_names?: boolean;
   questions: PollQuestion[];
 }
 
@@ -1101,6 +1103,8 @@ export interface PollSummary {
   closes_at: string | null;
   nights?: PollNight[];
   audience_label?: string;
+  /** Server 0.36.2+. */
+  show_names?: boolean;
 }
 
 /** GET /api/director/polls/. `pickable_nights` / `can_create_global` are
@@ -1116,6 +1120,8 @@ export interface PollResultChoice {
   text: string;
   count: number;
   pct: number;
+  /** Director results of a Names shown poll (server 0.36.2+): "Last, First" A-Z. */
+  voters?: string[];
 }
 
 export interface PollResultQuestion {
@@ -1134,6 +1140,8 @@ export interface PollResults {
   closes_at: string | null;
   nights?: PollNight[];
   audience_label?: string;
+  /** Server 0.36.2+: Names shown (true) or Anonymous. */
+  show_names?: boolean;
   questions: PollResultQuestion[];
   /** Present when the request asked to notify (server 0.36.0+). */
   notified?: { recipients: number; emailed: number; pushed: number };
@@ -1148,4 +1156,6 @@ export interface NewPoll {
   night_ids?: number[];
   /** Server 0.36.0+: email + push + inbox to everyone who can vote. */
   notify?: boolean;
+  /** Server 0.36.2+: Names shown (directors see who picked what). Default Anonymous. */
+  show_names?: boolean;
 }

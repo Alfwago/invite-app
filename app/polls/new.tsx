@@ -32,6 +32,7 @@ export default function NewPollScreen() {
   const [audience, setAudience] = useState<Audience>("everyone");
   const [picked, setPicked] = useState<number[]>([]);
   const [notify, setNotify] = useState(true);
+  const [showNames, setShowNames] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<Q[]>([{ text: "", choices: ["", ""] }]);
@@ -71,7 +72,7 @@ export default function NewPollScreen() {
               choices: q.choices.map((c) => c.trim()).filter(Boolean),
             })),
           },
-          { groupsSupported, audience, picked: groupIds, notify },
+          { groupsSupported, audience, picked: groupIds, notify, showNames },
         ),
       );
       const sent = notifiedText(res.notified);
@@ -155,6 +156,25 @@ export default function NewPollScreen() {
             ) : (
               <Text style={styles.hint}>Every player can see and answer it.</Text>
             )}
+            <View style={styles.notifyRow}>
+              <View style={styles.grow}>
+                <Text style={styles.notifyLabel}>Names shown</Text>
+                <Text style={styles.hint}>
+                  {showNames
+                    ? "You'll see who voted for what. Players are told; they only see counts."
+                    : "Anonymous: results show counts only."}
+                </Text>
+              </View>
+              <View style={styles.switchBox}>
+                <Switch
+                  value={showNames}
+                  onValueChange={setShowNames}
+                  trackColor={{ true: colors.gold, false: colors.border }}
+                  thumbColor="#fff"
+                  accessibilityLabel="Names shown"
+                />
+              </View>
+            </View>
             <View style={styles.notifyRow}>
               <View style={styles.grow}>
                 <Text style={styles.notifyLabel}>Notify players</Text>
