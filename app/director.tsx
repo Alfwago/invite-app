@@ -3,6 +3,7 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
+import { useAuth } from "@/src/auth/AuthContext";
 import type { HomeNight } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
@@ -13,6 +14,7 @@ import { colors, font, radius, spacing } from "@/src/theme";
 
 export default function DirectorDashboard() {
   const router = useRouter();
+  const { me } = useAuth();
   const home = useHome();
   const approvals = useApprovals();
   const polls = usePolls();
@@ -24,7 +26,7 @@ export default function DirectorDashboard() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Director dashboard" }} />
+      <Stack.Screen options={{ title: "Directors" }} />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         {home.isLoading ? (
           <Loading label="Loading…" />
@@ -97,8 +99,16 @@ export default function DirectorDashboard() {
                 icon="bar-chart-outline"
                 label={openPolls > 0 ? `Polls (${openPolls} open)` : "Polls"}
                 onPress={() => router.push("/polls/manage" as never)}
-                last
+                last={!me?.is_president}
               />
+              {me?.is_president ? (
+                <ToolRow
+                  icon="megaphone-outline"
+                  label="League notices"
+                  onPress={() => router.push("/notices" as never)}
+                  last
+                />
+              ) : null}
             </Card>
           </>
         )}

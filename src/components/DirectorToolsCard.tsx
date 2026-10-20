@@ -19,7 +19,7 @@ export function DirectorToolsCard() {
   if (!me?.is_director) return null;
 
   const rows: { label: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [
-    { label: "Director dashboard", icon: "grid-outline", href: "/director" },
+    { label: "Directors", icon: "clipboard-outline", href: "/director" },
     { label: "Team generator", icon: "shuffle-outline", href: "/teams" },
     { label: "Polls", icon: "bar-chart-outline", href: "/polls/manage" },
   ];

@@ -636,10 +636,11 @@ export function useResetJerseys(eventId: number) {
 
 // ---- Player approval queue (director) -----------------------------
 
-export function useApprovals() {
+export function useApprovals(enabled = true) {
   return useQuery({
     queryKey: keys.approvals,
     queryFn: ({ signal }) => api.fetchApprovals(signal),
+    enabled,
   });
 }
 

@@ -3,49 +3,11 @@ import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useAuth } from "@/src/auth/AuthContext";
 import { Tap } from "@/src/components/Tap";
-import { useBoards, useInbox } from "@/src/hooks/queries";
+import { useApprovals, useBoards, useInbox } from "@/src/hooks/queries";
+import { navTabs } from "@/src/navTabs";
 import { colors, font } from "@/src/theme";
-
-type Item = {
-  href: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  active: (path: string) => boolean;
-};
-
-// Everything that isn't clearly an Events / Messages / Profile screen counts
-// as "Home" (director tools, players, teams, polls, inbox, notices…).
-const TABS: Item[] = [
-  {
-    href: "/",
-    label: "Home",
-    icon: "home",
-    active: (p) =>
-      !p.startsWith("/events") &&
-      !p.startsWith("/event/") &&
-      !p.startsWith("/messages") &&
-      !p.startsWith("/profile"),
-  },
-  {
-    href: "/events",
-    label: "Events",
-    icon: "calendar",
-    active: (p) => p.startsWith("/events") || p.startsWith("/event/"),
-  },
-  {
-    href: "/messages",
-    label: "Messages",
-    icon: "chatbubbles",
-    active: (p) => p.startsWith("/messages"),
-  },
-  {
-    href: "/profile",
-    label: "Profile",
-    icon: "person",
-    active: (p) => p.startsWith("/profile"),
-  },
-];
 
 /**
  * A persistent bottom nav rendered at the root, above the router Stack, so it
@@ -58,13 +20,19 @@ export function BottomBar() {
   const boards = useBoards();
   const inbox = useInbox();
   const unread = (boards.data?.unread_total ?? 0) + (inbox.data?.unread_total ?? 0);
+  // 1.8.0 #8: a Directors tab for directors, badged with pending approvals.
+  const { me } = useAuth();
+  const isDirector = !!me?.is_director;
+  const approvals = useApprovals(isDirector);
+  const pending = isDirector ? (approvals.data?.length ?? 0) : 0;
 
   if (pathname === "/login" || pathname.startsWith("/login")) return null;
 
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 6) }]}>
-      {TABS.map((t) => {
+      {navTabs(isDirector).map((t) => {
         const on = t.active(pathname);
+        const badge = t.key === "messages" ? unread : t.key === "directors" ? pending : 0;
         return (
           <Tap
             feedback="row"
@@ -79,9 +47,9 @@ export function BottomBar() {
                 size={24}
                 color={on ? colors.gold : colors.textMuted}
               />
-              {t.label === "Messages" && unread > 0 ? (
+              {badge > 0 ? (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
+                  <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
                 </View>
               ) : null}
             </View>
