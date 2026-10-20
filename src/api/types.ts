@@ -492,7 +492,9 @@ export interface EventCandidates {
   invitable: Candidate[];
   waitlist: WaitlistEntry[];
   /** Server 0.38.0+: skate groups for the invite picker, this skate's first. */
-  invite_groups?: { id: number | null; name: string; member_ids: number[] }[];
+  invite_groups?: { id: number | null; name: string; member_ids: number[]; members?: { id: number; name: string }[] }[];
+  /** Server 0.38.0+: already on the invite list (shown greyed in the picker). */
+  invited_ids?: number[];
 }
 
 /** Body for POST /events/<id>/roster/ — one director roster edit. */

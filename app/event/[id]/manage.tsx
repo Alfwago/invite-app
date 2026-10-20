@@ -758,10 +758,14 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
       {showAdd ? (
         candidates.isLoading ? (
           <Loading label="Loading…" />
-        ) : candidates.data && candidates.data.invitable.length > 0 ? (
+        ) : candidates.data && (candidates.data.invitable.length > 0 || candidates.data.invite_groups?.length) ? (
           <View style={styles.addPanel}>
             <InvitePicker
-              groups={buildInviteGroups(candidates.data.invitable, candidates.data.invite_groups)}
+              groups={buildInviteGroups(
+                candidates.data.invitable,
+                candidates.data.invite_groups,
+                candidates.data.invited_ids,
+              )}
               picked={picked}
               onChange={setPicked}
             />
@@ -2342,16 +2346,18 @@ function InvitePicker({
       </Text>
       {groups.map((g) => {
         const shown = g.members.filter((m) => matches(m, term));
-        if (searching && shown.length === 0) return null;
         const state = groupState(g.members, pickedSet);
         const expanded = searching || open.has(g.key);
         const count = g.members.filter((m) => pickedSet.has(m.id)).length;
+        const invitedShown = g.invited.filter((m) => !searching || m.name.toLowerCase().includes(term.trim().toLowerCase()));
+        if (searching && shown.length === 0 && invitedShown.length === 0) return null;
         return (
           <View key={g.key} style={styles.pickerGroup}>
             <View style={styles.pickerHead}>
               <Tap
                 feedback="row"
                 style={styles.pickerAll}
+                disabled={g.members.length === 0}
                 onPress={() => onChange(toggleGroup(picked, g.members))}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: state === "all" ? true : state === "some" ? "mixed" : false }}
@@ -2381,7 +2387,9 @@ function InvitePicker({
                 accessibilityLabel={expanded ? `Hide ${g.name}` : `Show ${g.name}`}
               >
                 <Text style={styles.muted}>
-                  {count} of {g.members.length}
+                  {g.members.length === 0
+                    ? "everyone's invited"
+                    : `${count} of ${g.members.length}${g.invited.length ? ` · ${g.invited.length} invited` : ""}`}
                 </Text>
                 <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
               </Tap>
@@ -2394,6 +2402,18 @@ function InvitePicker({
                     checked={pickedSet.has(c.id)}
                     onToggle={() => toggleOne(c.id)}
                   />
+                ))
+              : null}
+            {expanded
+              ? invitedShown.map((m) => (
+                  <View key={`${g.key}-inv-${m.id}`} style={[styles.checkRow, styles.invitedRow]}>
+                    <View style={[styles.checkbox, styles.checkboxOn]}>
+                      <Text style={styles.checkboxMark}>✓</Text>
+                    </View>
+                    <Text style={styles.checkLabel} numberOfLines={1}>
+                      {m.name} <Text style={styles.muted}>· invited</Text>
+                    </Text>
+                  </View>
                 ))
               : null}
           </View>
@@ -2732,6 +2752,7 @@ const styles = StyleSheet.create({
 
   walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
   pickerWrap: { gap: spacing.sm },
+  invitedRow: { opacity: 0.5 },
   pickerGroup: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.sm },
   pickerHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
   pickerAll: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 8 },

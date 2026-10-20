@@ -37,3 +37,19 @@ test("search", () => {
   assert.equal(matches(inv[0], "zane"), false);
   assert.equal(matches(inv[0], " "), true);
 });
+
+test("groups where everyone is invited still show, greyed", () => {
+  const g = buildInviteGroups(
+    [c(1, "Adams, Bob")],
+    [
+      { id: 5, name: "Monday", member_ids: [1, 2], members: [{ id: 1, name: "Adams, Bob" }, { id: 2, name: "Moss, Cal" }] },
+      { id: 6, name: "Thursday", member_ids: [2], members: [{ id: 2, name: "Moss, Cal" }] },
+    ],
+    [2],
+  );
+  assert.deepEqual(g.map((x) => [x.name, x.members.length, x.invited.map((i) => i.name)]), [
+    ["Monday", 1, ["Moss, Cal"]],
+    ["Thursday", 0, ["Moss, Cal"]],
+  ]);
+  assert.equal(groupState(g[1].members, new Set()), "all");
+});

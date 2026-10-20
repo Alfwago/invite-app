@@ -4,31 +4,52 @@ import type { Candidate } from "./api/types.ts";
 export interface InviteGroup {
   key: string;
   name: string;
+  /** Who can still be invited. */
   members: Candidate[];
+  /** Already on the invite list: shown ticked and greyed (owner 2026-10-20:
+   *  every night's list is visible, not only groups with people left). */
+  invited: { id: number; name: string }[];
 }
 
-/** Groups from the server's `invite_groups`, each limited to people who can
- *  still be invited. An older server sends no groups: one flat list. */
+export interface ServerInviteGroup {
+  id: number | null;
+  name: string;
+  member_ids: number[];
+  members?: { id: number; name: string }[];
+}
+
+/** Every group from the server's `invite_groups`, split into who can still
+ *  be invited and who already is. An older server sends no groups: one flat
+ *  list. */
 export function buildInviteGroups(
   invitable: Candidate[],
-  groups: { id: number | null; name: string; member_ids: number[] }[] | undefined,
+  groups: ServerInviteGroup[] | undefined,
+  invitedIds: number[] = [],
 ): InviteGroup[] {
   if (!groups || groups.length === 0) {
-    return invitable.length ? [{ key: "all", name: "Players", members: invitable }] : [];
+    return invitable.length ? [{ key: "all", name: "Players", members: invitable, invited: [] }] : [];
   }
   const byId = new Map(invitable.map((c) => [c.id, c]));
+  const invited = new Set(invitedIds);
   return groups
-    .map((g) => ({
-      key: String(g.id ?? "rest"),
-      name: g.name,
-      members: g.member_ids.map((id) => byId.get(id)).filter((c): c is Candidate => !!c),
-    }))
-    .filter((g) => g.members.length > 0);
+    .map((g) => {
+      const names = new Map((g.members ?? []).map((m) => [m.id, m.name]));
+      return {
+        key: String(g.id ?? "rest"),
+        name: g.name,
+        members: g.member_ids.map((id) => byId.get(id)).filter((c): c is Candidate => !!c),
+        invited: g.member_ids
+          .filter((id) => !byId.has(id) && invited.has(id))
+          .map((id) => ({ id, name: names.get(id) ?? "" })),
+      };
+    })
+    .filter((g) => g.members.length > 0 || g.invited.length > 0);
 }
 
 export type GroupState = "all" | "some" | "none";
 
 export function groupState(members: Candidate[], picked: Set<number>): GroupState {
+  if (members.length === 0) return "all"; // everyone's already invited
   const n = members.filter((m) => picked.has(m.id)).length;
   return n === 0 ? "none" : n === members.length ? "all" : "some";
 }
