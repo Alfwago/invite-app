@@ -797,7 +797,7 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
   const [batchDelay, setBatchDelay] = useState(String(manage.batch_invites_delay_hours ?? 24));
 
   function confirmSend() {
-    Alert.alert("Send invites now?", "Emails the first batch of invites immediately.", [
+    Alert.alert("Send invites now?", "Emails everyone on the invite list now (not the rest of the skate group).", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Send",
