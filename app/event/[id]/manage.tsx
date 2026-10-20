@@ -31,6 +31,7 @@ import { KeyboardAwareScrollView, useFocusScroll } from "@/src/components/Keyboa
 import { BorrowPicker } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
+import { buildInviteGroups, groupState, matches, toggleGroup, type InviteGroup } from "@/src/invitePicker";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
 import { fineBadge, fineSettingsPatch, lateDropLine, lateDropRows } from "@/src/lateDrop";
 import { LATE_SCRATCHES_TITLE, lateScratchControl, postConfirmCopy } from "@/src/lateScratch";
@@ -759,18 +760,14 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
           <Loading label="Loading…" />
         ) : candidates.data && candidates.data.invitable.length > 0 ? (
           <View style={styles.addPanel}>
-            {candidates.data.invitable.map((c) => (
-              <CheckRow
-                key={c.id}
-                label={c.name + (c.is_goalie_skater ? " (G/S)" : c.is_goalie ? " (G)" : "")}
-                checked={picked.includes(c.id)}
-                onToggle={() =>
-                  setPicked((s) =>
-                    s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id],
-                  )
-                }
-              />
-            ))}
+            <InvitePicker
+              groups={buildInviteGroups(candidates.data.invitable, candidates.data.invite_groups)}
+              picked={picked}
+              onChange={setPicked}
+            />
+            {candidates.data.invite_groups ? (
+              <Text style={styles.hint}>Players from other skate groups come in as Borrowed.</Text>
+            ) : null}
             <Button
               label={`Add ${picked.length || ""}`.trim()}
               onPress={addInvites}
@@ -778,7 +775,7 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
             />
           </View>
         ) : (
-          <Text style={styles.muted}>Everyone on this skate group is already invited.</Text>
+          <Text style={styles.muted}>Everyone is already invited.</Text>
         )
       ) : null}
     </Card>
@@ -2310,6 +2307,102 @@ function ToggleButton({
   );
 }
 
+/** Invite picker (server 0.38.0 #3): each skate group with "All of …" and
+ *  its people, plus a search. Someone in two groups is one pick. */
+function InvitePicker({
+  groups,
+  picked,
+  onChange,
+}: {
+  groups: InviteGroup[];
+  picked: number[];
+  onChange: (next: number[]) => void;
+}) {
+  const [term, setTerm] = useState("");
+  const [open, setOpen] = useState<Set<string>>(() => new Set(groups.slice(0, 1).map((g) => g.key)));
+  const pickedSet = new Set(picked);
+  const searching = term.trim().length > 0;
+  const toggleOne = (id: number) =>
+    onChange(pickedSet.has(id) ? picked.filter((x) => x !== id) : [...picked, id]);
+
+  return (
+    <View style={styles.pickerWrap}>
+      <TextInput
+        style={styles.input}
+        value={term}
+        onChangeText={setTerm}
+        placeholder="Search players"
+        placeholderTextColor={colors.textMuted}
+        autoCorrect={false}
+        autoCapitalize="none"
+        accessibilityLabel="Search players"
+      />
+      <Text style={styles.muted}>
+        {picked.length === 1 ? "1 person selected" : `${picked.length} people selected`}
+      </Text>
+      {groups.map((g) => {
+        const shown = g.members.filter((m) => matches(m, term));
+        if (searching && shown.length === 0) return null;
+        const state = groupState(g.members, pickedSet);
+        const expanded = searching || open.has(g.key);
+        const count = g.members.filter((m) => pickedSet.has(m.id)).length;
+        return (
+          <View key={g.key} style={styles.pickerGroup}>
+            <View style={styles.pickerHead}>
+              <Tap
+                feedback="row"
+                style={styles.pickerAll}
+                onPress={() => onChange(toggleGroup(picked, g.members))}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: state === "all" ? true : state === "some" ? "mixed" : false }}
+                accessibilityLabel={`All of ${g.name}`}
+              >
+                <View style={[styles.checkbox, state !== "none" && styles.checkboxOn]}>
+                  {state === "all" ? (
+                    <Text style={styles.checkboxMark}>✓</Text>
+                  ) : state === "some" ? (
+                    <Text style={styles.checkboxMark}>–</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.pickerName} numberOfLines={1}>
+                  All of {g.name}
+                </Text>
+              </Tap>
+              <Tap
+                onPress={() =>
+                  setOpen((o) => {
+                    const n = new Set(o);
+                    if (n.has(g.key)) n.delete(g.key);
+                    else n.add(g.key);
+                    return n;
+                  })
+                }
+                style={styles.pickerToggle}
+                accessibilityLabel={expanded ? `Hide ${g.name}` : `Show ${g.name}`}
+              >
+                <Text style={styles.muted}>
+                  {count} of {g.members.length}
+                </Text>
+                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
+              </Tap>
+            </View>
+            {expanded
+              ? shown.map((c) => (
+                  <CheckRow
+                    key={`${g.key}-${c.id}`}
+                    label={c.name + (c.is_goalie_skater ? " (G/S)" : c.is_goalie ? " (G)" : "")}
+                    checked={pickedSet.has(c.id)}
+                    onToggle={() => toggleOne(c.id)}
+                  />
+                ))
+              : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function CheckRow({
   label,
   checked,
@@ -2638,6 +2731,12 @@ const styles = StyleSheet.create({
   makePermanent: { alignSelf: "flex-start", paddingTop: 2 },
 
   walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  pickerWrap: { gap: spacing.sm },
+  pickerGroup: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.sm },
+  pickerHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
+  pickerAll: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 8 },
+  pickerName: { color: colors.text, fontSize: font.sm, fontWeight: "800", flexShrink: 1 },
+  pickerToggle: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 8, paddingLeft: 8 },
   stepBtn: {
     width: 36,
     height: 36,

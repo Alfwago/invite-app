@@ -488,8 +488,11 @@ export interface Candidate {
 
 export interface EventCandidates {
   addable: Candidate[];
+  /** Server 0.38.0+: everyone not yet invited (other groups come in as Borrowed). */
   invitable: Candidate[];
   waitlist: WaitlistEntry[];
+  /** Server 0.38.0+: skate groups for the invite picker, this skate's first. */
+  invite_groups?: { id: number | null; name: string; member_ids: number[] }[];
 }
 
 /** Body for POST /events/<id>/roster/ — one director roster edit. */
