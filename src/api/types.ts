@@ -404,6 +404,10 @@ export interface InviteeEntry {
   name: string;
   status: RsvpStatus;
   sent_at: string | null;
+  /** Server 0.38.0+: not in this skate's group — their group ("" if a member). */
+  from_group?: string;
+  /** Its short label ("Thu"). */
+  from_group_short?: string;
 }
 
 /** Director-only extras on EventDetail. `null` for non-directors. */

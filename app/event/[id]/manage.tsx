@@ -715,6 +715,10 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
                 {i.name}
               </Text>
               <Badge text={INVITEE_LABEL[i.status] ?? i.status} tone={INVITEE_TONE[i.status] ?? "neutral"} />
+              {/* Not in this skate's group (owner 2026-10-20: so the director knows). */}
+              {i.from_group ? (
+                <Badge text={`FROM ${(i.from_group_short || i.from_group).toUpperCase()}`} tone="caution" />
+              ) : null}
               {inBatch ? <Badge text="BATCH 2" tone="gold" /> : null}
             </View>
             <View style={styles.inviteeActions}>
