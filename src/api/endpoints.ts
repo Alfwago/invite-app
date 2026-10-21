@@ -4,6 +4,7 @@ import type { SiteInvitePayload } from "../siteInvites";
 import type {
   AppVersions,
   DirectoryEntry,
+  HomeAdItem,
   BoardMessage,
   BoardsResponse,
   CreateNextEventBody,
@@ -871,4 +872,15 @@ export async function decideUsernameChange(
 export async function fetchDirectors(signal?: AbortSignal): Promise<DirectoryEntry[]> {
   const data = await apiFetch<{ directors: DirectoryEntry[] }>("/api/directors/", { signal });
   return data.directors;
+}
+
+/** Home page ads for the app (server 0.38.1+; an older server has none → []). */
+export async function fetchHomeAds(signal?: AbortSignal): Promise<HomeAdItem[]> {
+  try {
+    const data = await apiFetch<{ ads: HomeAdItem[] }>("/api/home-ads/", { signal });
+    return data.ads ?? [];
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return [];
+    throw e;
+  }
 }

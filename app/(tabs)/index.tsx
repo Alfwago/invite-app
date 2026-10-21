@@ -16,6 +16,7 @@ import { ApiError } from "@/src/api/client";
 import type { HomeNight } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
+import { HomeAdBanner } from "@/src/components/HomeAdBanner";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
 import { Tap } from "@/src/components/Tap";
@@ -104,6 +105,9 @@ export default function HomeScreen() {
         </View>
 
         <VerifyBanner />
+
+        {/* Ad spot (server 0.38.1+): Admin → Home page ads, Show on App or Both. */}
+        <HomeAdBanner />
 
         {/* Waitlist promotions to answer (server 0.36.0+): first, they hold a spot. */}
         {(query.data.pending_promotions ?? []).map((p) => (

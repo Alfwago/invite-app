@@ -46,6 +46,7 @@ export const keys = {
   teamLineupVersion: (id: number) => ["team-lineup-version", id] as const,
   approvals: ["approvals"] as const,
   directors: ["directors"] as const,
+  homeAds: ["home-ads"] as const,
   siteInviteOptions: ["site-invite-options"] as const,
   nameChangeApprovals: ["name-change-approvals"] as const,
   usernameChangeApprovals: ["username-change-approvals"] as const,
@@ -856,6 +857,15 @@ export function useDirectors() {
   return useQuery({
     queryKey: keys.directors,
     queryFn: ({ signal }) => api.fetchDirectors(signal),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Home page ads (server 0.38.1+). */
+export function useHomeAds() {
+  return useQuery({
+    queryKey: keys.homeAds,
+    queryFn: ({ signal }) => api.fetchHomeAds(signal),
     staleTime: 5 * 60_000,
   });
 }

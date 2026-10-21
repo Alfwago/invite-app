@@ -1201,3 +1201,17 @@ export interface DirectoryEntry {
   email: string;
   phone: string;
 }
+
+/** GET /api/home-ads/ (server 0.38.1+): uploaded picture/GIF ads for the top
+ *  of Home, from Admin → Home page ads ("Show on" App or Both). */
+export interface HomeAdItem {
+  id: number;
+  name: string;
+  image_url: string;
+  link_url: string;
+  alt_text: string;
+  /** Changes on "Show again to everyone". */
+  key: string;
+  /** How long x hides it; 0 = this app session. */
+  hide_seconds: number;
+}
