@@ -1,4 +1,5 @@
 import { ApiError, apiFetch } from "./client";
+import { imageMimeType } from "../imageUpload";
 import type { BorrowPanel } from "../borrow";
 import type { SiteInvitePayload } from "../siteInvites";
 import type {
@@ -242,9 +243,7 @@ export function fetchMessages(
 
 function imagePart(uri: string) {
   const name = uri.split("/").pop() || "photo.jpg";
-  const ext = name.split(".").pop()?.toLowerCase();
-  const type = ext === "png" ? "image/png" : "image/jpeg";
-  return { uri, name, type } as unknown as Blob;
+  return { uri, name, type: imageMimeType(name) } as unknown as Blob;
 }
 
 export function postMessage(msg: NewMessage): Promise<BoardMessage> {
@@ -533,9 +532,7 @@ export function setHeaderImage(
 ): Promise<EventDetail> {
   const form = new FormData();
   const name = imageUri.split("/").pop() || "header.jpg";
-  const ext = name.split(".").pop()?.toLowerCase();
-  const type = ext === "png" ? "image/png" : "image/jpeg";
-  form.append("image", { uri: imageUri, name, type } as unknown as Blob);
+  form.append("image", { uri: imageUri, name, type: imageMimeType(name) } as unknown as Blob);
   return apiFetch(`/api/events/${id}/header-image/`, { method: "POST", form });
 }
 

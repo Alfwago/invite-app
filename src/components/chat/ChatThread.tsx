@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { pickQuality } from "@/src/imageUpload";
 import { Ionicons } from "@expo/vector-icons";
 import { useHeaderHeight } from "@react-navigation/elements";
 
@@ -133,7 +134,8 @@ export function ChatThread({
       Alert.alert("Permission needed", "Allow photo access to attach a picture.");
       return;
     }
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6 });
+    // Full quality: the original file, so a GIF stays animated (src/imageUpload.ts).
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: pickQuality(Platform.OS) });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   }
 
