@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Image,
@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link, useRouter } from "expo-router";
+import { Link, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -26,7 +26,7 @@ import { PromotionCard } from "@/src/components/PromotionCard";
 import { UpdatePill } from "@/src/components/UpdatePill";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { useBranding, useHome, useInbox, usePolls } from "@/src/hooks/queries";
+import { useBranding, useHome, useHomeAds, useInbox, usePolls } from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
@@ -38,7 +38,27 @@ export default function HomeScreen() {
   const router = useRouter();
   const { me, signOut } = useAuth();
   const query = useHome();
-  const pull = usePullToRefresh(query.refetch);
+  const branding = useBranding();
+  const ads = useHomeAds();
+  // Like a website page load (owner 2026-10-21): every visit to Home — and a
+  // pull-to-refresh — picks a fresh header, hero and ad, and picks up Admin
+  // changes. Tabs keep Home mounted, so this runs on focus, not on mount.
+  const [visit, setVisit] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setVisit((v) => v + 1);
+      void branding.refetch();
+      void ads.refetch();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+  const pull = usePullToRefresh(
+    useCallback(async () => {
+      setVisit((v) => v + 1);
+      await Promise.all([query.refetch(), branding.refetch(), ads.refetch()]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [query.refetch]),
+  );
   const [nightsOpen, setNightsOpen] = useState(false);
 
   function confirmSignOut() {
@@ -48,7 +68,6 @@ export default function HomeScreen() {
     ]);
   }
 
-  const branding = useBranding();
   const brand = (
     <View>
       <View style={[styles.brandBar, { paddingTop: insets.top + spacing.sm }]}>
@@ -110,7 +129,7 @@ export default function HomeScreen() {
         <VerifyBanner />
 
         {/* Ad spot (server 0.38.1+): Admin → Home page ads, Show on App or Both. */}
-        <HomeAdBanner />
+        <HomeAdBanner visit={visit} />
 
         {/* Waitlist promotions to answer (server 0.36.0+): first, they hold a spot. */}
         {(query.data.pending_promotions ?? []).map((p) => (

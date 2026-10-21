@@ -15,7 +15,7 @@ const sessionHidden = new Set<string>();
  *  GIF ad at random from Admin → Home page ads (Show on App or Both) that
  *  this phone hasn't hidden. Tap opens its link; x hides it for the ad's
  *  hide time. Nothing at all when there's no ad. */
-export function HomeAdBanner() {
+export function HomeAdBanner({ visit = 0 }: { visit?: number }) {
   const ads = useHomeAds();
   const list = ads.data ?? [];
   const [stored, setStored] = useState<Record<string, number> | null>(null);
@@ -43,11 +43,12 @@ export function HomeAdBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keysSig]);
 
-  // Pick once per list (not on every render), like one ad per page load.
+  // One pick per visit to Home (``visit`` changes on focus / pull), like one
+  // ad per website page load — not on every render.
   const ad = useMemo(
     () => (stored ? pickAd(list, stored, sessionHidden, Date.now()) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [keysSig, stored],
+    [keysSig, stored, visit],
   );
 
   if (!ad || dismissed === ad.key) return null;
@@ -59,6 +60,8 @@ export function HomeAdBanner() {
       sessionHidden.add(a.key);
       return;
     }
+    // Count it as hidden right away, so the next visit picks another ad.
+    setStored((s) => ({ ...(s ?? {}), [a.key]: until }));
     try {
       await SecureStore.setItemAsync(storeKey(a.key), String(until));
     } catch {
