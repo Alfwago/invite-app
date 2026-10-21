@@ -16,6 +16,7 @@ import { ApiError } from "@/src/api/client";
 import type { HomeNight } from "@/src/api/types";
 import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
+import { BrandImage } from "@/src/components/BrandImage";
 import { HomeAdBanner } from "@/src/components/HomeAdBanner";
 import { DirectorToolsCard } from "@/src/components/DirectorToolsCard";
 import { EventCard } from "@/src/components/EventCard";
@@ -25,7 +26,7 @@ import { PromotionCard } from "@/src/components/PromotionCard";
 import { UpdatePill } from "@/src/components/UpdatePill";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { useHome, useInbox, usePolls } from "@/src/hooks/queries";
+import { useBranding, useHome, useInbox, usePolls } from "@/src/hooks/queries";
 import { colors, font, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
@@ -47,13 +48,15 @@ export default function HomeScreen() {
     ]);
   }
 
+  const branding = useBranding();
   const brand = (
     <View>
       <View style={[styles.brandBar, { paddingTop: insets.top + spacing.sm }]}>
-        <Image source={WORDMARK} style={styles.wordmark} resizeMode="contain" />
+        {/* Header + hero follow the website (Admin → Header / Home hero images). */}
+        <BrandImage url={branding.data?.header_url} fallback={WORDMARK} style={styles.wordmark} resizeMode="contain" />
         <Text style={styles.tagline}>Four Decades{"\n"}One Brotherhood</Text>
       </View>
-      <Image source={HERO} style={styles.hero} resizeMode="cover" />
+      <BrandImage url={branding.data?.hero_url} fallback={HERO} style={styles.hero} resizeMode="cover" />
     </View>
   );
 

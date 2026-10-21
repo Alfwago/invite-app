@@ -47,6 +47,7 @@ export const keys = {
   approvals: ["approvals"] as const,
   directors: ["directors"] as const,
   homeAds: ["home-ads"] as const,
+  branding: ["branding"] as const,
   siteInviteOptions: ["site-invite-options"] as const,
   nameChangeApprovals: ["name-change-approvals"] as const,
   usernameChangeApprovals: ["username-change-approvals"] as const,
@@ -867,5 +868,16 @@ export function useHomeAds() {
     queryKey: keys.homeAds,
     queryFn: ({ signal }) => api.fetchHomeAds(signal),
     staleTime: 5 * 60_000,
+  });
+}
+
+/** The website's header + Home hero picks (server 0.38.2+). A fresh pick each
+ *  time Home opens, like a website page load; never an error state. */
+export function useBranding() {
+  return useQuery({
+    queryKey: keys.branding,
+    queryFn: ({ signal }) => api.fetchBranding(signal),
+    staleTime: 0,
+    retry: false,
   });
 }

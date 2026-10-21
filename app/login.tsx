@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,9 +19,13 @@ import { Tap } from "@/src/components/Tap";
 import { Button } from "@/src/components/ui";
 import { colors, font, radius, spacing } from "@/src/theme";
 
+import { BrandImage } from "@/src/components/BrandImage";
+import { useBranding } from "@/src/hooks/queries";
+
 const WORDMARK = require("@/assets/brand/wordmark.png");
 
 export default function LoginScreen() {
+  const branding = useBranding(); // the website's header (server 0.38.2+)
   const { signIn } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -85,7 +88,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.brand}>
-          <Image source={WORDMARK} style={styles.wordmark} resizeMode="contain" />
+          <BrandImage url={branding.data?.header_url} fallback={WORDMARK} style={styles.wordmark} resizeMode="contain" />
           <Text style={styles.tagline}>Four Decades · One Brotherhood</Text>
         </View>
 

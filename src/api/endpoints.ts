@@ -3,6 +3,7 @@ import type { BorrowPanel } from "../borrow";
 import type { SiteInvitePayload } from "../siteInvites";
 import type {
   AppVersions,
+  Branding,
   DirectoryEntry,
   HomeAdItem,
   BoardMessage,
@@ -882,5 +883,16 @@ export async function fetchHomeAds(signal?: AbortSignal): Promise<HomeAdItem[]> 
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return [];
     throw e;
+  }
+}
+
+/** The website's header + Home hero picks (server 0.38.2+). Any failure or an
+ *  older server → nulls, so the app keeps its built-in images. */
+export async function fetchBranding(signal?: AbortSignal): Promise<Branding> {
+  try {
+    const data = await apiFetch<Branding>("/api/branding/", { signal, anonymous: true });
+    return { header_url: data?.header_url ?? null, hero_url: data?.hero_url ?? null };
+  } catch {
+    return { header_url: null, hero_url: null };
   }
 }

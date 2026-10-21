@@ -1215,3 +1215,10 @@ export interface HomeAdItem {
   /** How long x hides it; 0 = this app session. */
   hide_seconds: number;
 }
+
+/** GET /api/branding/ (server 0.38.2+): the website's current header and Home
+ *  hero picks; null = use the app's built-in image. */
+export interface Branding {
+  header_url: string | null;
+  hero_url: string | null;
+}

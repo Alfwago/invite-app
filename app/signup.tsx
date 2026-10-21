@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,6 +20,9 @@ import { Button } from "@/src/components/ui";
 import { Dropdown } from "@/src/components/Dropdown";
 import { colors, font, radius, spacing } from "@/src/theme";
 
+import { BrandImage } from "@/src/components/BrandImage";
+import { useBranding } from "@/src/hooks/queries";
+
 const WORDMARK = require("@/assets/brand/wordmark.png");
 
 const SKILL_OPTIONS = [
@@ -31,6 +33,7 @@ const SKILL_OPTIONS = [
 ];
 
 export default function SignupScreen() {
+  const branding = useBranding(); // the website's header (server 0.38.2+)
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -121,7 +124,7 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.brand}>
-          <Image source={WORDMARK} style={styles.wordmark} resizeMode="contain" />
+          <BrandImage url={branding.data?.header_url} fallback={WORDMARK} style={styles.wordmark} resizeMode="contain" />
           <Text style={styles.tagline}>Create an account</Text>
         </View>
 
