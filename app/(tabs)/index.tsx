@@ -75,7 +75,9 @@ export default function HomeScreen() {
         <BrandImage url={branding.data?.header_url} fallback={WORDMARK} style={styles.wordmark} resizeMode="contain" />
         <Text style={styles.tagline}>Four Decades{"\n"}One Brotherhood</Text>
       </View>
-      <BrandImage url={branding.data?.hero_url} fallback={HERO} style={styles.hero} resizeMode="cover" />
+      <View style={styles.heroFrame}>
+        <BrandImage url={branding.data?.hero_url} fallback={HERO} style={styles.hero} fitWidth />
+      </View>
     </View>
   );
 
@@ -312,14 +314,16 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     lineHeight: 15,
   },
-  hero: {
-    width: "100%",
-    height: 104,
+  // The gold rule sits on a frame, not the picture: borders on the image
+  // would eat into its height and leave strips at the sides.
+  heroFrame: {
     borderTopWidth: 3,
     borderTopColor: colors.gold,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  // Full width; the height follows the picture's shape (BrandImage fitWidth).
+  hero: { width: "100%" },
   body: { padding: spacing.lg, gap: spacing.md },
   greetingRow: {
     flexDirection: "row",

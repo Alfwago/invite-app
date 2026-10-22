@@ -10,6 +10,11 @@ Store; Android ships as a direct-download APK from the site.
 Reserve mode, no group headers in the invite picker, no sort fields, no
 Responses switch). No native change.
 
+- **Home hero fits the screen width** (owner 2026-10-21): it fills the width
+  and takes its height from each picture's shape, so nothing is cropped (it
+  was a fixed 104pt "cover", which cut the words off wide heroes). The gold
+  rule moved to a frame so it doesn't squeeze the picture. `src/heroAspect.ts`
+  (tested).
 - **Communications tab matches the website** (server 0.39.0, owner
   2026-10-21). Numbered cards: 1 Send invites (status line with "N added
   since, not sent yet"; Schedule and batches fold under Change), 2 Director
