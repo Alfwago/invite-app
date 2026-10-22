@@ -1,3 +1,4 @@
+import { isAccountPendingError } from "@/src/pendingAccount";
 import Constants from "expo-constants";
 
 /**
@@ -64,6 +65,15 @@ export function setUnauthorizedHandler(fn: (() => void) | null) {
   onUnauthorized = fn;
 }
 
+let onAccountPending: (() => void) | null = null;
+
+/** Called (by the AuthProvider) when the server answers 403 "account_pending"
+ *  (server 0.39.2): the account isn't approved/verified, so it reloads /me/
+ *  and the navigator moves to the Pending screen. */
+export function setAccountPendingHandler(fn: (() => void) | null) {
+  onAccountPending = fn;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
@@ -103,6 +113,7 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
     // Only when the token we sent is still the current one — a late reply
     // to a request from before a fresh sign-in mustn't sign that out.
     if (res.status === 401 && sentToken && sentToken === getToken()) onUnauthorized?.();
+    if (sentToken && sentToken === getToken() && isAccountPendingError(res.status, data)) onAccountPending?.();
     throw new ApiError(res.status, data ?? text);
   }
   return data as T;

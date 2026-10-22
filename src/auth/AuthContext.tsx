@@ -12,7 +12,7 @@ import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { setTokenProvider, setUnauthorizedHandler } from "@/src/api/client";
+import { setTokenProvider, setAccountPendingHandler, setUnauthorizedHandler } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
 import type { Me } from "@/src/api/types";
 import { skateCardSignOut } from "@/modules/skate-card";
@@ -81,6 +81,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profile = await api.fetchMe();
     setMe(profile);
   }, []);
+
+  // The server says this account is pending (0.39.2): reload /me/ so the
+  // navigator shows the Pending screen. At most once every few seconds —
+  // several screens can get the same 403 at once.
+  const pendingCheckAt = useRef(0);
+  useEffect(() => {
+    setAccountPendingHandler(() => {
+      const now = Date.now();
+      if (now - pendingCheckAt.current < 5000) return;
+      pendingCheckAt.current = now;
+      void loadMe().catch(() => {});
+    });
+    return () => setAccountPendingHandler(null);
+  }, [loadMe]);
 
   // Cold start: restore a saved token and confirm it still works.
   useEffect(() => {

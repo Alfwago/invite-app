@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-query";
 
 import { retryDelay, shouldRetry } from "@/src/api/retryPolicy";
+import { allowedWhilePending, pendingReason } from "@/src/pendingAccount";
 import { AuthProvider, useAuth } from "@/src/auth/AuthContext";
 import { BottomBar } from "@/src/components/BottomBar";
 import { NavHeader } from "@/src/components/NavHeader";
@@ -171,7 +172,7 @@ function useNotificationHandling() {
 }
 
 function RootNavigator() {
-  const { ready, token } = useAuth();
+  const { ready, token, me } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -188,8 +189,14 @@ function RootNavigator() {
       router.replace("/login");
     } else if (token && inAuthScreen) {
       router.replace("/");
+    } else if (token && me) {
+      // Pending accounts (1.8.1 / server 0.39.2): profile, resend the
+      // verification email, delete the account — nothing else.
+      const pending = pendingReason(me) !== null;
+      if (pending && !allowedWhilePending(segments)) router.replace("/pending");
+      else if (!pending && segments[0] === "pending") router.replace("/");
     }
-  }, [ready, token, segments, router]);
+  }, [ready, token, me, segments, router]);
 
   if (!ready) return <Loading label="Starting up…" />;
 
@@ -218,6 +225,7 @@ function RootNavigator() {
       <Stack.Screen name="teams/history" options={{ title: "Saved splits" }} />
       <Stack.Screen name="approvals" options={{ title: "Invites & approvals" }} />
       <Stack.Screen name="delete-account" options={{ title: "Delete account" }} />
+      <Stack.Screen name="pending" options={{ title: "Your account", headerBackVisible: false, gestureEnabled: false }} />
       <Stack.Screen name="director" options={{ title: "Directors" }} />
       <Stack.Screen name="directors" options={{ title: "Skate Directors" }} />
       <Stack.Screen name="polls/index" options={{ title: "Polls" }} />
