@@ -3,7 +3,7 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-20 — 1.8.0 (iOS build 33): Directors tab, invite picker, reserved spots, team order, names, poll privacy
+## 2026-10-21 — 1.8.0 (iOS build 34): Directors tab, invite picker, reserved spots, team order, names, poll privacy
 
 **Pairs with `invite-server` 0.38.0**, which ships first. Folds in 1.7.1
 (never released). On an older server each new piece hides itself (no
