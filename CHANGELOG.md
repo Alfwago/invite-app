@@ -10,6 +10,18 @@ Store; Android ships as a direct-download APK from the site.
 Reserve mode, no group headers in the invite picker, no sort fields, no
 Responses switch). No native change.
 
+- **Communications tab matches the website** (server 0.39.0, owner
+  2026-10-21). Numbered cards: 1 Send invites (status line with "N added
+  since, not sent yet"; Schedule and batches fold under Change), 2 Director
+  message (with the invite header image), 3 Invite list, 4 Add to invite
+  list, 5 Penalty box.
+  - Invite list: filter chips with counts and coloured status badges
+    (Going / Maybe / Can't make it / Waitlisted / No reply / Not sent).
+    `src/inviteList.ts` (tested).
+  - Quiet rows: only a not-sent row shows Send; Resend, batch 2 and Remove
+    are under ⋯, and Remove asks first (warns when the player is Going).
+  - "Add N and send now" once invites are out (only when the server sends
+    `can_add_and_send`, so it hides on 0.38.x). Penalty box Remove asks first.
 - **Directors tab** (#8): directors get a fifth bottom-bar tab, Directors
   (the dashboard), badged with players waiting for approval. League notices
   for presidents. `src/navTabs.ts` (tested).

@@ -82,7 +82,7 @@ export function Button({
 // text. One rule for tone — good / caution / bad — plus gold for "locked"
 // and a solid "goalie" chip.
 
-export type BadgeTone = "neutral" | "gold" | "good" | "caution" | "bad" | "goalie";
+export type BadgeTone = "neutral" | "gold" | "good" | "caution" | "bad" | "goalie" | "info" | "unsent";
 
 const TONES: Record<BadgeTone, { bg: string; border: string; fg: string }> = {
   neutral: { bg: "#0c0c0c", border: colors.border, fg: "#cfcfcf" },
@@ -91,12 +91,21 @@ const TONES: Record<BadgeTone, { bg: string; border: string; fg: string }> = {
   caution: { bg: colors.amberDim, border: colors.amber, fg: colors.amber },
   bad: { bg: colors.redDim, border: colors.red, fg: colors.red },
   goalie: { bg: colors.gold, border: colors.gold, fg: colors.goldText },
+  // Invite list (1.8.0, matching the website's 0.39.0 badges): Maybe, Not sent.
+  info: { bg: colors.blueDim, border: colors.blue, fg: colors.blue },
+  unsent: { bg: "transparent", border: colors.amber, fg: colors.amber },
 };
 
 export function Badge({ text, tone = "neutral" }: { text: string; tone?: BadgeTone }) {
   const t = TONES[tone];
   return (
-    <View style={[styles.badge, { backgroundColor: t.bg, borderColor: t.border }]}>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: t.bg, borderColor: t.border },
+        tone === "unsent" && { borderStyle: "dashed" },
+      ]}
+    >
       <Text style={[styles.badgeText, { color: t.fg }]}>{text}</Text>
     </View>
   );

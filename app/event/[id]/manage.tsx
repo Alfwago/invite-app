@@ -20,6 +20,7 @@ import type {
   EventManage,
   EventPatchBody,
   EventPreset,
+  InviteeEntry,
   PayOverride,
   RosterAction,
   RosterEntry,
@@ -32,6 +33,7 @@ import { BorrowPicker } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
 import { buildInviteGroups, groupState, matches, toggleGroup, type InviteGroup } from "@/src/invitePicker";
+import { filterChips, inviteStatus, matchesFilter, removeConfirmText, type InviteFilter } from "@/src/inviteList";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
 import { fineBadge, fineSettingsPatch, lateDropLine, lateDropRows } from "@/src/lateDrop";
 import { LATE_SCRATCHES_TITLE, lateScratchControl, postConfirmCopy } from "@/src/lateScratch";
@@ -561,27 +563,57 @@ function SettingsCard({ event }: { event: EventDetail }) {
 // COMMUNICATIONS
 // ====================================================================
 
+// Laid out like the website's tab (1.8.0 / server 0.39.0, owner 2026-10-21,
+// after Amy + Art's review): numbered cards in the order a director uses
+// them — 1 Send invites, 2 Director message, 3 Invite list, 4 Add to invite
+// list, 5 Penalty box.
 function CommunicationsPanel({ event, manage }: { event: EventDetail; manage: EventManage }) {
   return (
     <>
-      <DirectorMessageCard event={event} />
-      <HeaderImageCard event={event} manage={manage} />
       <SendInvitesCard event={event} manage={manage} />
+      <DirectorMessageCard event={event} manage={manage} />
       <InviteListCard event={event} manage={manage} />
+      <AddInvitesCard event={event} manage={manage} />
       <PenaltyBoxCard event={event} manage={manage} />
     </>
   );
 }
 
-function DirectorMessageCard({ event }: { event: EventDetail }) {
+function StepHeading({ n, title, count }: { n: number; title: string; count?: number }) {
+  return (
+    <View style={styles.stepRow}>
+      <View style={styles.step}>
+        <Text style={styles.stepText}>{n}</Text>
+      </View>
+      <Text style={styles.heading}>
+        {title}
+        {count != null ? <Text style={styles.stepCount}> ({count})</Text> : null}
+      </Text>
+    </View>
+  );
+}
+
+function DirectorMessageCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const [message, setMessage] = useState(event.director_message ?? "");
   const patch = usePatchEvent(event.id);
+  const img = useHeaderImage(event.id);
   const dirty = message.trim() !== (event.director_message ?? "").trim();
+
+  async function pick() {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+    img.set.mutate(res.assets[0].uri, {
+      onError: (e) => Alert.alert("Upload failed", errText(e)),
+    });
+  }
 
   return (
     <Card accent="public">
-      <Text style={styles.heading}>Director message</Text>
-      <Text style={styles.hint}>Shown to players on the event and in the invite email.</Text>
+      <StepHeading n={2} title="Director message" />
+      <Text style={styles.hint}>Shows first in the event messages for everyone, and goes out with the invite.</Text>
       <TextInput
         style={styles.textarea}
         value={message}
@@ -602,27 +634,8 @@ function DirectorMessageCard({ event }: { event: EventDetail }) {
         disabled={!dirty}
         loading={patch.isPending}
       />
-    </Card>
-  );
-}
 
-function HeaderImageCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
-  const img = useHeaderImage(event.id);
-
-  async function pick() {
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-    if (res.canceled || !res.assets?.[0]) return;
-    img.set.mutate(res.assets[0].uri, {
-      onError: (e) => Alert.alert("Upload failed", errText(e)),
-    });
-  }
-
-  return (
-    <Card>
-      <Text style={styles.heading}>Invite header image</Text>
+      <Text style={styles.subhead}>Invite header image</Text>
       {manage.invite_header_image ? (
         <Image
           source={{ uri: manage.invite_header_image }}
@@ -654,45 +667,143 @@ function HeaderImageCard({ event, manage }: { event: EventDetail; manage: EventM
   );
 }
 
-const INVITEE_TONE: Record<string, "good" | "caution" | "bad" | "neutral"> = {
-  YES: "good",
-  MAYBE: "caution",
-  WAITLIST: "caution",
-  NO: "bad",
-  NO_RESPONSE: "neutral",
-};
-const INVITEE_LABEL: Record<string, string> = {
-  YES: "Going",
-  MAYBE: "Maybe",
-  WAITLIST: "Waitlist",
-  NO: "No",
-  NO_RESPONSE: "No response",
-};
-
 function InviteListCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const roster = useRosterAction(event.id);
-  const candidates = useCandidates(event.id);
-  const [showAdd, setShowAdd] = useState(false);
-  const [picked, setPicked] = useState<number[]>([]);
+  const [filter, setFilter] = useState<InviteFilter>("all");
 
   const busy = roster.isPending;
   const batchOn = manage.batch_invites_enabled;
   const batchIds = new Set(manage.batch_invitee_ids);
   const invitees = [...manage.invitees].sort((a, b) => a.name.localeCompare(b.name));
+  const chips = filterChips(invitees);
+  // A filter whose last row was removed falls back to All.
+  const current = chips.some((c) => c.key === filter) ? filter : "all";
+  const shown = invitees.filter((i) => matchesFilter(i, current));
 
   function act(body: RosterAction, onErr = "Couldn't update the invite list") {
     roster.mutate(body, { onError: (e) => Alert.alert(onErr, errText(e)) });
   }
 
-  function addInvites() {
-    if (picked.length === 0) return;
-    roster.mutate(
-      { action: "add_invites", player_ids: picked },
+  function confirmRemove(i: InviteeEntry) {
+    Alert.alert("Remove from the invite list?", removeConfirmText(i.name, i.status), [
+      { text: "Cancel", style: "cancel" },
       {
-        onSuccess: () => {
-          setPicked([]);
-          setShowAdd(false);
-        },
+        text: "Remove",
+        style: "destructive",
+        onPress: () => act({ action: "remove_invite", player_id: i.player_id }),
+      },
+    ]);
+  }
+
+  // The ⋯ menu: Resend (once sent), batch 2 (when batches are on), Remove.
+  function openMenu(i: InviteeEntry) {
+    const inBatch = batchOn && batchIds.has(i.player_id);
+    const buttons: { text: string; style?: "cancel" | "destructive"; onPress?: () => void }[] = [];
+    if (i.sent_at) {
+      buttons.push({ text: "Resend invite", onPress: () => act({ action: "send_invite", player_id: i.player_id }) });
+    }
+    if (batchOn) {
+      buttons.push({
+        text: inBatch ? "Move to batch 1" : "Move to batch 2",
+        onPress: () =>
+          act(
+            inBatch
+              ? { action: "remove_batch", player_id: i.player_id }
+              : { action: "add_batch", player_ids: [i.player_id] },
+          ),
+      });
+    }
+    buttons.push({ text: "Remove from list…", style: "destructive", onPress: () => confirmRemove(i) });
+    buttons.push({ text: "Cancel", style: "cancel" });
+    Alert.alert(i.name, undefined, buttons);
+  }
+
+  return (
+    <Card>
+      <StepHeading n={3} title="Invite list" count={invitees.length} />
+      {invitees.length === 0 ? (
+        <Text style={styles.muted}>No one is on the invite list yet. Add players below, then send.</Text>
+      ) : (
+        <View style={styles.chips}>
+          {chips.map((c) => {
+            const on = c.key === current;
+            const warn = c.key === "notsent" && !on;
+            return (
+              <Tap
+                key={c.key}
+                onPress={() => setFilter(c.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                style={[styles.chip, on && styles.chipOn, warn && styles.chipWarn]}
+              >
+                <Text style={[styles.chipText, on && styles.chipTextOn, warn && styles.chipTextWarn]}>
+                  {c.label} {c.count}
+                </Text>
+              </Tap>
+            );
+          })}
+        </View>
+      )}
+
+      {shown.map((i) => {
+        const st = inviteStatus(i);
+        const inBatch = batchOn && batchIds.has(i.player_id);
+        return (
+          <View key={i.player_id} style={[styles.inviteeRow, st.key === "notsent" && styles.inviteeRowUnsent]}>
+            <View style={styles.inviteeMain}>
+              <Text style={styles.playerName} numberOfLines={1}>
+                {i.name}
+              </Text>
+              <Badge text={st.label} tone={st.tone} />
+              {/* Not in this skate's group (owner 2026-10-20: so the director knows). */}
+              {i.from_group ? <Badge text={`From ${i.from_group_short || i.from_group}`} tone="caution" /> : null}
+              {inBatch ? <Badge text="Batch 2" tone="gold" /> : null}
+            </View>
+            <View style={styles.inviteeActions}>
+              {/* Quiet row actions: only a not-sent row shows Send. */}
+              {!i.sent_at ? (
+                <Tap
+                  onPress={() => act({ action: "send_invite", player_id: i.player_id })}
+                  disabled={busy}
+                  hitSlop={8}
+                  accessibilityLabel={`Send ${i.name} their invite`}
+                >
+                  <Text style={styles.commsLink}>Send</Text>
+                </Tap>
+              ) : null}
+              <Tap
+                onPress={() => openMenu(i)}
+                disabled={busy}
+                hitSlop={8}
+                style={styles.moreBtn}
+                accessibilityLabel={`More for ${i.name}`}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+              </Tap>
+            </View>
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
+
+function AddInvitesCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
+  const roster = useRosterAction(event.id);
+  const candidates = useCandidates(event.id);
+  const [picked, setPicked] = useState<number[]>([]);
+  const busy = roster.isPending;
+  const n = picked.length;
+  // "Add N and send now" once invites are out (server 0.39.0+; an older
+  // server has no can_add_and_send, so the button stays hidden).
+  const canSend = !!manage.can_add_and_send;
+
+  function add(send: boolean) {
+    if (n === 0) return;
+    roster.mutate(
+      { action: send ? "add_invites_send" : "add_invites", player_ids: picked },
+      {
+        onSuccess: () => setPicked([]),
         onError: (e) => Alert.alert("Couldn't add", errText(e)),
       },
     );
@@ -700,93 +811,46 @@ function InviteListCard({ event, manage }: { event: EventDetail; manage: EventMa
 
   return (
     <Card>
-      <Text style={styles.heading}>Invite list ({invitees.length})</Text>
-      <Text style={styles.hint}>
-        Everyone who gets the invite email.
-        {batchOn ? " Tap a name for batch 2." : ""}
-      </Text>
-
-      {invitees.map((i) => {
-        const inBatch = batchOn && batchIds.has(i.player_id);
-        return (
-          <View key={i.player_id} style={styles.inviteeRow}>
-            <View style={styles.inviteeMain}>
-              <Text style={styles.playerName} numberOfLines={1}>
-                {i.name}
-              </Text>
-              <Badge text={INVITEE_LABEL[i.status] ?? i.status} tone={INVITEE_TONE[i.status] ?? "neutral"} />
-              {/* Not in this skate's group (owner 2026-10-20: so the director knows). */}
-              {i.from_group ? (
-                <Badge text={`FROM ${(i.from_group_short || i.from_group).toUpperCase()}`} tone="caution" />
-              ) : null}
-              {inBatch ? <Badge text="BATCH 2" tone="gold" /> : null}
-            </View>
-            <View style={styles.inviteeActions}>
-              <TinyBtn
-                icon={i.sent_at ? "mail" : "mail-outline"}
-                gold
-                disabled={busy}
-                onPress={() => act({ action: "send_invite", player_id: i.player_id })}
-              />
-              {batchOn ? (
-                <TinyBtn
-                  text={inBatch ? "−2" : "+2"}
-                  on={inBatch}
-                  disabled={busy}
-                  onPress={() =>
-                    act(
-                      inBatch
-                        ? { action: "remove_batch", player_id: i.player_id }
-                        : { action: "add_batch", player_ids: [i.player_id] },
-                    )
-                  }
-                />
-              ) : null}
-              <TinyBtn
-                icon="close"
-                danger
-                disabled={busy}
-                onPress={() => act({ action: "remove_invite", player_id: i.player_id })}
-              />
-            </View>
-          </View>
-        );
-      })}
-
-      <View style={styles.divider} />
-      <Button
-        label={showAdd ? "Close player list" : "Add to invite list"}
-        variant="secondary"
-        onPress={() => setShowAdd((s) => !s)}
-      />
-      {showAdd ? (
-        candidates.isLoading ? (
-          <Loading label="Loading…" />
-        ) : candidates.data && (candidates.data.invitable.length > 0 || candidates.data.invite_groups?.length) ? (
-          <View style={styles.addPanel}>
-            <InvitePicker
-              groups={buildInviteGroups(
-                candidates.data.invitable,
-                candidates.data.invite_groups,
-                candidates.data.invited_ids,
-              )}
-              ownKey={candidates.data.own_group_id != null ? String(candidates.data.own_group_id) : null}
-              picked={picked}
-              onChange={setPicked}
-            />
-            {candidates.data.invite_groups ? (
-              <Text style={styles.hint}>Players from other skate groups come in as Borrowed.</Text>
-            ) : null}
+      <StepHeading n={4} title="Add to invite list" />
+      <Text style={styles.hint}>Pick whole skate groups or just a few people. Already-invited people aren&apos;t shown.</Text>
+      {candidates.isLoading ? (
+        <Loading label="Loading…" />
+      ) : candidates.data && (candidates.data.invitable.length > 0 || candidates.data.invite_groups?.length) ? (
+        <>
+          <InvitePicker
+            groups={buildInviteGroups(
+              candidates.data.invitable,
+              candidates.data.invite_groups,
+              candidates.data.invited_ids,
+            )}
+            ownKey={candidates.data.own_group_id != null ? String(candidates.data.own_group_id) : null}
+            picked={picked}
+            onChange={setPicked}
+          />
+          {candidates.data.invite_groups ? (
+            <Text style={styles.hint}>Players from other skate groups come in as Borrowed.</Text>
+          ) : null}
+          <View style={styles.twoCol}>
             <Button
-              label={`Add ${picked.length || ""}`.trim()}
-              onPress={addInvites}
-              disabled={busy || picked.length === 0}
+              label={n ? `Add ${n} to list` : "Add to list"}
+              variant={canSend ? "secondary" : "primary"}
+              onPress={() => add(false)}
+              disabled={busy || n === 0}
+              style={styles.grow}
             />
+            {canSend ? (
+              <Button
+                label={n ? `Add ${n} and send now` : "Add and send now"}
+                onPress={() => add(true)}
+                disabled={busy || n === 0}
+                style={styles.grow}
+              />
+            ) : null}
           </View>
-        ) : (
-          <Text style={styles.muted}>Everyone is already invited.</Text>
-        )
-      ) : null}
+        </>
+      ) : (
+        <Text style={styles.muted}>Everyone is already invited.</Text>
+      )}
     </Card>
   );
 }
@@ -797,9 +861,11 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
   const sendBatch = useSendBatch(event.id);
   const schedule = useInviteSchedule(event.id);
 
+  const [showOptions, setShowOptions] = useState(false);
   const [schedAt, setSchedAt] = useState<Date | null>(null);
   const [batchEnabled, setBatchEnabled] = useState(manage.batch_invites_enabled);
   const [batchDelay, setBatchDelay] = useState(String(manage.batch_invites_delay_hours ?? 24));
+  const c = manage.invite_send_counts;
 
   function send(sendTo?: "new" | "all") {
     sendInvites.mutate(sendTo ? { sendTo } : undefined, {
@@ -809,7 +875,6 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
   }
 
   function confirmSend() {
-    const c = manage.invite_send_counts;
     // Owner 2026-10-20: once invites are out, only the newly added or everyone.
     if (c?.sent_before) {
       const buttons: { text: string; style?: "cancel"; onPress?: () => void }[] = [];
@@ -860,14 +925,23 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
   }
 
   return (
-    <Card>
-      <Text style={styles.heading}>Invitations</Text>
+    <Card style={styles.sendCard}>
+      <StepHeading n={1} title="Send invites" />
       <Text style={styles.status}>
-        {event.invites_sent_at
-          ? `Sent ${formatDateTime(event.invites_sent_at)}`
-          : manage.invites_send_at
-            ? `Scheduled for ${formatDateTime(manage.invites_send_at)}`
-            : "Not sent yet."}
+        {event.invites_sent_at ? (
+          <>
+            {`Sent ${formatDateTime(event.invites_sent_at)}. `}
+            {c && c.new > 0 ? (
+              <Text style={styles.pending}>{`${c.new} added since, not sent yet.`}</Text>
+            ) : (
+              "Everyone on the list has it."
+            )}
+          </>
+        ) : manage.invites_send_at ? (
+          `Scheduled for ${formatDateTime(manage.invites_send_at)}${c ? ` · ${c.all} on the invite list` : ""}.`
+        ) : (
+          `Not sent yet${c ? ` · ${c.all} on the invite list` : ""}.`
+        )}
       </Text>
 
       <Button label="Send invites now" onPress={confirmSend} loading={sendInvites.isPending} />
@@ -885,47 +959,65 @@ function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventM
         />
       ) : null}
 
+      {/* Schedule + batches fold away: most nights it's just the one button. */}
       <View style={styles.divider} />
-      <Text style={styles.subhead}>Schedule for later</Text>
-      <DateTimeField value={schedAt} onChange={setSchedAt} minimumDate={new Date()} />
-      <View style={styles.twoCol}>
-        <Button
-          label="Schedule"
-          variant="secondary"
-          onPress={scheduleSend}
-          loading={schedule.set.isPending}
-          style={styles.grow}
-        />
-        {manage.invites_send_at ? (
-          <Button
-            label="Clear schedule"
-            variant="secondary"
-            onPress={() => schedule.clear.mutate()}
-            loading={schedule.clear.isPending}
-            style={styles.grow}
-          />
-        ) : null}
-      </View>
+      <Tap
+        onPress={() => setShowOptions((s) => !s)}
+        style={styles.foldRow}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showOptions }}
+      >
+        <Text style={styles.status}>
+          Schedule: {manage.invites_send_at ? formatDateTime(manage.invites_send_at) : "not set"} · Batches:{" "}
+          {manage.batch_invites_enabled ? "on" : "off"}
+        </Text>
+        <Text style={styles.commsLink}>{showOptions ? "Done" : "Change"}</Text>
+      </Tap>
 
-      <View style={styles.divider} />
-      <ToggleRow label="Send in two batches" value={batchEnabled} onChange={setBatchEnabled} />
-      {batchEnabled ? (
-        <Field label="Batch 2 delay (hours)">
-          <TextInput
-            style={styles.input}
-            value={batchDelay}
-            onChangeText={setBatchDelay}
-            keyboardType="number-pad"
-            placeholderTextColor={colors.textMuted}
+      {showOptions ? (
+        <>
+          <Text style={styles.subhead}>Schedule for later</Text>
+          <DateTimeField value={schedAt} onChange={setSchedAt} minimumDate={new Date()} />
+          <View style={styles.twoCol}>
+            <Button
+              label="Schedule"
+              variant="secondary"
+              onPress={scheduleSend}
+              loading={schedule.set.isPending}
+              style={styles.grow}
+            />
+            {manage.invites_send_at ? (
+              <Button
+                label="Clear schedule"
+                variant="secondary"
+                onPress={() => schedule.clear.mutate()}
+                loading={schedule.clear.isPending}
+                style={styles.grow}
+              />
+            ) : null}
+          </View>
+
+          <View style={styles.divider} />
+          <ToggleRow label="Send in two batches" value={batchEnabled} onChange={setBatchEnabled} />
+          {batchEnabled ? (
+            <Field label="Batch 2 delay (hours)">
+              <TextInput
+                style={styles.input}
+                value={batchDelay}
+                onChangeText={setBatchDelay}
+                keyboardType="number-pad"
+                placeholderTextColor={colors.textMuted}
+              />
+            </Field>
+          ) : null}
+          <Button
+            label="Save batch settings"
+            variant="secondary"
+            onPress={saveBatch}
+            loading={patch.isPending}
           />
-        </Field>
+        </>
       ) : null}
-      <Button
-        label="Save batch settings"
-        variant="secondary"
-        onPress={saveBatch}
-        loading={patch.isPending}
-      />
     </Card>
   );
 }
@@ -957,23 +1049,35 @@ function PenaltyBoxCard({ event, manage }: { event: EventDetail; manage: EventMa
     );
   }
 
+  function confirmRemove(name: string, playerId: number) {
+    Alert.alert("Take them out of the box?", `${name} will be able to RSVP right away.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: () => pb.remove.mutate(playerId) },
+    ]);
+  }
+
   return (
     <Card accent="director">
-      <Text style={styles.heading}>Penalty box</Text>
+      <StepHeading
+        n={5}
+        title="Penalty box"
+        count={manage.penalty_box.length ? manage.penalty_box.length : undefined}
+      />
       <Text style={styles.hint}>
-        Boxed players can&apos;t RSVP until their delay passes. Set this up before invites go out.
+        Players in the box can&apos;t RSVP for this skate until their delay has passed. Shown on the invite page, so
+        set it up before sending invites.
       </Text>
 
       {manage.penalty_box.length === 0 ? (
-        <Text style={styles.muted}>Nobody in the box.</Text>
+        <Text style={styles.muted}>No one is in the penalty box for this skate.</Text>
       ) : (
         manage.penalty_box.map((p) => (
           <View key={p.id} style={styles.rosterRow}>
             <Text style={styles.playerName} numberOfLines={1}>
               {p.name} · {p.delay_hours}h{p.reason ? ` · ${p.reason}` : ""}
             </Text>
-            <Tap feedback="icon" onPress={() => pb.remove.mutate(p.player_id)} hitSlop={8}>
-              <Text style={styles.removeXText}>Remove</Text>
+            <Tap feedback="icon" onPress={() => confirmRemove(p.name, p.player_id)} hitSlop={8}>
+              <Text style={styles.commsLink}>Remove</Text>
             </Tap>
           </View>
         ))
@@ -2686,6 +2790,38 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   removeXText: { color: colors.red, fontSize: font.xs, fontWeight: "700" },
+  // Communications tab (1.8.0, matching the website's 0.39.0 tab).
+  stepRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  step: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepText: { color: colors.gold, fontSize: font.xs, fontWeight: "800" },
+  stepCount: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
+  sendCard: { borderColor: colors.gold },
+  pending: { color: colors.amber },
+  foldRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  commsLink: { color: colors.gold, fontSize: font.sm, fontWeight: "700" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: {
+    borderWidth: 1,
+    borderColor: "#333",
+    borderRadius: radius.pill,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  chipOn: { borderColor: colors.gold, backgroundColor: colors.goldDim },
+  chipWarn: { borderColor: "#5a3d10" },
+  chipText: { color: "#cccccc", fontSize: font.sm },
+  chipTextOn: { color: colors.gold, fontWeight: "700" },
+  chipTextWarn: { color: colors.amber },
+  inviteeRowUnsent: { backgroundColor: "#0f0c04" },
+  moreBtn: { paddingHorizontal: 6, paddingVertical: 2 },
   adminLine: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   roleTag: {
     color: colors.textMuted,

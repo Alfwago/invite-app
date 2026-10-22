@@ -438,6 +438,8 @@ export interface EventManage {
   can_reserve?: boolean;
   /** Server 0.38.0+: for the "Only newly added / Send to all" prompt. */
   invite_send_counts?: { sent_before: boolean; all: number; new: number };
+  /** Server 0.39.0+: "Add N and send now" (true once invites are out). */
+  can_add_and_send?: boolean;
 }
 
 /** The viewer's "You're filling in for <Night>" card (server 0.33+). */
@@ -515,6 +517,8 @@ export type RosterAction =
       roles?: Record<string, "goalie" | "skater">;
     }
   | { action: "add_invites"; player_ids: number[] }
+  /** Server 0.39.0+ (only when manage.can_add_and_send). */
+  | { action: "add_invites_send"; player_ids: number[] }
   | { action: "remove_invite"; player_id: number }
   | { action: "add_batch"; player_ids: number[] }
   | { action: "remove_batch"; player_id: number }
