@@ -23,6 +23,7 @@ import {
 } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
+import { roleTag } from "@/src/roleTag";
 import { useEvent } from "@/src/hooks/queries";
 import { goingSections } from "@/src/rosterGroups";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -321,16 +322,9 @@ function RoleTag({
   entry: Pick<RosterEntry, "is_goalie" | "is_director" | "is_assistant_director" | "is_acting_director">;
 }) {
   // Roster mark reflects the slot the player is actually filling — a
-  // Goalie & Skater added as a skater gets no mark, added as a goalie gets "G".
-  const t = entry.is_goalie
-    ? "G"
-    : entry.is_director
-      ? "ND"
-      : entry.is_acting_director
-        ? "Acting ND"
-        : entry.is_assistant_director
-          ? "AD"
-          : "";
+  // Goalie & Skater added as a skater gets no "G", added as a goalie does.
+  // A director keeps their ND/AD tag either way (1.8.1).
+  const t = roleTag(entry);
   return t ? <Text style={styles.goldTag}>{t}</Text> : null;
 }
 

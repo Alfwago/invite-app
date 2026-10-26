@@ -27,59 +27,22 @@ import type {
   RosterGuest,
   WaitlistEntry,
 } from "@/src/api/types";
-import {
-  ClockField,
-  DateField,
-  DateTimeField,
-  NumberField,
-} from "@/src/components/pickers";
-import {
-  KeyboardAwareScrollView,
-  useFocusScroll,
-} from "@/src/components/KeyboardAwareScrollView";
+import { ClockField, DateField, DateTimeField, NumberField } from "@/src/components/pickers";
+import { KeyboardAwareScrollView, useFocusScroll } from "@/src/components/KeyboardAwareScrollView";
 import { BorrowPicker } from "@/src/components/BorrowCard";
 import { useRolePicker } from "@/src/components/RolePicker";
 import { addModeOptions, resolveAddMode, type AddMode } from "@/src/addPlayer";
-import {
-  buildInviteGroups,
-  groupState,
-  matches,
-  toggleGroup,
-  type InviteGroup,
-} from "@/src/invitePicker";
-import {
-  filterChips,
-  inviteStatus,
-  matchesFilter,
-  removeConfirmText,
-  type InviteFilter,
-} from "@/src/inviteList";
+import { buildInviteGroups, groupState, matches, toggleGroup, type InviteGroup } from "@/src/invitePicker";
+import { filterChips, inviteStatus, matchesFilter, removeConfirmText, type InviteFilter } from "@/src/inviteList";
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
-import {
-  fineBadge,
-  fineSettingsPatch,
-  lateDropLine,
-  lateDropRows,
-} from "@/src/lateDrop";
-import {
-  LATE_SCRATCHES_TITLE,
-  lateScratchControl,
-  postConfirmCopy,
-} from "@/src/lateScratch";
+import { fineBadge, fineSettingsPatch, lateDropLine, lateDropRows } from "@/src/lateDrop";
+import { LATE_SCRATCHES_TITLE, lateScratchControl, postConfirmCopy } from "@/src/lateScratch";
 import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
 import { useToast } from "@/src/components/Toast";
-import {
-  Badge,
-  Button,
-  Card,
-  ErrorState,
-  FillBar,
-  Loading,
-  Segmented,
-  Tap,
-} from "@/src/components/ui";
+import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented, Tap } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
 import { fillPct, rosterHealth } from "@/src/roster";
+import { roleTag } from "@/src/roleTag";
 import {
   useCandidates,
   useDeleteEvent,
@@ -120,9 +83,7 @@ export default function ManageEventScreen() {
     return (
       <ErrorState
         message={
-          query.error instanceof ApiError
-            ? query.error.detail
-            : "Couldn't load this event."
+          query.error instanceof ApiError ? query.error.detail : "Couldn't load this event."
         }
         onRetry={() => query.refetch()}
       />
@@ -171,19 +132,11 @@ export default function ManageEventScreen() {
           />
         }
       >
-        {tab === "overview" ? (
-          <OverviewPanel event={event} manage={manage} />
-        ) : null}
+        {tab === "overview" ? <OverviewPanel event={event} manage={manage} /> : null}
         {tab === "settings" ? <SettingsPanel event={event} /> : null}
-        {tab === "communications" ? (
-          <CommunicationsPanel event={event} manage={manage} />
-        ) : null}
-        {tab === "roster" ? (
-          <RosterCard event={event} addMode={addMode} onAddMode={setAddMode} />
-        ) : null}
-        {tab === "advanced" ? (
-          <AdvancedPanel event={event} manage={manage} />
-        ) : null}
+        {tab === "communications" ? <CommunicationsPanel event={event} manage={manage} /> : null}
+        {tab === "roster" ? <RosterCard event={event} addMode={addMode} onAddMode={setAddMode} /> : null}
+        {tab === "advanced" ? <AdvancedPanel event={event} manage={manage} /> : null}
       </KeyboardAwareScrollView>
     </>
   );
@@ -193,21 +146,13 @@ export default function ManageEventScreen() {
 // OVERVIEW
 // ====================================================================
 
-function OverviewPanel({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const router = useRouter();
   const r = event.roster;
   const going = event.players.filter((p) => p.status === "YES").length;
   const maybe = event.players.filter((p) => p.status === "MAYBE").length;
   const no = event.players.filter((p) => p.status === "NO").length;
-  const noResp = manage.invitees.filter(
-    (i) => i.status === "NO_RESPONSE",
-  ).length;
+  const noResp = manage.invitees.filter((i) => i.status === "NO_RESPONSE").length;
   const pct = fillPct(r);
 
   return (
@@ -219,17 +164,11 @@ function OverviewPanel({
           {formatEventDate(event.date)}
           {event.start_time ? ` · ${formatTime(event.start_time)}` : ""}
         </Text>
-        {event.location ? (
-          <Text style={styles.meta}>{event.location}</Text>
-        ) : null}
+        {event.location ? <Text style={styles.meta}>{event.location}</Text> : null}
         <View style={styles.badgeRow}>
           <Badge text={event.status} tone="neutral" />
-          {event.rsvp_locked ? (
-            <Badge text="SKATERS LOCKED" tone="bad" />
-          ) : null}
-          {event.goalie_rsvp_locked ? (
-            <Badge text="GOALIES LOCKED" tone="bad" />
-          ) : null}
+          {event.rsvp_locked ? <Badge text="SKATERS LOCKED" tone="bad" /> : null}
+          {event.goalie_rsvp_locked ? <Badge text="GOALIES LOCKED" tone="bad" /> : null}
         </View>
         <Button
           label="Team generator"
@@ -260,9 +199,7 @@ function OverviewPanel({
             : r.skater_spots_open != null
               ? `${r.skater_spots_open} skater spot${r.skater_spots_open === 1 ? "" : "s"} open`
               : `${r.skaters} in`}
-          {(r.goalie_spots_open ?? 0) > 0
-            ? ` · needs ${r.goalie_spots_open} goalie`
-            : ""}
+          {(r.goalie_spots_open ?? 0) > 0 ? ` · needs ${r.goalie_spots_open} goalie` : ""}
         </Text>
       </Card>
 
@@ -289,8 +226,8 @@ function OverviewPanel({
         </Text>
         {manage.penalty_box.length > 0 ? (
           <Text style={styles.status}>
-            {manage.penalty_box.length} player
-            {manage.penalty_box.length === 1 ? "" : "s"} in the penalty box
+            {manage.penalty_box.length} player{manage.penalty_box.length === 1 ? "" : "s"} in the
+            penalty box
           </Text>
         ) : null}
       </Card>
@@ -352,9 +289,7 @@ function AfterSkateCard({ event }: { event: EventDetail }) {
   const hasFineSetting = typeof m.fine_late_drops === "boolean";
   const hasSkateFee = typeof m.skate_fee === "number";
   const [fineLateDrops, setFineLateDrops] = useState(m.fine_late_drops ?? true);
-  const [skateFee, setSkateFee] = useState(
-    hasSkateFee ? String(m.skate_fee) : "",
-  );
+  const [skateFee, setSkateFee] = useState(hasSkateFee ? String(m.skate_fee) : "");
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
 
@@ -370,16 +305,12 @@ function AfterSkateCard({ event }: { event: EventDetail }) {
     <Card>
       <Text style={styles.heading}>After the skate</Text>
       <Text style={styles.hint}>
-        This skate is over, so its other settings are locked. Fines can still be
-        settled.
+        This skate is over, so its other settings are locked. Fines can still be settled.
       </Text>
       {hasFineSetting ? (
         <>
           <View style={styles.afterSkateRow}>
-            <Text
-              style={styles.label}
-              onPress={() => setFineLateDrops(!fineLateDrops)}
-            >
+            <Text style={styles.label} onPress={() => setFineLateDrops(!fineLateDrops)}>
               Fine late drops
             </Text>
             <View style={styles.fineSwitch}>
@@ -401,23 +332,13 @@ function AfterSkateCard({ event }: { event: EventDetail }) {
       ) : null}
       {hasSkateFee ? (
         <Field label="Skate fee, $ (a late drop is fined the same)">
-          <NumberField
-            value={skateFee}
-            onChange={setSkateFee}
-            min={0}
-            max={100}
-            placeholder="—"
-          />
+          <NumberField value={skateFee} onChange={setSkateFee} min={0} max={100} placeholder="—" />
         </Field>
       ) : null}
       {hasFineSetting || hasSkateFee ? (
         <>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Button
-            label="Save fine settings"
-            onPress={save}
-            loading={patch.isPending}
-          />
+          <Button label="Save fine settings" onPress={save} loading={patch.isPending} />
         </>
       ) : null}
     </Card>
@@ -429,21 +350,15 @@ function SettingsCard({ event }: { event: EventDetail }) {
   const m = event.manage!;
 
   const [title, setTitle] = useState(m.title ?? "");
-  const [startTime, setStartTime] = useState(
-    event.start_time?.slice(0, 5) ?? "",
-  );
+  const [startTime, setStartTime] = useState(event.start_time?.slice(0, 5) ?? "");
   const [date, setDate] = useState(m.date ?? "");
   const [location, setLocation] = useState(event.location ?? "");
-  const [capacity, setCapacity] = useState(
-    event.capacity != null ? String(event.capacity) : "",
-  );
+  const [capacity, setCapacity] = useState(event.capacity != null ? String(event.capacity) : "");
   const [goaliesNeeded, setGoaliesNeeded] = useState(
     event.goalies_needed != null ? String(event.goalies_needed) : "",
   );
   const [warnHours, setWarnHours] = useState(
-    m.rsvp_change_warning_hours != null
-      ? String(m.rsvp_change_warning_hours)
-      : "",
+    m.rsvp_change_warning_hours != null ? String(m.rsvp_change_warning_hours) : "",
   );
   const [allowGuests, setAllowGuests] = useState(event.allow_guests);
   const [autoWaitlist, setAutoWaitlist] = useState(event.auto_waitlist_enabled);
@@ -457,9 +372,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
   const hasFineSetting = typeof m.fine_late_drops === "boolean";
   const hasSkateFee = typeof m.skate_fee === "number";
   const [fineLateDrops, setFineLateDrops] = useState(m.fine_late_drops ?? true);
-  const [skateFee, setSkateFee] = useState(
-    hasSkateFee ? String(m.skate_fee) : "",
-  );
+  const [skateFee, setSkateFee] = useState(hasSkateFee ? String(m.skate_fee) : "");
   // Measured so the Fine switch sits on the middle of the warning picker.
   const [warnLabelH, setWarnLabelH] = useState(0);
   const [warnChipH, setWarnChipH] = useState<number | null>(null);
@@ -521,9 +434,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
         <ClockField
           value={startTime}
           onChange={setStartTime}
-          placeholder={
-            event.start_time ? formatTime(event.start_time) : "Pick a time"
-          }
+          placeholder={event.start_time ? formatTime(event.start_time) : "Pick a time"}
         />
       </Field>
 
@@ -560,10 +471,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
 
       <View style={styles.twoCol}>
         <View style={[styles.field, styles.col]}>
-          <Text
-            style={styles.label}
-            onLayout={(e) => setWarnLabelH(e.nativeEvent.layout.height)}
-          >
+          <Text style={styles.label} onLayout={(e) => setWarnLabelH(e.nativeEvent.layout.height)}>
             Late-change warning (hours before start)
           </Text>
           <View
@@ -596,10 +504,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
                 warnChipH != null ? { height: warnChipH } : null,
               ]}
             >
-              <Text
-                style={styles.label}
-                onPress={() => setFineLateDrops(!fineLateDrops)}
-              >
+              <Text style={styles.label} onPress={() => setFineLateDrops(!fineLateDrops)}>
                 Fine late drops
               </Text>
               {/* Its own box: in a row taller than the switch, iOS drew it at
@@ -626,65 +531,31 @@ function SettingsCard({ event }: { event: EventDetail }) {
       ) : null}
       {hasSkateFee ? (
         <Field label="Skate fee, $ (a late drop is fined the same)">
-          <NumberField
-            value={skateFee}
-            onChange={setSkateFee}
-            min={0}
-            max={100}
-            placeholder="—"
-          />
+          <NumberField value={skateFee} onChange={setSkateFee} min={0} max={100} placeholder="—" />
         </Field>
       ) : null}
 
       <View style={styles.divider} />
       <View style={styles.toggleGrid}>
-        <ToggleButton
-          label="Guests"
-          value={allowGuests}
-          onChange={setAllowGuests}
-        />
-        <ToggleButton
-          label="Auto Waitlist"
-          value={autoWaitlist}
-          onChange={setAutoWaitlist}
-        />
+        <ToggleButton label="Guests" value={allowGuests} onChange={setAllowGuests} />
+        <ToggleButton label="Auto Waitlist" value={autoWaitlist} onChange={setAutoWaitlist} />
         <ToggleButton label="Beer Guy" value={beer} onChange={setBeer} />
-        <ToggleButton
-          label="Whiskey Guy"
-          value={whiskey}
-          onChange={setWhiskey}
-        />
+        <ToggleButton label="Whiskey Guy" value={whiskey} onChange={setWhiskey} />
       </View>
       {whiskey ? (
-        <ToggleRow
-          label="WG Pays"
-          value={whiskeyPays}
-          onChange={setWhiskeyPays}
-        />
+        <ToggleRow label="WG Pays" value={whiskeyPays} onChange={setWhiskeyPays} />
       ) : null}
       <View style={styles.lockRow}>
-        <ToggleButton
-          label="Roster Lock"
-          value={rsvpLocked}
-          onChange={setRsvpLocked}
-        />
-        <ToggleButton
-          label="Goalie Lock"
-          value={goalieLocked}
-          onChange={setGoalieLocked}
-        />
+        <ToggleButton label="Roster Lock" value={rsvpLocked} onChange={setRsvpLocked} />
+        <ToggleButton label="Goalie Lock" value={goalieLocked} onChange={setGoalieLocked} />
       </View>
       <Text style={styles.hint}>
-        Roster and Goalie lock turn on automatically once the first
-        player/goalie is waitlisted. Turn off and save to unlock.
+        Roster and Goalie lock turn on automatically once the first player/goalie is waitlisted. Turn
+        off and save to unlock.
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button
-        label="Save configuration"
-        onPress={save}
-        loading={patch.isPending}
-      />
+      <Button label="Save configuration" onPress={save} loading={patch.isPending} />
     </Card>
   );
 }
@@ -697,13 +568,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
 // after Amy + Art's review): numbered cards in the order a director uses
 // them — 1 Send invites, 2 Director message, 3 Invite list, 4 Add to invite
 // list, 5 Penalty box.
-function CommunicationsPanel({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function CommunicationsPanel({ event, manage }: { event: EventDetail; manage: EventManage }) {
   return (
     <>
       <SendInvitesCard event={event} manage={manage} />
@@ -715,15 +580,7 @@ function CommunicationsPanel({
   );
 }
 
-function StepHeading({
-  n,
-  title,
-  count,
-}: {
-  n: number;
-  title: string;
-  count?: number;
-}) {
+function StepHeading({ n, title, count }: { n: number; title: string; count?: number }) {
   return (
     <View style={styles.stepRow}>
       <View style={styles.step}>
@@ -731,21 +588,13 @@ function StepHeading({
       </View>
       <Text style={styles.heading}>
         {title}
-        {count != null ? (
-          <Text style={styles.stepCount}> ({count})</Text>
-        ) : null}
+        {count != null ? <Text style={styles.stepCount}> ({count})</Text> : null}
       </Text>
     </View>
   );
 }
 
-function DirectorMessageCard({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function DirectorMessageCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const [message, setMessage] = useState(event.director_message ?? "");
   const patch = usePatchEvent(event.id);
   const img = useHeaderImage(event.id);
@@ -765,10 +614,7 @@ function DirectorMessageCard({
   return (
     <Card accent="public">
       <StepHeading n={2} title="Director message" />
-      <Text style={styles.hint}>
-        Shows first in the event messages for everyone, and goes out with the
-        invite.
-      </Text>
+      <Text style={styles.hint}>Shows first in the event messages for everyone, and goes out with the invite.</Text>
       <TextInput
         style={styles.textarea}
         value={message}
@@ -822,22 +668,14 @@ function DirectorMessageCard({
   );
 }
 
-function InviteListCard({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function InviteListCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const roster = useRosterAction(event.id);
   const [filter, setFilter] = useState<InviteFilter>("all");
 
   const busy = roster.isPending;
   const batchOn = manage.batch_invites_enabled;
   const batchIds = new Set(manage.batch_invitee_ids);
-  const invitees = [...manage.invitees].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  const invitees = [...manage.invitees].sort((a, b) => a.name.localeCompare(b.name));
   const chips = filterChips(invitees);
   // A filter whose last row was removed falls back to All.
   const current = chips.some((c) => c.key === filter) ? filter : "all";
@@ -848,34 +686,22 @@ function InviteListCard({
   }
 
   function confirmRemove(i: InviteeEntry) {
-    Alert.alert(
-      "Remove from the invite list?",
-      removeConfirmText(i.name, i.status),
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () =>
-            act({ action: "remove_invite", player_id: i.player_id }),
-        },
-      ],
-    );
+    Alert.alert("Remove from the invite list?", removeConfirmText(i.name, i.status), [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => act({ action: "remove_invite", player_id: i.player_id }),
+      },
+    ]);
   }
 
   // The ⋯ menu: Resend (once sent), batch 2 (when batches are on), Remove.
   function openMenu(i: InviteeEntry) {
     const inBatch = batchOn && batchIds.has(i.player_id);
-    const buttons: {
-      text: string;
-      style?: "cancel" | "destructive";
-      onPress?: () => void;
-    }[] = [];
+    const buttons: { text: string; style?: "cancel" | "destructive"; onPress?: () => void }[] = [];
     if (i.sent_at) {
-      buttons.push({
-        text: "Resend invite",
-        onPress: () => act({ action: "send_invite", player_id: i.player_id }),
-      });
+      buttons.push({ text: "Resend invite", onPress: () => act({ action: "send_invite", player_id: i.player_id }) });
     }
     if (batchOn) {
       buttons.push({
@@ -888,11 +714,7 @@ function InviteListCard({
           ),
       });
     }
-    buttons.push({
-      text: "Remove from list…",
-      style: "destructive",
-      onPress: () => confirmRemove(i),
-    });
+    buttons.push({ text: "Remove from list…", style: "destructive", onPress: () => confirmRemove(i) });
     buttons.push({ text: "Cancel", style: "cancel" });
     Alert.alert(i.name, undefined, buttons);
   }
@@ -901,9 +723,7 @@ function InviteListCard({
     <Card>
       <StepHeading n={3} title="Invite list" count={invitees.length} />
       {invitees.length === 0 ? (
-        <Text style={styles.muted}>
-          No one is on the invite list yet. Add players below, then send.
-        </Text>
+        <Text style={styles.muted}>No one is on the invite list yet. Add players below, then send.</Text>
       ) : (
         <View style={styles.chips}>
           {chips.map((c) => {
@@ -915,19 +735,9 @@ function InviteListCard({
                 onPress={() => setFilter(c.key)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: on }}
-                style={[
-                  styles.chip,
-                  on && styles.chipOn,
-                  warn && styles.chipWarn,
-                ]}
+                style={[styles.chip, on && styles.chipOn, warn && styles.chipWarn]}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    on && styles.chipTextOn,
-                    warn && styles.chipTextWarn,
-                  ]}
-                >
+                <Text style={[styles.chipText, on && styles.chipTextOn, warn && styles.chipTextWarn]}>
                   {c.label} {c.count}
                 </Text>
               </Tap>
@@ -940,34 +750,21 @@ function InviteListCard({
         const st = inviteStatus(i);
         const inBatch = batchOn && batchIds.has(i.player_id);
         return (
-          <View
-            key={i.player_id}
-            style={[
-              styles.inviteeRow,
-              st.key === "notsent" && styles.inviteeRowUnsent,
-            ]}
-          >
+          <View key={i.player_id} style={[styles.inviteeRow, st.key === "notsent" && styles.inviteeRowUnsent]}>
             <View style={styles.inviteeMain}>
               <Text style={styles.playerName} numberOfLines={1}>
                 {i.name}
               </Text>
               <Badge text={st.label} tone={st.tone} />
               {/* Not in this skate's group (owner 2026-10-20: so the director knows). */}
-              {i.from_group ? (
-                <Badge
-                  text={`From ${i.from_group_short || i.from_group}`}
-                  tone="caution"
-                />
-              ) : null}
+              {i.from_group ? <Badge text={`From ${i.from_group_short || i.from_group}`} tone="caution" /> : null}
               {inBatch ? <Badge text="Batch 2" tone="gold" /> : null}
             </View>
             <View style={styles.inviteeActions}>
               {/* Quiet row actions: only a not-sent row shows Send. */}
               {!i.sent_at ? (
                 <Tap
-                  onPress={() =>
-                    act({ action: "send_invite", player_id: i.player_id })
-                  }
+                  onPress={() => act({ action: "send_invite", player_id: i.player_id })}
                   disabled={busy}
                   hitSlop={8}
                   accessibilityLabel={`Send ${i.name} their invite`}
@@ -982,11 +779,7 @@ function InviteListCard({
                 style={styles.moreBtn}
                 accessibilityLabel={`More for ${i.name}`}
               >
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={18}
-                  color={colors.textMuted}
-                />
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
               </Tap>
             </View>
           </View>
@@ -996,13 +789,7 @@ function InviteListCard({
   );
 }
 
-function AddInvitesCard({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function AddInvitesCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const roster = useRosterAction(event.id);
   const candidates = useCandidates(event.id);
   const [picked, setPicked] = useState<number[]>([]);
@@ -1026,15 +813,10 @@ function AddInvitesCard({
   return (
     <Card>
       <StepHeading n={4} title="Add to invite list" />
-      <Text style={styles.hint}>
-        Pick whole skate groups or just a few people. Already-invited people
-        aren&apos;t shown.
-      </Text>
+      <Text style={styles.hint}>Pick whole skate groups or just a few people. Already-invited people aren&apos;t shown.</Text>
       {candidates.isLoading ? (
         <Loading label="Loading…" />
-      ) : candidates.data &&
-        (candidates.data.invitable.length > 0 ||
-          candidates.data.invite_groups?.length) ? (
+      ) : candidates.data && (candidates.data.invitable.length > 0 || candidates.data.invite_groups?.length) ? (
         <>
           <InvitePicker
             groups={buildInviteGroups(
@@ -1042,18 +824,12 @@ function AddInvitesCard({
               candidates.data.invite_groups,
               candidates.data.invited_ids,
             )}
-            ownKey={
-              candidates.data.own_group_id != null
-                ? String(candidates.data.own_group_id)
-                : null
-            }
+            ownKey={candidates.data.own_group_id != null ? String(candidates.data.own_group_id) : null}
             picked={picked}
             onChange={setPicked}
           />
           {candidates.data.invite_groups ? (
-            <Text style={styles.hint}>
-              Players from other skate groups come in as Borrowed.
-            </Text>
+            <Text style={styles.hint}>Players from other skate groups come in as Borrowed.</Text>
           ) : null}
           <View style={styles.twoCol}>
             <Button
@@ -1080,13 +856,7 @@ function AddInvitesCard({
   );
 }
 
-function SendInvitesCard({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function SendInvitesCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const patch = usePatchEvent(event.id);
   const sendInvites = useSendInvites(event.id);
   const sendBatch = useSendBatch(event.id);
@@ -1094,12 +864,8 @@ function SendInvitesCard({
 
   const [showOptions, setShowOptions] = useState(false);
   const [schedAt, setSchedAt] = useState<Date | null>(null);
-  const [batchEnabled, setBatchEnabled] = useState(
-    manage.batch_invites_enabled,
-  );
-  const [batchDelay, setBatchDelay] = useState(
-    String(manage.batch_invites_delay_hours ?? 24),
-  );
+  const [batchEnabled, setBatchEnabled] = useState(manage.batch_invites_enabled);
+  const [batchDelay, setBatchDelay] = useState(String(manage.batch_invites_delay_hours ?? 24));
   const c = manage.invite_send_counts;
 
   function send(sendTo?: "new" | "all") {
@@ -1112,20 +878,9 @@ function SendInvitesCard({
   function confirmSend() {
     // Owner 2026-10-20: once invites are out, only the newly added or everyone.
     if (c?.sent_before) {
-      const buttons: {
-        text: string;
-        style?: "cancel";
-        onPress?: () => void;
-      }[] = [];
-      if (c.new > 0)
-        buttons.push({
-          text: `Only newly added (${c.new})`,
-          onPress: () => send("new"),
-        });
-      buttons.push({
-        text: `Send to all on the list (${c.all})`,
-        onPress: () => send("all"),
-      });
+      const buttons: { text: string; style?: "cancel"; onPress?: () => void }[] = [];
+      if (c.new > 0) buttons.push({ text: `Only newly added (${c.new})`, onPress: () => send("new") });
+      buttons.push({ text: `Send to all on the list (${c.all})`, onPress: () => send("all") });
       buttons.push({ text: "Cancel", style: "cancel" });
       Alert.alert(
         "Send invites again?",
@@ -1137,29 +892,19 @@ function SendInvitesCard({
       return;
     }
     const who = c ? `the ${c.all} player${c.all === 1 ? "" : "s"}` : "everyone";
-    Alert.alert(
-      "Send invites now?",
-      `Emails ${who} on the invite list (not the rest of the skate group).`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Send", onPress: () => send(c ? "all" : undefined) },
-      ],
-    );
+    Alert.alert("Send invites now?", `Emails ${who} on the invite list (not the rest of the skate group).`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Send", onPress: () => send(c ? "all" : undefined) },
+    ]);
   }
 
   function scheduleSend() {
     if (!schedAt) {
-      Alert.alert(
-        "Pick a date and time",
-        "Choose when the invites should go out.",
-      );
+      Alert.alert("Pick a date and time", "Choose when the invites should go out.");
       return;
     }
     if (schedAt.getTime() <= Date.now()) {
-      Alert.alert(
-        "That time has passed",
-        "Pick a date and time in the future.",
-      );
+      Alert.alert("That time has passed", "Pick a date and time in the future.");
       return;
     }
     const p = (n: number) => String(n).padStart(2, "0");
@@ -1188,9 +933,7 @@ function SendInvitesCard({
           <>
             {`Sent ${formatDateTime(event.invites_sent_at)}. `}
             {c && c.new > 0 ? (
-              <Text
-                style={styles.pending}
-              >{`${c.new} added since, not sent yet.`}</Text>
+              <Text style={styles.pending}>{`${c.new} added since, not sent yet.`}</Text>
             ) : (
               "Everyone on the list has it."
             )}
@@ -1202,19 +945,14 @@ function SendInvitesCard({
         )}
       </Text>
 
-      <Button
-        label="Send invites now"
-        onPress={confirmSend}
-        loading={sendInvites.isPending}
-      />
+      <Button label="Send invites now" onPress={confirmSend} loading={sendInvites.isPending} />
       {manage.batch_invites_enabled ? (
         <Button
           label="Send batch 2 now"
           variant="secondary"
           onPress={() =>
             sendBatch.mutate(undefined, {
-              onSuccess: (r) =>
-                Alert.alert("Batch 2 sent", `${r.notified} notified.`),
+              onSuccess: (r) => Alert.alert("Batch 2 sent", `${r.notified} notified.`),
               onError: (e) => Alert.alert("Send failed", errText(e)),
             })
           }
@@ -1231,11 +969,8 @@ function SendInvitesCard({
         accessibilityState={{ expanded: showOptions }}
       >
         <Text style={styles.status}>
-          Schedule:{" "}
-          {manage.invites_send_at
-            ? formatDateTime(manage.invites_send_at)
-            : "not set"}{" "}
-          · Batches: {manage.batch_invites_enabled ? "on" : "off"}
+          Schedule: {manage.invites_send_at ? formatDateTime(manage.invites_send_at) : "not set"} · Batches:{" "}
+          {manage.batch_invites_enabled ? "on" : "off"}
         </Text>
         <Text style={styles.commsLink}>{showOptions ? "Done" : "Change"}</Text>
       </Tap>
@@ -1243,11 +978,7 @@ function SendInvitesCard({
       {showOptions ? (
         <>
           <Text style={styles.subhead}>Schedule for later</Text>
-          <DateTimeField
-            value={schedAt}
-            onChange={setSchedAt}
-            minimumDate={new Date()}
-          />
+          <DateTimeField value={schedAt} onChange={setSchedAt} minimumDate={new Date()} />
           <View style={styles.twoCol}>
             <Button
               label="Schedule"
@@ -1268,11 +999,7 @@ function SendInvitesCard({
           </View>
 
           <View style={styles.divider} />
-          <ToggleRow
-            label="Send in two batches"
-            value={batchEnabled}
-            onChange={setBatchEnabled}
-          />
+          <ToggleRow label="Send in two batches" value={batchEnabled} onChange={setBatchEnabled} />
           {batchEnabled ? (
             <Field label="Batch 2 delay (hours)">
               <TextInput
@@ -1296,13 +1023,7 @@ function SendInvitesCard({
   );
 }
 
-function PenaltyBoxCard({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function PenaltyBoxCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const pb = usePenaltyBox(event.id);
   const candidates = useCandidates(event.id);
   const [player, setPlayer] = useState<number | null>(null);
@@ -1317,11 +1038,7 @@ function PenaltyBoxCard({
   function add() {
     if (player == null) return;
     pb.add.mutate(
-      {
-        player_id: player,
-        delay_hours: Number(delay) || 24,
-        reason: reason.trim(),
-      },
+      { player_id: player, delay_hours: Number(delay) || 24, reason: reason.trim() },
       {
         onSuccess: () => {
           setPlayer(null);
@@ -1334,18 +1051,10 @@ function PenaltyBoxCard({
   }
 
   function confirmRemove(name: string, playerId: number) {
-    Alert.alert(
-      "Take them out of the box?",
-      `${name} will be able to RSVP right away.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => pb.remove.mutate(playerId),
-        },
-      ],
-    );
+    Alert.alert("Take them out of the box?", `${name} will be able to RSVP right away.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: () => pb.remove.mutate(playerId) },
+    ]);
   }
 
   return (
@@ -1353,30 +1062,22 @@ function PenaltyBoxCard({
       <StepHeading
         n={5}
         title="Penalty box"
-        count={
-          manage.penalty_box.length ? manage.penalty_box.length : undefined
-        }
+        count={manage.penalty_box.length ? manage.penalty_box.length : undefined}
       />
       <Text style={styles.hint}>
-        Players in the box can&apos;t RSVP for this skate until their delay has
-        passed. Shown on the invite page, so set it up before sending invites.
+        Players in the box can&apos;t RSVP for this skate until their delay has passed. Shown on the invite page, so
+        set it up before sending invites.
       </Text>
 
       {manage.penalty_box.length === 0 ? (
-        <Text style={styles.muted}>
-          No one is in the penalty box for this skate.
-        </Text>
+        <Text style={styles.muted}>No one is in the penalty box for this skate.</Text>
       ) : (
         manage.penalty_box.map((p) => (
           <View key={p.id} style={styles.rosterRow}>
             <Text style={styles.playerName} numberOfLines={1}>
               {p.name} · {p.delay_hours}h{p.reason ? ` · ${p.reason}` : ""}
             </Text>
-            <Tap
-              feedback="icon"
-              onPress={() => confirmRemove(p.name, p.player_id)}
-              hitSlop={8}
-            >
+            <Tap feedback="icon" onPress={() => confirmRemove(p.name, p.player_id)} hitSlop={8}>
               <Text style={styles.commsLink}>Remove</Text>
             </Tap>
           </View>
@@ -1398,9 +1099,7 @@ function PenaltyBoxCard({
                 key={i.player_id}
                 label={i.name}
                 checked={player === i.player_id}
-                onToggle={() =>
-                  setPlayer((cur) => (cur === i.player_id ? null : i.player_id))
-                }
+                onToggle={() => setPlayer((cur) => (cur === i.player_id ? null : i.player_id))}
               />
             ))
           )}
@@ -1423,11 +1122,7 @@ function PenaltyBoxCard({
               />
             </Field>
           </View>
-          <Button
-            label="Add"
-            onPress={add}
-            disabled={player == null || pb.add.isPending}
-          />
+          <Button label="Add" onPress={add} disabled={player == null || pb.add.isPending} />
         </View>
       ) : null}
     </Card>
@@ -1467,9 +1162,7 @@ function RosterCard({
 
   // is_goalie_skater comes from the candidates endpoint, not EventDetail.waitlist.
   const gsWaitlist = new Set(
-    (candidates.data?.waitlist ?? [])
-      .filter((w) => w.is_goalie_skater)
-      .map((w) => w.waitlist_id),
+    (candidates.data?.waitlist ?? []).filter((w) => w.is_goalie_skater).map((w) => w.waitlist_id),
   );
 
   const toast = useToast();
@@ -1494,17 +1187,13 @@ function RosterCard({
       .map((dp) => ({ day_player_id: dp.id, present: dp.present })),
   ];
   const paidEligible = [
-    ...going
-      .filter((p) => p.pays)
-      .map((p) => ({ player_id: p.player_id, paid: p.paid })),
+    ...going.filter((p) => p.pays).map((p) => ({ player_id: p.player_id, paid: p.paid })),
     ...event.day_players
       .filter((dp) => dp.pays && !dp.is_reservation)
       .map((dp) => ({ day_player_id: dp.id, paid: dp.paid })),
   ];
-  const presentAllOn =
-    presentEligible.length > 0 && presentEligible.every((t) => t.present);
-  const paidAllOn =
-    paidEligible.length > 0 && paidEligible.every((t) => t.paid);
+  const presentAllOn = presentEligible.length > 0 && presentEligible.every((t) => t.present);
+  const paidAllOn = paidEligible.length > 0 && paidEligible.every((t) => t.paid);
 
   async function toggleAllPresent() {
     const desired = !presentAllOn;
@@ -1512,11 +1201,7 @@ function RosterCard({
     try {
       for (const { present, ...target } of presentEligible) {
         if (present !== desired) {
-          await roster.mutateAsync({
-            action: "set_present",
-            present: desired,
-            ...target,
-          });
+          await roster.mutateAsync({ action: "set_present", present: desired, ...target });
         }
       }
     } catch (e) {
@@ -1532,11 +1217,7 @@ function RosterCard({
     try {
       for (const { paid, ...target } of paidEligible) {
         if (paid !== desired) {
-          await roster.mutateAsync({
-            action: "set_paid",
-            paid: desired,
-            ...target,
-          });
+          await roster.mutateAsync({ action: "set_paid", paid: desired, ...target });
         }
       }
     } catch (e) {
@@ -1553,11 +1234,7 @@ function RosterCard({
       if (choice == null) return; // cancelled → don't promote
       role = choice;
     }
-    act({
-      action: "promote",
-      waitlist_id: w.waitlist_id,
-      ...(role ? { role } : {}),
-    });
+    act({ action: "promote", waitlist_id: w.waitlist_id, ...(role ? { role } : {}) });
   }
 
   // "Add to <Night>" under a borrowed player's name — director only (this
@@ -1572,30 +1249,20 @@ function RosterCard({
     );
     Alert.alert(copy.title, copy.body, [
       { text: "Cancel", style: "cancel" },
-      {
-        text: copy.button,
-        onPress: () =>
-          act({ action: "make_permanent", player_id: entry.player_id }),
-      },
+      { text: copy.button, onPress: () => act({ action: "make_permanent", player_id: entry.player_id }) },
     ]);
   }
 
   function confirmRemove(entry: RosterEntry) {
-    const told = entry.is_borrowed
-      ? " They'll be told they've been taken off this skate."
-      : "";
-    Alert.alert(
-      "Remove from roster?",
-      `${entry.name} will be set to Not going.${told}`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => act({ action: "remove", player_id: entry.player_id }),
-        },
-      ],
-    );
+    const told = entry.is_borrowed ? " They'll be told they've been taken off this skate." : "";
+    Alert.alert("Remove from roster?", `${entry.name} will be set to Not going.${told}`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => act({ action: "remove", player_id: entry.player_id }),
+      },
+    ]);
   }
 
   function addWalkOn() {
@@ -1639,27 +1306,15 @@ function RosterCard({
         {presentEligible.length > 0 || paidEligible.length > 0 ? (
           <View style={styles.bulkRow}>
             {presentEligible.length > 0 ? (
-              <Tap
-                feedback="icon"
-                onPress={toggleAllPresent}
-                disabled={busy}
-                hitSlop={6}
-              >
+              <Tap feedback="icon" onPress={toggleAllPresent} disabled={busy} hitSlop={6}>
                 <Text style={styles.linkText}>
                   {presentAllOn ? "Deselect all present" : "Select all present"}
                 </Text>
               </Tap>
             ) : null}
             {paidEligible.length > 0 ? (
-              <Tap
-                feedback="icon"
-                onPress={toggleAllPaid}
-                disabled={busy}
-                hitSlop={6}
-              >
-                <Text style={styles.linkText}>
-                  {paidAllOn ? "Deselect all paid" : "Select all paid"}
-                </Text>
+              <Tap feedback="icon" onPress={toggleAllPaid} disabled={busy} hitSlop={6}>
+                <Text style={styles.linkText}>{paidAllOn ? "Deselect all paid" : "Select all paid"}</Text>
               </Tap>
             ) : null}
           </View>
@@ -1678,22 +1333,14 @@ function RosterCard({
               payOverride={p.pay_override}
               onPayOverride={() =>
                 choosePayOverride(p.name, p.pay_override ?? "", (v) =>
-                  act({
-                    action: "set_pay_override",
-                    player_id: p.player_id,
-                    pay_override: v,
-                  }),
+                  act({ action: "set_pay_override", player_id: p.player_id, pay_override: v }),
                 )
               }
               borrowed={!!p.is_borrowed}
               borrowedFrom={p.borrowed_from_name}
               promotionPending={!!p.promotion_pending}
-              makePermanentLabel={
-                event.night ? `Add to ${event.night.name}` : undefined
-              }
-              onMakePermanent={
-                event.night ? () => confirmMakePermanent(p) : undefined
-              }
+              makePermanentLabel={event.night ? `Add to ${event.night.name}` : undefined}
+              onMakePermanent={event.night ? () => confirmMakePermanent(p) : undefined}
               team={p.team}
               pays={p.pays}
               present={p.present}
@@ -1706,50 +1353,22 @@ function RosterCard({
               showWhiskey={event.whiskey_guy_enabled}
               guests={p.guests}
               onBeer={() =>
-                act({
-                  action: "set_beer_guy",
-                  player_id: p.is_beer_guy ? null : p.player_id,
-                })
+                act({ action: "set_beer_guy", player_id: p.is_beer_guy ? null : p.player_id })
               }
               onWhiskey={() =>
-                act({
-                  action: "set_whiskey_guy",
-                  player_id: p.is_whiskey_guy ? null : p.player_id,
-                })
+                act({ action: "set_whiskey_guy", player_id: p.is_whiskey_guy ? null : p.player_id })
               }
               onGuestPresent={(i, v) =>
-                act({
-                  action: "guest_present",
-                  player_id: p.player_id,
-                  guest_index: i,
-                  present: v,
-                })
+                act({ action: "guest_present", player_id: p.player_id, guest_index: i, present: v })
               }
               onGuestPaid={(i, v) =>
-                act({
-                  action: "guest_paid",
-                  player_id: p.player_id,
-                  guest_index: i,
-                  paid: v,
-                })
+                act({ action: "guest_paid", player_id: p.player_id, guest_index: i, paid: v })
               }
               onGuestRemove={(i) =>
-                act({
-                  action: "remove_guest",
-                  player_id: p.player_id,
-                  guest_index: i,
-                })
+                act({ action: "remove_guest", player_id: p.player_id, guest_index: i })
               }
-              onPresent={(v) =>
-                act({
-                  action: "set_present",
-                  player_id: p.player_id,
-                  present: v,
-                })
-              }
-              onPaid={(v) =>
-                act({ action: "set_paid", player_id: p.player_id, paid: v })
-              }
+              onPresent={(v) => act({ action: "set_present", player_id: p.player_id, present: v })}
+              onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
               onRemove={() => confirmRemove(p)}
             />
           ))
@@ -1764,34 +1383,19 @@ function RosterCard({
               busy={busy}
               onFill={(player) =>
                 act(
-                  {
-                    action: "fill_reservation",
-                    day_player_id: dp.id,
-                    player_id: player.id,
-                  },
+                  { action: "fill_reservation", day_player_id: dp.id, player_id: player.id },
                   `${player.name} is in the reserved spot`,
                 )
               }
               onRelease={() =>
-                Alert.alert(
-                  "Release this spot?",
-                  "It opens up for players again (and the waitlist, if that's on).",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Release",
-                      style: "destructive",
-                      onPress: () =>
-                        act(
-                          {
-                            action: "release_reservation",
-                            day_player_id: dp.id,
-                          },
-                          "Spot released",
-                        ),
-                    },
-                  ],
-                )
+                Alert.alert("Release this spot?", "It opens up for players again (and the waitlist, if that's on).", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Release",
+                    style: "destructive",
+                    onPress: () => act({ action: "release_reservation", day_player_id: dp.id }, "Spot released"),
+                  },
+                ])
               }
             />
           ) : editWalkOn?.id === dp.id ? (
@@ -1801,11 +1405,7 @@ function RosterCard({
               busy={busy}
               onCancel={() => setEditWalkOn(null)}
               onSave={(patch) => {
-                act({
-                  action: "edit_day_player",
-                  day_player_id: dp.id,
-                  ...patch,
-                });
+                act({ action: "edit_day_player", day_player_id: dp.id, ...patch });
                 setEditWalkOn(null);
               }}
             />
@@ -1818,11 +1418,7 @@ function RosterCard({
               payOverride={dp.pay_override}
               onPayOverride={() =>
                 choosePayOverride(dp.name, dp.pay_override ?? "", (v) =>
-                  act({
-                    action: "set_pay_override",
-                    day_player_id: dp.id,
-                    pay_override: v,
-                  }),
+                  act({ action: "set_pay_override", day_player_id: dp.id, pay_override: v }),
                 )
               }
               walkOn
@@ -1832,15 +1428,9 @@ function RosterCard({
               disabled={busy}
               tickDisabled={bulkBusy}
               onEdit={() => setEditWalkOn(dp)}
-              onPresent={(v) =>
-                act({ action: "set_present", day_player_id: dp.id, present: v })
-              }
-              onPaid={(v) =>
-                act({ action: "set_paid", day_player_id: dp.id, paid: v })
-              }
-              onRemove={() =>
-                act({ action: "remove_day_player", day_player_id: dp.id })
-              }
+              onPresent={(v) => act({ action: "set_present", day_player_id: dp.id, present: v })}
+              onPaid={(v) => act({ action: "set_paid", day_player_id: dp.id, paid: v })}
+              onRemove={() => act({ action: "remove_day_player", day_player_id: dp.id })}
             />
           ),
         )}
@@ -1855,22 +1445,14 @@ function RosterCard({
                 entry={p}
                 skateFee={event.manage?.skate_fee}
                 tickDisabled={bulkBusy}
-                onPaid={(v) =>
-                  act({ action: "set_paid", player_id: p.player_id, paid: v })
-                }
+                onPaid={(v) => act({ action: "set_paid", player_id: p.player_id, paid: v })}
                 isPast={!!event.is_past}
                 postDisabled={busy}
                 onPost={(posted) => {
                   const send = () =>
                     act(
-                      {
-                        action: "set_late_drop_posted",
-                        player_id: p.player_id,
-                        posted,
-                      },
-                      posted
-                        ? `Posted ${p.name} to ${LATE_SCRATCHES_TITLE}`
-                        : `Took ${p.name} off ${LATE_SCRATCHES_TITLE}`,
+                      { action: "set_late_drop_posted", player_id: p.player_id, posted },
+                      posted ? `Posted ${p.name} to ${LATE_SCRATCHES_TITLE}` : `Took ${p.name} off ${LATE_SCRATCHES_TITLE}`,
                     );
                   if (!posted) return send();
                   const copy = postConfirmCopy(p.name);
@@ -1887,34 +1469,19 @@ function RosterCard({
         {event.waitlist.length > 0 ? (
           <>
             <View style={styles.divider} />
-            <Text style={styles.subhead}>
-              Waitlist ({event.waitlist.length})
-            </Text>
-            <Text style={styles.muted}>
-              In promotion order — use ▲▼ to reorder.
-            </Text>
+            <Text style={styles.subhead}>Waitlist ({event.waitlist.length})</Text>
+            <Text style={styles.muted}>In promotion order — use ▲▼ to reorder.</Text>
             {event.waitlist.map((w: WaitlistEntry, i) => (
               <View key={`w-${w.waitlist_id}`} style={styles.rosterRow}>
                 <Text style={styles.wlNum}>{i + 1}</Text>
-                <Text
-                  style={[styles.playerName, styles.grow]}
-                  numberOfLines={1}
-                >
+                <Text style={[styles.playerName, styles.grow]} numberOfLines={1}>
                   {w.name}
-                  {gsWaitlist.has(w.waitlist_id)
-                    ? " (G/S)"
-                    : w.is_goalie
-                      ? " (G)"
-                      : ""}
+                  {gsWaitlist.has(w.waitlist_id) ? " (G/S)" : w.is_goalie ? " (G)" : ""}
                 </Text>
                 <Tap
                   feedback="icon"
                   onPress={() =>
-                    act({
-                      action: "reorder_waitlist",
-                      waitlist_id: w.waitlist_id,
-                      direction: "up",
-                    })
+                    act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "up" })
                   }
                   disabled={busy || i === 0}
                   hitSlop={6}
@@ -1925,18 +1492,11 @@ function RosterCard({
                 <Tap
                   feedback="icon"
                   onPress={() =>
-                    act({
-                      action: "reorder_waitlist",
-                      waitlist_id: w.waitlist_id,
-                      direction: "down",
-                    })
+                    act({ action: "reorder_waitlist", waitlist_id: w.waitlist_id, direction: "down" })
                   }
                   disabled={busy || i === event.waitlist.length - 1}
                   hitSlop={6}
-                  style={[
-                    styles.arrowBtn,
-                    i === event.waitlist.length - 1 && styles.arrowDisabled,
-                  ]}
+                  style={[styles.arrowBtn, i === event.waitlist.length - 1 && styles.arrowDisabled]}
                 >
                   <Text style={styles.arrowText}>▼</Text>
                 </Tap>
@@ -1968,28 +1528,16 @@ function RosterCard({
           }))}
         />
         <Text style={styles.muted}>{current.description}</Text>
-        {borrowOff ? (
-          <Text style={styles.addModeNote}>
-            Borrow: {borrowOff.disabledReason}
-          </Text>
-        ) : null}
+        {borrowOff ? <Text style={styles.addModeNote}>Borrow: {borrowOff.disabledReason}</Text> : null}
 
         {mode === "group" ? (
           <>
             <Button
-              label={
-                showAdd
-                  ? "Close player list"
-                  : event.night
-                    ? "Choose players"
-                    : "Add players"
-              }
+              label={showAdd ? "Close player list" : event.night ? "Choose players" : "Add players"}
               variant="secondary"
               onPress={() => setShowAdd((s) => !s)}
             />
-            {showAdd ? (
-              <AddPlayerPanel event={event} busy={busy} onAct={act} />
-            ) : null}
+            {showAdd ? <AddPlayerPanel event={event} busy={busy} onAct={act} /> : null}
           </>
         ) : null}
 
@@ -2014,14 +1562,7 @@ function RosterCard({
                 accessibilityState={{ checked: walkOnGoalie }}
                 accessibilityLabel="Goalie"
               >
-                <Text
-                  style={[
-                    styles.goaliePickText,
-                    walkOnGoalie && styles.goaliePickTextOn,
-                  ]}
-                >
-                  G
-                </Text>
+                <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
               </Tap>
             </View>
             <View style={styles.walkOnRow}>
@@ -2035,8 +1576,7 @@ function RosterCard({
                 placeholderTextColor={colors.textMuted}
               />
               <Text style={[styles.muted, styles.grow]}>
-                {walkOnGoalie ? "0–3, defaults to 2.0" : "0–5, defaults to 3.0"}{" "}
-                · feeds Team Generator
+                {walkOnGoalie ? "0–3, defaults to 2.0" : "0–5, defaults to 3.0"} · feeds Team Generator
               </Text>
             </View>
             <Button
@@ -2099,9 +1639,7 @@ function ReserveSpotsForm({
         >
           <Ionicons name="add" size={18} color={colors.text} />
         </Tap>
-        <Text style={[styles.muted, styles.grow]}>
-          spot{count === 1 ? "" : "s"}
-        </Text>
+        <Text style={[styles.muted, styles.grow]}>spot{count === 1 ? "" : "s"}</Text>
         <Tap
           onPress={() => setGoalie((g) => !g)}
           style={[styles.goaliePick, goalie && styles.goaliePickOn]}
@@ -2109,11 +1647,7 @@ function ReserveSpotsForm({
           accessibilityState={{ checked: goalie }}
           accessibilityLabel="Goalie spots"
         >
-          <Text
-            style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}
-          >
-            G
-          </Text>
+          <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
         </Tap>
       </View>
       <TextInput
@@ -2159,9 +1693,7 @@ function ReservedSpotRow({
   const [picking, setPicking] = useState(false);
   const candidates = useCandidates(eventId, picking);
   const choices = (candidates.data?.addable ?? []).filter((c) =>
-    dp.is_goalie
-      ? c.is_goalie || c.is_goalie_skater
-      : !c.is_goalie || c.is_goalie_skater,
+    dp.is_goalie ? c.is_goalie || c.is_goalie_skater : !c.is_goalie || c.is_goalie_skater,
   );
   return (
     <View style={styles.reservedRow}>
@@ -2173,14 +1705,8 @@ function ReservedSpotRow({
             {dp.reservation_note ? ` · ${dp.reservation_note}` : ""}
           </Text>
         </View>
-        <Tap
-          onPress={() => setPicking((p) => !p)}
-          style={styles.reservedBtn}
-          disabled={busy}
-        >
-          <Text style={styles.reservedBtnText}>
-            {picking ? "Cancel" : "Fill"}
-          </Text>
+        <Tap onPress={() => setPicking((p) => !p)} style={styles.reservedBtn} disabled={busy}>
+          <Text style={styles.reservedBtnText}>{picking ? "Cancel" : "Fill"}</Text>
         </Tap>
         <Tap onPress={onRelease} style={styles.reservedBtn} disabled={busy}>
           <Text style={styles.reservedBtnText}>Release</Text>
@@ -2190,9 +1716,7 @@ function ReservedSpotRow({
         candidates.isLoading ? (
           <Loading label="Loading players…" />
         ) : choices.length === 0 ? (
-          <Text style={styles.muted}>
-            Nobody left in this skate group to put here.
-          </Text>
+          <Text style={styles.muted}>Nobody left in this skate group to put here.</Text>
         ) : (
           <View style={styles.reservedList}>
             {choices.map((c) => (
@@ -2223,22 +1747,14 @@ function WalkOnEditor({
 }: {
   dp: DayPlayer;
   busy?: boolean;
-  onSave: (patch: {
-    name: string;
-    is_goalie: boolean;
-    rating_ppv?: string;
-  }) => void;
+  onSave: (patch: { name: string; is_goalie: boolean; rating_ppv?: string }) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(dp.name);
   const [goalie, setGoalie] = useState(dp.is_goalie);
   const [rating, setRating] = useState(dp.rating_ppv ?? "");
   const max = goalie ? 3 : 5;
-  const bad =
-    rating.trim() !== "" &&
-    (Number.isNaN(Number(rating)) ||
-      Number(rating) < 0 ||
-      Number(rating) > max);
+  const bad = rating.trim() !== "" && (Number.isNaN(Number(rating)) || Number(rating) < 0 || Number(rating) > max);
   return (
     <View style={styles.walkOnEditor}>
       <View style={styles.walkOnRow}>
@@ -2253,11 +1769,7 @@ function WalkOnEditor({
           onPress={() => setGoalie((g) => !g)}
           style={[styles.goaliePick, goalie && styles.goaliePickOn]}
         >
-          <Text
-            style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}
-          >
-            G
-          </Text>
+          <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
         </Tap>
       </View>
       <View style={styles.walkOnRow}>
@@ -2269,15 +1781,9 @@ function WalkOnEditor({
           placeholder={goalie ? "Goalie score" : "PPV"}
           placeholderTextColor={colors.textMuted}
         />
-        <Text style={[styles.muted, styles.grow]}>
-          {goalie ? "0–3" : "0–5"}
-        </Text>
+        <Text style={[styles.muted, styles.grow]}>{goalie ? "0–3" : "0–5"}</Text>
       </View>
-      {bad ? (
-        <Text style={styles.walkOnErr}>
-          {goalie ? "Goalie score must be 0–3." : "PPV must be 0–5."}
-        </Text>
-      ) : null}
+      {bad ? <Text style={styles.walkOnErr}>{goalie ? "Goalie score must be 0–3." : "PPV must be 0–5."}</Text> : null}
       <View style={styles.walkOnRow}>
         <Button
           label="Save"
@@ -2291,13 +1797,7 @@ function WalkOnEditor({
           disabled={busy || bad || !name.trim()}
           style={styles.grow}
         />
-        <Button
-          label="Cancel"
-          variant="secondary"
-          onPress={onCancel}
-          disabled={busy}
-          style={styles.grow}
-        />
+        <Button label="Cancel" variant="secondary" onPress={onCancel} disabled={busy} style={styles.grow} />
       </View>
     </View>
   );
@@ -2306,31 +1806,14 @@ function WalkOnEditor({
 // Director's per-event "who pays" override (server 0.34+): Default follows
 // the usual rule, Comp = free tonight, Charge = pays tonight. A payment
 // already marked is kept either way — the $ just hides while they don't pay.
-function choosePayOverride(
-  name: string,
-  current: PayOverride,
-  onPick: (v: PayOverride) => void,
-) {
+function choosePayOverride(name: string, current: PayOverride, onPick: (v: PayOverride) => void) {
   const mark = (v: PayOverride) => (v === current ? " ✓" : "");
-  Alert.alert(
-    `Pays: ${name}`,
-    "Tonight only. Default follows the usual rule (goalies, ND, Beer Guy… don't pay).",
-    [
-      {
-        text: `Default${mark("")}`,
-        onPress: () => current !== "" && onPick(""),
-      },
-      {
-        text: `Comp — doesn't pay${mark("comp")}`,
-        onPress: () => current !== "comp" && onPick("comp"),
-      },
-      {
-        text: `Charge — pays${mark("charge")}`,
-        onPress: () => current !== "charge" && onPick("charge"),
-      },
-      { text: "Cancel", style: "cancel" },
-    ],
-  );
+  Alert.alert(`Pays: ${name}`, "Tonight only. Default follows the usual rule (goalies, ND, Beer Guy… don't pay).", [
+    { text: `Default${mark("")}`, onPress: () => current !== "" && onPick("") },
+    { text: `Comp — doesn't pay${mark("comp")}`, onPress: () => current !== "comp" && onPick("comp") },
+    { text: `Charge — pays${mark("charge")}`, onPress: () => current !== "charge" && onPick("charge") },
+    { text: "Cancel", style: "cancel" },
+  ]);
 }
 
 function RosterAdminRow({
@@ -2412,23 +1895,23 @@ function RosterAdminRow({
   onPaid: (v: boolean) => void;
   onRemove: () => void;
 }) {
-  const goldTag = isGoalie
-    ? "G"
-    : isDirector
-      ? "ND"
-      : isActingDirector
-        ? "Acting ND"
-        : isAssistantDirector
-          ? "AD"
-          : "";
+  // A director playing goalie keeps "ND" and gets "G" too (1.8.1).
+  const goldTag = roleTag({
+    is_goalie: isGoalie,
+    is_director: isDirector,
+    is_acting_director: isActingDirector,
+    is_assistant_director: isAssistantDirector,
+  });
   const hasGuys = (showBeer && onBeer) || (showWhiskey && onWhiskey);
+  const hasTags =
+    (!goldTag && walkOn) || borrowed || promotionPending || !!payOverride || (walkOn && ratingPpv != null);
   return (
     <View style={styles.adminRow}>
       <View style={styles.adminLine}>
         {/* Name column (1.8.1, owner 2026-10-26): the name keeps its own
             line and any tags wrap underneath, so a borrowed / pending /
-            walk-on player's name can't be squeezed out and the buttons
-            stay on screen. */}
+            walk-on player's name can't be squeezed out and the buttons stay
+            on screen. */}
         <View style={styles.adminNameCol}>
           <View style={styles.adminNameLine}>
             <Text style={styles.playerName} numberOfLines={1}>
@@ -2436,29 +1919,16 @@ function RosterAdminRow({
             </Text>
             {goldTag ? <Text style={styles.goldTag}>{goldTag}</Text> : null}
             {team ? (
-              <Ionicons
-                name="shirt"
-                size={15}
-                color={TEAM_TINT[team]}
-                accessibilityLabel={`${team} Team`}
-              />
+              <Ionicons name="shirt" size={15} color={TEAM_TINT[team]} accessibilityLabel={`${team} Team`} />
             ) : null}
           </View>
-          {(!goldTag && walkOn) ||
-          borrowed ||
-          promotionPending ||
-          payOverride ||
-          (walkOn && ratingPpv != null) ? (
+          {hasTags ? (
             <View style={styles.adminTagLine}>
-              {!goldTag && walkOn ? (
-                <Text style={styles.roleTag}>walk-on</Text>
-              ) : null}
+              {!goldTag && walkOn ? <Text style={styles.roleTag}>walk-on</Text> : null}
               {borrowed ? (
                 <Text
                   style={styles.roleTag}
-                  accessibilityLabel={
-                    borrowedFrom ? `Borrowed from ${borrowedFrom}` : "Borrowed"
-                  }
+                  accessibilityLabel={borrowedFrom ? `Borrowed from ${borrowedFrom}` : "Borrowed"}
                 >
                   borrowed
                 </Text>
@@ -2471,9 +1941,7 @@ function RosterAdminRow({
                   Pending
                 </Text>
               ) : null}
-              {payOverride ? (
-                <Text style={styles.payTag}>{payOverride}</Text>
-              ) : null}
+              {payOverride ? <Text style={styles.payTag}>{payOverride}</Text> : null}
               {walkOn && ratingPpv != null ? (
                 <Text style={styles.dpRating}>
                   {isGoalie ? "G" : "PPV"} {ratingPpv}
@@ -2483,19 +1951,9 @@ function RosterAdminRow({
           ) : null}
         </View>
         <View style={styles.tinyBtns}>
-          <TinyBtn
-            icon="checkmark"
-            on={present}
-            disabled={tickDisabled}
-            onPress={() => onPresent(!present)}
-          />
+          <TinyBtn icon="checkmark" on={present} disabled={tickDisabled} onPress={() => onPresent(!present)} />
           {pays ? (
-            <TinyBtn
-              text="$"
-              on={paid}
-              disabled={tickDisabled}
-              onPress={() => onPaid(!paid)}
-            />
+            <TinyBtn text="$" on={paid} disabled={tickDisabled} onPress={() => onPaid(!paid)} />
           ) : null}
           {payOverride !== undefined && onPayOverride ? (
             <TinyBtn
@@ -2507,20 +1965,10 @@ function RosterAdminRow({
           ) : null}
           {hasGuys ? <View style={styles.grpGap} /> : null}
           {showBeer && onBeer ? (
-            <TinyBtn
-              icon="beer"
-              on={!!beerOn}
-              disabled={disabled}
-              onPress={onBeer}
-            />
+            <TinyBtn icon="beer" on={!!beerOn} disabled={disabled} onPress={onBeer} />
           ) : null}
           {showWhiskey && onWhiskey ? (
-            <TinyBtn
-              icon="wine"
-              on={!!whiskeyOn}
-              disabled={disabled}
-              onPress={onWhiskey}
-            />
+            <TinyBtn icon="wine" on={!!whiskeyOn} disabled={disabled} onPress={onWhiskey} />
           ) : null}
           <View style={styles.grpGap} />
           {onEdit ? (
@@ -2551,25 +1999,10 @@ function RosterAdminRow({
             {g.skill ? ` (${g.skill})` : ""}
           </Text>
           <View style={styles.tinyBtns}>
-            <TinyBtn
-              icon="checkmark"
-              on={g.present}
-              disabled={tickDisabled}
-              onPress={() => onGuestPresent?.(i, !g.present)}
-            />
-            <TinyBtn
-              text="$"
-              on={g.paid}
-              disabled={tickDisabled}
-              onPress={() => onGuestPaid?.(i, !g.paid)}
-            />
+            <TinyBtn icon="checkmark" on={g.present} disabled={tickDisabled} onPress={() => onGuestPresent?.(i, !g.present)} />
+            <TinyBtn text="$" on={g.paid} disabled={tickDisabled} onPress={() => onGuestPaid?.(i, !g.paid)} />
             <View style={styles.grpGap} />
-            <TinyBtn
-              icon="close"
-              danger
-              disabled={disabled}
-              onPress={() => onGuestRemove?.(i)}
-            />
+            <TinyBtn icon="close" danger disabled={disabled} onPress={() => onGuestRemove?.(i)} />
           </View>
         </View>
       ))}
@@ -2612,27 +2045,15 @@ function LateDropRow({
         {badge ? (
           <View style={styles.tinyBtns}>
             <Text style={styles.fineBadge}>{badge}</Text>
-            <TinyBtn
-              text="$"
-              on={entry.paid}
-              disabled={tickDisabled}
-              onPress={() => onPaid(!entry.paid)}
-            />
+            <TinyBtn text="$" on={entry.paid} disabled={tickDisabled} onPress={() => onPaid(!entry.paid)} />
           </View>
         ) : null}
       </View>
       <Text style={styles.lateDropLine}>{lateDropLine(entry)}</Text>
       {board ? (
         <View style={styles.boardLine}>
-          <Text style={[styles.boardTag, board.posted && styles.boardTagOn]}>
-            {board.tag}
-          </Text>
-          <Tap
-            feedback="icon"
-            hitSlop={6}
-            disabled={postDisabled}
-            onPress={() => onPost(!board.posted)}
-          >
+          <Text style={[styles.boardTag, board.posted && styles.boardTagOn]}>{board.tag}</Text>
+          <Tap feedback="icon" hitSlop={6} disabled={postDisabled} onPress={() => onPost(!board.posted)}>
             <Text style={styles.linkText}>{board.button}</Text>
           </Tap>
         </View>
@@ -2702,9 +2123,7 @@ function AddPlayerPanel({
 
   if (candidates.isLoading) return <Loading label="Loading players…" />;
   if (candidates.isError || !candidates.data) {
-    return (
-      <Text style={styles.error}>Couldn&apos;t load the player list.</Text>
-    );
+    return <Text style={styles.error}>Couldn&apos;t load the player list.</Text>;
   }
 
   const { addable } = candidates.data;
@@ -2747,14 +2166,10 @@ function AddPlayerPanel({
       {addable.map((c) => (
         <CheckRow
           key={c.id}
-          label={
-            c.name + (c.is_goalie_skater ? " (G/S)" : c.is_goalie ? " (G)" : "")
-          }
+          label={c.name + (c.is_goalie_skater ? " (G/S)" : c.is_goalie ? " (G)" : "")}
           checked={selected.includes(c.id)}
           onToggle={() =>
-            setSelected((s) =>
-              s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id],
-            )
+            setSelected((s) => (s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id]))
           }
         />
       ))}
@@ -2782,13 +2197,7 @@ function AddPlayerPanel({
 // ADVANCED
 // ====================================================================
 
-function AdvancedPanel({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function AdvancedPanel({ event, manage }: { event: EventDetail; manage: EventManage }) {
   return (
     <>
       <DirectorNotesCard event={event} manage={manage} />
@@ -2798,13 +2207,7 @@ function AdvancedPanel({
   );
 }
 
-function DirectorNotesCard({
-  event,
-  manage,
-}: {
-  event: EventDetail;
-  manage: EventManage;
-}) {
+function DirectorNotesCard({ event, manage }: { event: EventDetail; manage: EventManage }) {
   const patch = usePatchEvent(event.id);
   const [notes, setNotes] = useState(manage.director_notes ?? "");
   const dirty = notes.trim() !== (manage.director_notes ?? "").trim();
@@ -2812,9 +2215,7 @@ function DirectorNotesCard({
   return (
     <Card>
       <Text style={styles.heading}>Director notes</Text>
-      <Text style={styles.hint}>
-        Private to directors — never shown to players.
-      </Text>
+      <Text style={styles.hint}>Private to directors — never shown to players.</Text>
       <TextInput
         style={styles.textarea}
         value={notes}
@@ -2850,9 +2251,7 @@ function PresetsCard({ event }: { event: EventDetail }) {
     return (
       <Card>
         <Text style={styles.heading}>Event setup presets</Text>
-        <Text style={styles.muted}>
-          Custom events don&apos;t support presets.
-        </Text>
+        <Text style={styles.muted}>Custom events don&apos;t support presets.</Text>
       </Card>
     );
   }
@@ -2875,11 +2274,7 @@ function PresetsCard({ event }: { event: EventDetail }) {
   function confirmDelete(p: EventPreset) {
     Alert.alert("Delete preset?", `"${p.name}" will be removed.`, [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => mut.remove.mutate(p.id),
-      },
+      { text: "Delete", style: "destructive", onPress: () => mut.remove.mutate(p.id) },
     ]);
   }
 
@@ -2887,9 +2282,8 @@ function PresetsCard({ event }: { event: EventDetail }) {
     <Card>
       <Text style={styles.heading}>Event setup presets</Text>
       <Text style={styles.hint}>
-        A reusable snapshot of time, capacity, beer/whiskey, and this
-        event&apos;s Yes roster. The default preset auto-applies to new events
-        for this night.
+        A reusable snapshot of time, capacity, beer/whiskey, and this event&apos;s Yes roster. The
+        default preset auto-applies to new events for this night.
       </Text>
 
       {presets.isLoading ? (
@@ -2907,12 +2301,7 @@ function PresetsCard({ event }: { event: EventDetail }) {
               {!p.is_default ? (
                 <Tap
                   feedback="icon"
-                  onPress={() =>
-                    mut.update.mutate({
-                      presetId: p.id,
-                      body: { is_default: true },
-                    })
-                  }
+                  onPress={() => mut.update.mutate({ presetId: p.id, body: { is_default: true } })}
                   hitSlop={6}
                 >
                   <Text style={styles.linkText}>Make default</Text>
@@ -2921,10 +2310,7 @@ function PresetsCard({ event }: { event: EventDetail }) {
               <Tap
                 feedback="icon"
                 onPress={() =>
-                  mut.update.mutate({
-                    presetId: p.id,
-                    body: { from_event_id: Number(event.id) },
-                  })
+                  mut.update.mutate({ presetId: p.id, body: { from_event_id: Number(event.id) } })
                 }
                 hitSlop={6}
               >
@@ -2947,11 +2333,7 @@ function PresetsCard({ event }: { event: EventDetail }) {
         placeholder="Preset name"
         placeholderTextColor={colors.textMuted}
       />
-      <ToggleRow
-        label="Make it the default"
-        value={makeDefault}
-        onChange={setMakeDefault}
-      />
+      <ToggleRow label="Make it the default" value={makeDefault} onChange={setMakeDefault} />
       <Button
         label="Save preset"
         variant="secondary"
@@ -2988,12 +2370,7 @@ function DeleteCard({ event }: { event: EventDetail }) {
   return (
     <Card>
       <Text style={styles.heading}>Delete event</Text>
-      <Button
-        label="Delete event"
-        variant="danger"
-        onPress={confirm}
-        loading={del.isPending}
-      />
+      <Button label="Delete event" variant="danger" onPress={confirm} loading={del.isPending} />
     </Card>
   );
 }
@@ -3086,20 +2463,12 @@ function InvitePicker({
 }) {
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState<Set<string>>(
-    () =>
-      new Set(
-        groups
-          .filter((g) => g.key !== ownKey && g.members.length > 0)
-          .slice(0, 1)
-          .map((g) => g.key),
-      ),
+    () => new Set(groups.filter((g) => g.key !== ownKey && g.members.length > 0).slice(0, 1).map((g) => g.key)),
   );
   const pickedSet = new Set(picked);
   const searching = term.trim().length > 0;
   const toggleOne = (id: number) =>
-    onChange(
-      pickedSet.has(id) ? picked.filter((x) => x !== id) : [...picked, id],
-    );
+    onChange(pickedSet.has(id) ? picked.filter((x) => x !== id) : [...picked, id]);
 
   return (
     <View style={styles.pickerWrap}>
@@ -3114,9 +2483,7 @@ function InvitePicker({
         accessibilityLabel="Search players"
       />
       <Text style={styles.muted}>
-        {picked.length === 1
-          ? "1 person selected"
-          : `${picked.length} people selected`}
+        {picked.length === 1 ? "1 person selected" : `${picked.length} people selected`}
       </Text>
       {groups.map((g) => {
         const shown = g.members.filter((m) => matches(m, term));
@@ -3136,18 +2503,10 @@ function InvitePicker({
                 disabled={g.members.length === 0}
                 onPress={() => onChange(toggleGroup(picked, g.members))}
                 accessibilityRole="checkbox"
-                accessibilityState={{
-                  checked:
-                    state === "all" ? true : state === "some" ? "mixed" : false,
-                }}
+                accessibilityState={{ checked: state === "all" ? true : state === "some" ? "mixed" : false }}
                 accessibilityLabel={`All of ${g.name}`}
               >
-                <View
-                  style={[
-                    styles.checkbox,
-                    state !== "none" && styles.checkboxOn,
-                  ]}
-                >
+                <View style={[styles.checkbox, state !== "none" && styles.checkboxOn]}>
                   {state === "all" ? (
                     <Text style={styles.checkboxMark}>✓</Text>
                   ) : state === "some" ? (
@@ -3168,39 +2527,25 @@ function InvitePicker({
                   })
                 }
                 style={styles.pickerToggle}
-                accessibilityLabel={
-                  expanded ? `Hide ${g.name}` : `Show ${g.name}`
-                }
+                accessibilityLabel={expanded ? `Hide ${g.name}` : `Show ${g.name}`}
               >
                 <Text style={styles.muted}>
-                  {g.members.length === 0
-                    ? "everyone's invited"
-                    : `${count} of ${g.members.length}`}
+                  {g.members.length === 0 ? "everyone's invited" : `${count} of ${g.members.length}`}
                 </Text>
-                <Ionicons
-                  name={expanded ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={colors.textMuted}
-                />
+                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
               </Tap>
             </View>
             {expanded
               ? shown.map((c) => (
                   <CheckRow
                     key={`${g.key}-${c.id}`}
-                    label={
-                      c.name +
-                      (c.is_goalie_skater
-                        ? " (G/S)"
-                        : c.is_goalie
-                          ? " (G)"
-                          : "")
-                    }
+                    label={c.name + (c.is_goalie_skater ? " (G/S)" : c.is_goalie ? " (G)" : "")}
                     checked={pickedSet.has(c.id)}
                     onToggle={() => toggleOne(c.id)}
                   />
                 ))
               : null}
+
           </View>
         );
       })}
@@ -3294,11 +2639,7 @@ const styles = StyleSheet.create({
   status: { color: colors.textMuted, fontSize: 13 },
   error: { color: colors.red, fontWeight: "600" },
   muted: { color: colors.textMuted },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.xs,
-  },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
   addModeNote: { color: colors.textMuted, fontSize: font.xs },
   grow: { flex: 1 },
 
@@ -3387,11 +2728,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   toggleBtnOn: { borderColor: colors.gold, backgroundColor: colors.gold },
-  toggleBtnText: {
-    color: colors.textMuted,
-    fontSize: font.sm,
-    fontWeight: "700",
-  },
+  toggleBtnText: { color: colors.textMuted, fontSize: font.sm, fontWeight: "700" },
   toggleBtnTextOn: { color: colors.goldText },
 
   headerPreview: {
@@ -3411,12 +2748,7 @@ const styles = StyleSheet.create({
   },
   playerName: { color: colors.text, fontSize: font.sm, flexShrink: 1 },
   promoteBtn: { flexGrow: 0, paddingHorizontal: spacing.md, minHeight: 36 },
-  wlNum: {
-    color: colors.textMuted,
-    fontSize: font.xs,
-    fontWeight: "800",
-    width: 16,
-  },
+  wlNum: { color: colors.textMuted, fontSize: font.xs, fontWeight: "800", width: 16 },
   arrowBtn: {
     width: 30,
     height: 30,
@@ -3443,18 +2775,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  adminRowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    flexWrap: "wrap",
-  },
-  adminRowActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    flexWrap: "wrap",
-  },
+  adminRowTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexWrap: "wrap" },
+  adminRowActions: { flexDirection: "row", alignItems: "center", gap: spacing.md, flexWrap: "wrap" },
   inviteeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -3493,12 +2815,7 @@ const styles = StyleSheet.create({
   stepCount: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
   sendCard: { borderColor: colors.gold },
   pending: { color: colors.amber },
-  foldRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
+  foldRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   commsLink: { color: colors.gold, fontSize: font.sm, fontWeight: "700" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: {
@@ -3518,17 +2835,8 @@ const styles = StyleSheet.create({
   adminLine: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   // Name on its own line, tags under it; takes the room the buttons leave.
   adminNameCol: { flex: 1, minWidth: 0, gap: 2 },
-  adminNameLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  adminTagLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-  },
+  adminNameLine: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  adminTagLine: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 },
   roleTag: {
     color: colors.textMuted,
     fontSize: 10,
@@ -3558,20 +2866,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
   },
-  tinyBtns: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginLeft: "auto",
-    flexShrink: 0,
-  },
+  tinyBtns: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: "auto", flexShrink: 0 },
   lateDropLine: { color: colors.textMuted, fontSize: font.xs, marginTop: 2 },
-  boardLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: 4,
-  },
+  boardLine: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 4 },
   boardTag: {
     color: colors.textMuted,
     fontSize: font.xs,
@@ -3599,12 +2896,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: spacing.sm,
   },
-  grpGap: {
-    width: 1,
-    alignSelf: "stretch",
-    marginHorizontal: 4,
-    backgroundColor: colors.border,
-  },
+  grpGap: { width: 1, alignSelf: "stretch", marginHorizontal: 4, backgroundColor: colors.border },
   tiny: {
     minWidth: 30,
     height: 28,
@@ -3626,38 +2918,11 @@ const styles = StyleSheet.create({
 
   walkOnRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
   pickerWrap: { gap: spacing.sm },
-  pickerGroup: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm,
-  },
-  pickerHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    minHeight: 44,
-  },
-  pickerAll: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: 8,
-  },
-  pickerName: {
-    color: colors.text,
-    fontSize: font.sm,
-    fontWeight: "800",
-    flexShrink: 1,
-  },
-  pickerToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 8,
-    paddingLeft: 8,
-  },
+  pickerGroup: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.sm },
+  pickerHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
+  pickerAll: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 8 },
+  pickerName: { color: colors.text, fontSize: font.sm, fontWeight: "800", flexShrink: 1 },
+  pickerToggle: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 8, paddingLeft: 8 },
   stepBtn: {
     width: 36,
     height: 36,
@@ -3667,13 +2932,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  stepValue: {
-    color: colors.text,
-    fontSize: font.base,
-    fontWeight: "800",
-    minWidth: 22,
-    textAlign: "center",
-  },
+  stepValue: { color: colors.text, fontSize: font.base, fontWeight: "800", minWidth: 22, textAlign: "center" },
   reservedRow: {
     gap: spacing.sm,
     paddingVertical: spacing.sm,
@@ -3690,11 +2949,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   reservedBtnText: { color: colors.text, fontSize: font.xs, fontWeight: "700" },
-  reservedList: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-  },
+  reservedList: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
   reservedChoice: { paddingVertical: 10, paddingHorizontal: spacing.md },
   reservedChoiceText: { color: colors.text, fontSize: font.sm },
   goaliePick: {
@@ -3737,12 +2992,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.xs,
   },
-  checkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: 6,
-  },
+  checkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 6 },
   checkbox: {
     width: 22,
     height: 22,
