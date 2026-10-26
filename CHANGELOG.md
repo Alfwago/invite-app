@@ -3,6 +3,20 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-10-26 — 1.8.1: pending-account screen, roster row fix
+
+**Pairs with invite-server 0.39.2** (on prod 2026-10-22).
+
+- **Pending screen** (server 0.39.2 gate): a not-yet-approved or unverified
+  account sees "Awaiting director approval" / "Verify your email" with its
+  profile, resend verification, delete account, sign out and Check again;
+  Home once approved. A 403 `account_pending` from any screen switches to it.
+  `src/pendingAccount.ts` (tested).
+- **Manage → Roster rows** (owner 2026-10-26, "O’Donnell, Ben"): the name
+  has its own line with tags (Borrowed, Pending, walk-on, comp/charge)
+  underneath, so a tagged player's name no longer disappears and the buttons
+  no longer run off the right edge.
+
 ## 2026-10-21 — 1.8.0 (iOS build 34): Directors tab, invite picker, reserved spots, team order, names, poll privacy
 
 **Pairs with `invite-server` 0.38.0**, which ships first. Folds in 1.7.1
