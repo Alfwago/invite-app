@@ -805,6 +805,11 @@ export interface PlayerRow {
   rating_source: "night" | "none";
   global_score: number | null;
   global_goalie_score: number | null;
+  /** Server 0.39.3+, non-playing members only: their title, shown instead
+   *  of a PPV ("🏒 Front Office" until a director sets one). */
+  member_title?: string;
+  /** What a director typed ("" = the default). */
+  member_title_raw?: string;
   /** Server 0.38.0+ sort fields (#6/#7). ISO dates; null = none. */
   join_date?: string | null;
   last_skated?: string | null;
@@ -835,6 +840,9 @@ export interface PlayerDetail {
   is_goalie: boolean;
   is_goalie_skater: boolean;
   player_type: PlayerTypeTag;
+  /** Server 0.39.3+, non-playing members only (see PlayerRow). */
+  member_title?: string;
+  member_title_raw?: string;
   join_year: number | null;
   years_in_obh: number | null;
   skill_assessment: string;

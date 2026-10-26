@@ -12,6 +12,11 @@ Store; Android ships as a direct-download APK from the site.
   profile, resend verification, delete account, sign out and Check again;
   Home once approved. A 403 `account_pending` from any screen switches to it.
   `src/pendingAccount.ts` (tested).
+- **Non-playing members get a title** instead of a PPV (server 0.39.3,
+  owner 2026-10-26): Player Profiles shows it in gold ("🍺 Head Bartender";
+  "🏒 Front Office" until a director sets one), and the player screen has a
+  Member title card to edit it. Older servers send no title, so nothing
+  changes there.
 - **OBH Notifications: "Clear all"** in the screen's top bar (owner
   2026-10-26). Swipe-left / long-press on the Inbox row still works too.
 - **"ND G":** a night director playing goalie keeps the ND tag and gets G

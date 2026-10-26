@@ -42,8 +42,10 @@ export function listGoalieScore(row: PlayerRow, nightSelected: boolean): number 
 
 /** The list's number(s), as on the website: "3.10" for a skater, "G 2.40"
  *  for a goalie, "3.10 · G 2.40" for a Goalie & Skater, "Not Rated" when
- *  there's nothing to show. */
+ *  there's nothing to show, and a non-playing member's title. */
 export function listText(row: PlayerRow, nightSelected: boolean): string {
+  // Non-playing members show their title instead (server 0.39.3).
+  if (row.member_title) return row.member_title;
   const parts: string[] = [];
   const skater = listScore(row, nightSelected);
   const pureGoalie = row.player_type === "goalie";

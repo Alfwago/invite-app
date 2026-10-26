@@ -585,6 +585,11 @@ export function fetchPlayer(id: number, signal?: AbortSignal): Promise<PlayerDet
   return apiFetch(`/api/players/${id}/`, { signal });
 }
 
+/** A non-playing member's title (server 0.39.3); "" = the default. */
+export function savePlayerTitle(id: number, memberTitle: string): Promise<PlayerDetail> {
+  return apiFetch(`/api/players/${id}/`, { method: "PATCH", body: { member_title: memberTitle } });
+}
+
 export function savePlayerRatings(
   id: number,
   body: RatingPatch,

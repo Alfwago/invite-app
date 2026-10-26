@@ -552,6 +552,17 @@ export function usePlayer(id: number | undefined) {
   });
 }
 
+export function useSaveMemberTitle(playerId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (title: string) => api.savePlayerTitle(playerId, title),
+    onSuccess: (result) => {
+      qc.setQueryData(keys.player(playerId), result);
+      qc.invalidateQueries({ queryKey: ["players"] });
+    },
+  });
+}
+
 export function useSaveRatings(playerId: number) {
   const qc = useQueryClient();
   return useMutation({

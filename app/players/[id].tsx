@@ -15,7 +15,7 @@ import type { GlobalScore, PlayerDetail, PlayerNightRow } from "@/src/api/types"
 import { RatingRadar } from "@/src/components/RatingRadar";
 import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { usePlayer, useSaveRatings } from "@/src/hooks/queries";
+import { usePlayer, useSaveMemberTitle, useSaveRatings } from "@/src/hooks/queries";
 import { formatScore, obhGrade } from "@/src/ratings";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -151,6 +151,10 @@ export default function PlayerDetailScreen() {
           <Tile value={m.present_count} label="Skated" />
         </View>
 
+        {player.member_title != null ? (
+          // Non-playing member (server 0.39.3): a title instead of ratings.
+          <MemberTitleCard playerId={player.id} title={player.member_title} raw={player.member_title_raw ?? ""} />
+        ) : (
         <Card>
           <Text style={styles.cardLabel}>Ratings</Text>
           <View style={styles.nightChips}>
@@ -254,6 +258,7 @@ export default function PlayerDetailScreen() {
           </>
           )}
         </Card>
+        )}
       </ScrollView>
     </>
   );
@@ -327,7 +332,52 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n));
 }
 
+/** A non-playing member's title (server 0.39.3, owner 2026-10-26): shown in
+ *  Player Profiles instead of a PPV. Blank goes back to "🏒 Front Office". */
+function MemberTitleCard({ playerId, title, raw }: { playerId: number; title: string; raw: string }) {
+  const save = useSaveMemberTitle(playerId);
+  const [text, setText] = useState(raw);
+  const dirty = text.trim() !== raw.trim();
+  return (
+    <Card>
+      <Text style={styles.cardLabel}>Member title</Text>
+      <Text style={styles.memberTitle}>{title}</Text>
+      <Text style={styles.sub}>Non-playing members get a title instead of a PPV score.</Text>
+      <TextInput
+        style={styles.titleInput}
+        value={text}
+        onChangeText={setText}
+        placeholder="🏒 Front Office"
+        placeholderTextColor={colors.textMuted}
+        maxLength={40}
+        accessibilityLabel="Member title"
+      />
+      <Button
+        label={dirty ? "Save title" : "Title saved"}
+        onPress={() =>
+          save.mutate(text.trim(), {
+            onError: (e) => Alert.alert("Couldn't save", e instanceof ApiError ? e.detail : "Try again."),
+          })
+        }
+        disabled={!dirty}
+        loading={save.isPending}
+      />
+      <Text style={styles.sub}>Up to 40 characters, emoji welcome. Leave it blank for 🏒 Front Office.</Text>
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  memberTitle: { color: colors.gold, fontSize: font.lg, fontWeight: "800" },
+  titleInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    color: colors.text,
+    fontSize: font.base,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
   globalBlock: { gap: spacing.md, paddingVertical: spacing.sm },
   globalRow: { alignItems: "center", gap: 2 },
   globalLabel: { color: colors.textMuted, fontSize: font.sm, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
