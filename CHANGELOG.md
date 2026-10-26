@@ -17,8 +17,11 @@ Store; Android ships as a direct-download APK from the site.
   "🏒 Front Office" until a director sets one), and the player screen has a
   Member title card to edit it. Older servers send no title, so nothing
   changes there.
-- **OBH Notifications: "Clear all"** in the screen's top bar (owner
-  2026-10-26). Swipe-left / long-press on the Inbox row still works too.
+- **OBH Notifications: "Clear all"** in the screen's top bar, and clear
+  one at a time: swipe a notification left for Clear, or long-press it
+  (owner 2026-10-26). Hidden for you only (DELETE /api/dm/messages/<id>/,
+  which already allowed it). Swipe-left / long-press on the Inbox row still
+  clears them all.
 - **"ND G":** a night director playing goalie keeps the ND tag and gets G
   (shared `src/roleTag.ts`, tested; matches the website, server 0.39.3).
 - **Manage → Roster rows** (owner 2026-10-26, "O’Donnell, Ben"): the name

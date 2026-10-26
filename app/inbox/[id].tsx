@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Swipeable } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import { useHeaderHeight } from "@react-navigation/elements";
 
@@ -108,8 +109,22 @@ export default function DmThreadScreen() {
     ]);
   }
 
+  // One OBH notification (1.8.1, owner 2026-10-26): swipe left or
+  // long-press to clear just that one. Hidden for you only.
+  function clearOne(msg: DMMessage) {
+    actions.remove.mutate(msg.id, {
+      onError: (e) => Alert.alert("Couldn't clear", e instanceof ApiError ? e.detail : "Try again."),
+    });
+  }
+
   function longPress(msg: DMMessage) {
-    if (msg.is_system) return;
+    if (msg.is_system) {
+      Alert.alert("Clear this notification?", undefined, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Clear", style: "destructive", onPress: () => clearOne(msg) },
+      ]);
+      return;
+    }
     const buttons: AlertButton[] = [{ text: "React…", onPress: () => react(msg) }];
     if (msg.can_edit) {
       buttons.push({
@@ -172,6 +187,7 @@ export default function DmThreadScreen() {
               msg={item}
               onEvent={(eid) => router.push(`/event/${eid}` as never)}
               onLongPress={() => longPress(item)}
+              onClear={() => clearOne(item)}
               onToggleReaction={(e) => actions.react.mutate({ messageId: item.id, emoji: e })}
             />
           )}
@@ -231,24 +247,37 @@ function Bubble({
   msg,
   onEvent,
   onLongPress,
+  onClear,
   onToggleReaction,
 }: {
   msg: DMMessage;
   onEvent: (eventId: number) => void;
   onLongPress: () => void;
+  onClear: () => void;
   onToggleReaction: (emoji: string) => void;
 }) {
   if (msg.is_system) {
     return (
-      <Tap
-        feedback="row"
-        style={styles.systemRow}
-        disabled={msg.event_id == null}
-        onPress={() => msg.event_id != null && onEvent(msg.event_id)}
+      <Swipeable
+        overshootRight={false}
+        renderRightActions={() => (
+          <Tap feedback="row" style={styles.swipeClear} onPress={onClear} accessibilityLabel="Clear this notification">
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+            <Text style={styles.swipeClearText}>Clear</Text>
+          </Tap>
+        )}
       >
-        <Text style={styles.systemText}>{msg.body}</Text>
-        <Text style={styles.systemWhen}>{formatDateTime(msg.created_at)}</Text>
-      </Tap>
+        <Tap
+          feedback="row"
+          style={styles.systemRow}
+          onPress={() => msg.event_id != null && onEvent(msg.event_id)}
+          onLongPress={onLongPress}
+          delayLongPress={300}
+        >
+          <Text style={styles.systemText}>{msg.body}</Text>
+          <Text style={styles.systemWhen}>{formatDateTime(msg.created_at)}</Text>
+        </Tap>
+      </Swipeable>
     );
   }
   return (
@@ -306,6 +335,16 @@ const styles = StyleSheet.create({
   },
   systemText: { color: colors.text, fontSize: font.sm },
   clearAll: { color: colors.gold, fontSize: 15, fontWeight: "700" },
+  swipeClear: {
+    backgroundColor: colors.red,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 88,
+    gap: 2,
+    borderRadius: radius.md,
+    marginLeft: spacing.sm,
+  },
+  swipeClearText: { color: "#fff", fontSize: font.xs, fontWeight: "700" },
   systemWhen: { color: colors.textMuted, fontSize: font.xs },
   bubbleRow: { maxWidth: "82%", gap: 2 },
   mineRow: { alignSelf: "flex-end", alignItems: "flex-end" },
