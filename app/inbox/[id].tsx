@@ -20,7 +20,7 @@ import { LinkText } from "@/src/components/LinkText";
 import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { formatDateTime } from "@/src/format";
-import { useDmMessageActions, useDmThread, useSendDm } from "@/src/hooks/queries";
+import { useDeleteDmThread, useDmMessageActions, useDmThread, useSendDm } from "@/src/hooks/queries";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 const FALLBACK_EMOJI = ["👍", "😂", "🔥", "👎"];
@@ -37,6 +37,7 @@ export default function DmThreadScreen() {
   const query = useDmThread(who);
   const send = useSendDm(who === "system" ? 0 : who);
   const actions = useDmMessageActions(who);
+  const clear = useDeleteDmThread();
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState<{ id: number; original: string } | null>(null);
   const listRef = useRef<FlatList<DMMessage>>(null);
@@ -52,6 +53,21 @@ export default function DmThreadScreen() {
         onRetry={() => query.refetch()}
       />
     );
+  }
+
+  function confirmClear() {
+    Alert.alert("Clear all notifications?", "This clears the OBH notifications from your inbox.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear all",
+        style: "destructive",
+        onPress: () =>
+          clear.mutate("system", {
+            onSuccess: () => router.back(),
+            onError: (e) => Alert.alert("Couldn't clear", e instanceof ApiError ? e.detail : "Try again."),
+          }),
+      },
+    ]);
   }
 
   const canReply = who !== "system" && thread.can_reply;
@@ -125,7 +141,21 @@ export default function DmThreadScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: thread.other_name }} />
+      <Stack.Screen
+        options={{
+          title: thread.other_name,
+          // OBH notifications (1.8.1, owner 2026-10-26): a visible "Clear all".
+          // Swipe / long-press in the Inbox list still works too.
+          headerRight:
+            who === "system" && thread.messages.length > 0
+              ? () => (
+                  <Tap onPress={confirmClear} hitSlop={8} accessibilityLabel="Clear all notifications">
+                    <Text style={styles.clearAll}>Clear all</Text>
+                  </Tap>
+                )
+              : undefined,
+        }}
+      />
       <KeyboardAvoidingView
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -275,6 +305,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   systemText: { color: colors.text, fontSize: font.sm },
+  clearAll: { color: colors.gold, fontSize: 15, fontWeight: "700" },
   systemWhen: { color: colors.textMuted, fontSize: font.xs },
   bubbleRow: { maxWidth: "82%", gap: 2 },
   mineRow: { alignSelf: "flex-end", alignItems: "flex-end" },
