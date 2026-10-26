@@ -594,7 +594,7 @@ function AccountCard({
 
 // ── bits ───────────────────────────────────────────────────────────────
 const PLAYER_TYPE_LABEL: Record<PlayerType, string> = {
-  non_playing: "Non-playing member",
+  non_playing: "Non-Player",
   skater: "Skater",
   goalie: "Goalie",
   goalie_skater: "Goalie & Skater",

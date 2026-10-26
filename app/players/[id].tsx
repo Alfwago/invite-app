@@ -130,7 +130,11 @@ export default function PlayerDetailScreen() {
         <Card>
           <View style={styles.headerRow}>
             <Text style={styles.name}>{player.name}</Text>
-            {player.is_goalie ? <Badge text="GOALIE" tone="goalie" /> : null}
+            {player.player_type === "non_playing" ? (
+              <Badge text="NON-PLAYER" tone="neutral" />
+            ) : player.is_goalie ? (
+              <Badge text="GOALIE" tone="goalie" />
+            ) : null}
           </View>
           <Text style={styles.sub}>
             {player.profile_id || "—"}
@@ -342,7 +346,7 @@ function MemberTitleCard({ playerId, title, raw }: { playerId: number; title: st
     <Card>
       <Text style={styles.cardLabel}>Member title</Text>
       <Text style={styles.memberTitle}>{title}</Text>
-      <Text style={styles.sub}>Non-playing members get a title instead of a PPV score.</Text>
+      <Text style={styles.sub}>Non-Players get a title instead of a PPV score.</Text>
       <TextInput
         style={styles.titleInput}
         value={text}

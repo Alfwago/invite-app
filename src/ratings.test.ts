@@ -95,3 +95,8 @@ test("a non-playing member's title replaces the score", () => {
   const row = { player_type: "non_playing", member_title: "🍺 Head Bartender", ratings: {}, rating_source: "none", global_score: null, global_goalie_score: null } as never;
   assert.equal(listText(row, false), "🍺 Head Bartender");
 });
+
+test("non-playing members are tagged Non-Player, never skater", () => {
+  assert.equal(roleTag({ is_goalie: false, player_type: "non_playing" }), "Non-Player");
+  assert.equal(roleTag({ is_goalie: false, player_type: "skater" }), "");
+});
