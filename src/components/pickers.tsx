@@ -353,6 +353,7 @@ export function NumberField({
   step = 1,
   unit,
   placeholder = "Choose a number",
+  icon = "people-outline",
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -361,6 +362,8 @@ export function NumberField({
   step?: number;
   unit?: string;
   placeholder?: string;
+  /** The chip's icon — people by default; cash for a price. */
+  icon?: React.ComponentProps<typeof FieldChip>["icon"];
 }) {
   const [open, setOpen] = useState(false);
   const current = /^\d+$/.test(value) ? Number(value) : null;
@@ -373,7 +376,7 @@ export function NumberField({
   return (
     <View style={styles.wrap}>
       <FieldChip
-        icon="people-outline"
+        icon={icon}
         text={current != null ? `${current}${unit ? ` ${unit}` : ""}` : placeholder}
         placeholder={current == null}
         open={open}

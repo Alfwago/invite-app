@@ -281,6 +281,8 @@ export interface RosterEntry {
   status: RsvpStatus;
   is_goalie: boolean;
   is_director: boolean; // night's primary director
+  /** The creator of a non-skating event (server 0.40.0+) — shown as "Host". */
+  is_host?: boolean;
   is_assistant_director?: boolean; // night's assistant director
   /** The AD standing in for an ND who isn't on the roster ("Acting ND"),
    *  exempt like the ND. Server 0.34+; missing on older servers. */
@@ -763,6 +765,22 @@ export interface EditMessage {
   body?: string;
   imageUri?: string;
   mentionIds?: number[];
+}
+
+/** POST /api/events/non-skating/ (server 0.40.0+, Admins + Presidents):
+ *  a party / golf outing. Times are "HH:MM". */
+export interface NonSkatingEventBody {
+  title: string;
+  date: string;
+  start_time: string;
+  location: string;
+  arrive_by?: string;
+  directions_url?: string;
+  venue_notes?: string;
+  capacity?: number;
+  skate_fee?: number;
+  allow_guests: boolean;
+  notes?: string;
 }
 
 export interface CreateNextEventBody {

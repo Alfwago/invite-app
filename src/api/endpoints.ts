@@ -10,6 +10,7 @@ import type {
   BoardMessage,
   BoardsResponse,
   CreateNextEventBody,
+  NonSkatingEventBody,
   EventCandidates,
   EventDetail,
   EventMessage,
@@ -386,6 +387,10 @@ export function submitRsvp(id: number | string, body: RsvpBody): Promise<EventDe
 
 export function createNextEvent(body: CreateNextEventBody): Promise<EventDetail> {
   return apiFetch("/api/events/next/", { method: "POST", body });
+}
+
+export function createNonSkatingEvent(body: NonSkatingEventBody): Promise<EventDetail> {
+  return apiFetch("/api/events/non-skating/", { method: "POST", body });
 }
 
 export function patchEvent(id: number | string, body: EventPatchBody): Promise<EventDetail> {

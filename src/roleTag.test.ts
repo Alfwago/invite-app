@@ -15,3 +15,7 @@ test("single tags and none", () => {
   assert.equal(roleTag({ is_director: true, is_acting_director: true }), "ND");
   assert.equal(roleTag({}), "");
 });
+
+test("a party's creator is its Host", () => {
+  assert.equal(roleTag({ is_host: true }), "Host");
+});

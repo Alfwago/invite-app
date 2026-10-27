@@ -1,21 +1,25 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { ApiError } from "@/src/api/client";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
 import { Tap } from "@/src/components/Tap";
 import { ClockField, DateField, NumberField } from "@/src/components/pickers";
-import type { Night } from "@/src/api/types";
+import type { Night, NonSkatingEventBody } from "@/src/api/types";
+import { useAuth } from "@/src/auth/AuthContext";
 import { Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
-import { useCreateNextEvent, useNights } from "@/src/hooks/queries";
+import { useCreateNextEvent, useCreateNonSkatingEvent, useNights } from "@/src/hooks/queries";
 import { colors, radius, spacing } from "@/src/theme";
 
 const CUSTOM = -1;
+// A golf outing / party / Hockey Fest (server 0.40.0+): Admins + Presidents.
+const NON_SKATING = -2;
 
 export default function NewEventScreen() {
   const router = useRouter();
+  const { me } = useAuth();
   const nightsQuery = useNights();
   const create = useCreateNextEvent();
 
@@ -81,7 +85,7 @@ export default function NewEventScreen() {
   return (
     <KeyboardAwareScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Card>
-        <Text style={styles.label}>Which skate?</Text>
+        <Text style={styles.label}>Which event?</Text>
         {options.map((n: Night) => (
           <NightOption
             key={n.id}
@@ -95,7 +99,18 @@ export default function NewEventScreen() {
           active={nightId === CUSTOM}
           onPress={() => setNightId(CUSTOM)}
         />
+        {me?.is_president ? (
+          <NightOption
+            label="Non-skating event (golf outing, party, Hockey Fest)"
+            active={nightId === NON_SKATING}
+            onPress={() => setNightId(NON_SKATING)}
+          />
+        ) : null}
       </Card>
+
+      {nightId === NON_SKATING ? <NonSkatingForm /> : null}
+      {nightId === NON_SKATING ? null : (
+        <>
 
       {night ? (
         <Card accent="public">
@@ -167,7 +182,138 @@ export default function NewEventScreen() {
         disabled={!selected}
         loading={create.isPending}
       />
+        </>
+      )}
     </KeyboardAwareScrollView>
+  );
+}
+
+/** A golf outing / party: no skate group, goalies or hockey (same form as
+ *  the website's "New non-skating event"). Starts as a draft; the Manage
+ *  screen's Comms tab builds the invite list and sends. */
+function NonSkatingForm() {
+  const router = useRouter();
+  const create = useCreateNonSkatingEvent();
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [arriveBy, setArriveBy] = useState("");
+  const [location, setLocation] = useState("");
+  const [directions, setDirections] = useState("");
+  const [venueNotes, setVenueNotes] = useState("");
+  const [capacity, setCapacity] = useState("");
+  const [cost, setCost] = useState("");
+  const [allowGuests, setAllowGuests] = useState(true);
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setError(null);
+    if (!title.trim()) return setError("Give it a name.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return setError("Pick a date.");
+    if (!/^\d{1,2}:\d{2}$/.test(startTime.trim())) return setError("Pick a start time.");
+    if (!location.trim()) return setError("Where is it?");
+    const body: NonSkatingEventBody = {
+      title: title.trim(),
+      date,
+      start_time: startTime.trim(),
+      location: location.trim(),
+      allow_guests: allowGuests,
+      ...(arriveBy.trim() ? { arrive_by: arriveBy.trim() } : {}),
+      ...(directions.trim() ? { directions_url: directions.trim() } : {}),
+      ...(venueNotes.trim() ? { venue_notes: venueNotes.trim() } : {}),
+      ...(capacity.trim() ? { capacity: Number(capacity) } : {}),
+      ...(cost.trim() ? { skate_fee: Number(cost) } : {}),
+      ...(notes.trim() ? { notes: notes.trim() } : {}),
+    };
+    try {
+      const event = await create.mutateAsync(body);
+      router.replace(`/event/${event.id}/manage`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail : "Couldn't create the event.");
+    }
+  }
+
+  return (
+    <>
+      <Card accent="public">
+        <Text style={styles.hint}>
+          No goalies, teams, ratings or late-drop fines. Guests count toward the headcount. After
+          you create it, build the invite list on its Comms tab and send.
+        </Text>
+      </Card>
+      <Card>
+        <Text style={styles.label}>Event name</Text>
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Holiday Party"
+          placeholderTextColor={colors.textMuted}
+        />
+        <Text style={styles.label}>Date</Text>
+        <DateField value={date} onChange={setDate} minimumDate={new Date()} placeholder="Pick a date" />
+        <Text style={styles.label}>Start time</Text>
+        <ClockField value={startTime} onChange={setStartTime} placeholder="Pick a time" />
+        <Text style={styles.label}>Arrive by (optional)</Text>
+        <ClockField value={arriveBy} onChange={setArriveBy} placeholder="Optional" />
+        <Text style={styles.label}>Location</Text>
+        <TextInput
+          style={styles.input}
+          value={location}
+          onChangeText={setLocation}
+          placeholder="Place / address"
+          placeholderTextColor={colors.textMuted}
+        />
+        <Text style={styles.label}>Directions link (optional)</Text>
+        <TextInput
+          style={styles.input}
+          value={directions}
+          onChangeText={setDirections}
+          placeholder="Blank = a map of the location"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+        />
+        <Text style={styles.label}>Venue notes (parking, dress code…)</Text>
+        <TextInput
+          style={[styles.input, styles.multiline]}
+          value={venueNotes}
+          onChangeText={setVenueNotes}
+          placeholder="Optional"
+          placeholderTextColor={colors.textMuted}
+          multiline
+        />
+      </Card>
+      <Card>
+        <Text style={styles.label}>Headcount limit (optional)</Text>
+        <NumberField value={capacity} onChange={setCapacity} min={1} max={300} placeholder="No limit" />
+        <Text style={styles.hint}>Players plus their guests. Extra RSVPs go on the waitlist.</Text>
+        <Text style={styles.label}>Cost per person, $ (optional)</Text>
+        <NumberField value={cost} onChange={setCost} min={0} max={500} step={5} placeholder="Free" icon="cash-outline" />
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>Players can bring guests (just a number)</Text>
+          <Switch
+            value={allowGuests}
+            onValueChange={setAllowGuests}
+            trackColor={{ true: colors.gold, false: colors.border }}
+            thumbColor="#fff"
+          />
+        </View>
+        <Text style={styles.label}>Details for invitees (optional)</Text>
+        <TextInput
+          style={[styles.input, styles.multiline]}
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Optional"
+          placeholderTextColor={colors.textMuted}
+          multiline
+        />
+      </Card>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Button label="Create event" onPress={submit} loading={create.isPending} />
+    </>
   );
 }
 
@@ -230,6 +376,24 @@ const styles = StyleSheet.create({
   },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.gold },
   hint: { color: colors.textMuted, fontSize: 13 },
+  input: {
+    backgroundColor: colors.bg,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    color: colors.text,
+    fontSize: 16,
+  },
+  multiline: { minHeight: 64, textAlignVertical: "top" },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  switchLabel: { color: colors.text, fontSize: 15, flexShrink: 1 },
   error: { color: colors.red, fontWeight: "600" },
   defaultRow: {
     flexDirection: "row",

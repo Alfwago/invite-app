@@ -13,6 +13,7 @@ import type { SiteInvitePayload } from "@/src/siteInvites";
 import type {
   BoardMessage,
   CreateNextEventBody,
+  NonSkatingEventBody,
   EventMessagesResponse,
   EventCandidates,
   EventDetail,
@@ -527,6 +528,17 @@ export function useCreateNextEvent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateNextEventBody) => api.createNextEvent(body),
+    onSuccess: (fresh) => {
+      qc.setQueryData(keys.event(fresh.id), fresh);
+      qc.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}
+
+export function useCreateNonSkatingEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: NonSkatingEventBody) => api.createNonSkatingEvent(body),
     onSuccess: (fresh) => {
       qc.setQueryData(keys.event(fresh.id), fresh);
       qc.invalidateQueries({ queryKey: ["events"] });

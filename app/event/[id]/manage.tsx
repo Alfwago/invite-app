@@ -610,6 +610,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
             min={0}
             max={skating ? 100 : 500}
             placeholder="—"
+            icon="cash-outline"
           />
         </Field>
       ) : null}
@@ -1412,6 +1413,7 @@ function RosterCard({
               name={p.name}
               isGoalie={p.is_goalie}
               isDirector={p.is_director}
+              isHost={p.is_host}
               isAssistantDirector={p.is_assistant_director}
               isActingDirector={p.is_acting_director}
               payOverride={p.pay_override}
@@ -1915,6 +1917,7 @@ function RosterAdminRow({
   name,
   isGoalie,
   isDirector,
+  isHost,
   isAssistantDirector,
   isActingDirector,
   payOverride,
@@ -1950,6 +1953,8 @@ function RosterAdminRow({
   name: string;
   isGoalie: boolean;
   isDirector?: boolean;
+  /** Creator of a non-skating event — "Host" (server 0.40.0+). */
+  isHost?: boolean;
   isAssistantDirector?: boolean;
   /** The AD standing in for an absent ND (server 0.34+). */
   isActingDirector?: boolean;
@@ -1993,6 +1998,7 @@ function RosterAdminRow({
   // A director playing goalie keeps "ND" and gets "G" too (1.8.1).
   const goldTag = roleTag({
     is_goalie: isGoalie,
+    is_host: isHost,
     is_director: isDirector,
     is_acting_director: isActingDirector,
     is_assistant_director: isAssistantDirector,
