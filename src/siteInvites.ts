@@ -20,38 +20,25 @@ export function parseInviteEmails(raw: string): string[] {
   return out;
 }
 
-/** A first/last name only makes sense for one person — with several
- *  addresses the name boxes are disabled and nothing is sent for them. */
-export function namesApply(emails: string[]): boolean {
-  return emails.length === 1;
-}
-
+// No name fields (owner 2026-10-27): invites go by email, mostly in
+// batches; the new player adds their name when they sign up. (The server
+// still accepts first_name / last_name for older apps.)
 export interface SiteInvitePayload {
   emails: string;
-  first_name?: string;
-  last_name?: string;
   director_id?: number;
 }
 
 export function buildInvitePayload({
   emailText,
-  firstName,
-  lastName,
   directorId,
   canChooseDirector,
 }: {
   emailText: string;
-  firstName: string;
-  lastName: string;
   directorId: number | null;
   canChooseDirector: boolean;
 }): SiteInvitePayload {
   const emails = parseInviteEmails(emailText);
   const payload: SiteInvitePayload = { emails: emails.join(", ") };
-  if (namesApply(emails)) {
-    if (firstName.trim()) payload.first_name = firstName.trim();
-    if (lastName.trim()) payload.last_name = lastName.trim();
-  }
   // Directors always invite under themselves; the server ignores the field
   // for them anyway, so only an admin's pick is sent.
   if (canChooseDirector && directorId != null) payload.director_id = directorId;

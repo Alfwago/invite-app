@@ -10,7 +10,6 @@ import {
   buildInvitePayload,
   inviteResultBadge,
   inviteSummary,
-  namesApply,
   parseInviteEmails,
 } from "@/src/siteInvites";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -22,8 +21,6 @@ import { colors, font, radius, spacing } from "@/src/theme";
 export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
   const send = useSendSiteInvites();
   const [emailText, setEmailText] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [directorId, setDirectorId] = useState<string | null>(
     options.can_choose_director ? String(options.default_director_id) : null,
   );
@@ -32,7 +29,6 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
   const [error, setError] = useState("");
 
   const emails = parseInviteEmails(emailText);
-  const nameOk = emails.length <= 1;
   const directorOptions = options.directors.map((d) => ({ value: String(d.id), label: d.name }));
 
   const onSend = () => {
@@ -41,8 +37,6 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
     setError("");
     const payload = buildInvitePayload({
       emailText,
-      firstName,
-      lastName,
       directorId: directorId ? Number(directorId) : null,
       canChooseDirector: options.can_choose_director,
     });
@@ -56,10 +50,6 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
         // (sent, has an account, someone else's invitee) are done here.
         const leftOver = data.results.filter((r) => r.status === "invalid").map((r) => r.email);
         setEmailText(leftOver.join(", "));
-        if (leftOver.length === 0) {
-          setFirstName("");
-          setLastName("");
-        }
       },
       onError: (e) => setError(e instanceof ApiError ? e.detail : "Couldn't send. Try again."),
     });
@@ -85,30 +75,6 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
         value={emailText}
         onChangeText={setEmailText}
       />
-
-      <View style={styles.row}>
-        <TextInput
-          style={[styles.input, styles.half, !nameOk && styles.disabled]}
-          placeholder="First name"
-          placeholderTextColor={colors.textMuted}
-          editable={nameOk}
-          value={firstName}
-          onChangeText={setFirstName}
-        />
-        <TextInput
-          style={[styles.input, styles.half, !nameOk && styles.disabled]}
-          placeholder="Last name"
-          placeholderTextColor={colors.textMuted}
-          editable={nameOk}
-          value={lastName}
-          onChangeText={setLastName}
-        />
-      </View>
-      <Text style={styles.meta}>
-        {namesApply(emails) || emails.length === 0
-          ? "Name is optional."
-          : "A name is only used when you invite one email."}
-      </Text>
 
       {options.can_choose_director ? (
         <>
@@ -164,8 +130,6 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
 const styles = StyleSheet.create({
   meta: { color: colors.textMuted, fontSize: font.sm },
   label: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
-  row: { flexDirection: "row", gap: spacing.sm },
-  half: { flex: 1 },
   input: {
     backgroundColor: colors.cardRaised,
     borderColor: colors.border,
@@ -177,7 +141,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   emails: { minHeight: 64, textAlignVertical: "top" },
-  disabled: { opacity: 0.4 },
   error: { color: colors.red, fontWeight: "600" },
   results: { gap: spacing.sm, marginTop: spacing.xs },
   summary: { color: colors.text, fontSize: font.sm, fontWeight: "700" },

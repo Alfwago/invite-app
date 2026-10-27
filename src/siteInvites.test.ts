@@ -5,7 +5,6 @@ import {
   buildInvitePayload,
   inviteResultBadge,
   inviteSummary,
-  namesApply,
   parseInviteEmails,
 } from "./siteInvites.ts";
 
@@ -17,40 +16,15 @@ test("parseInviteEmails: commas, semicolons, new lines; trimmed, lower-cased, de
   assert.deepEqual(parseInviteEmails("   "), []);
 });
 
-test("namesApply: only for exactly one address", () => {
-  assert.equal(namesApply([]), false);
-  assert.equal(namesApply(["a@example.test"]), true);
-  assert.equal(namesApply(["a@example.test", "b@example.test"]), false);
-});
-
-test("buildInvitePayload: a single address carries the trimmed name", () => {
+test("buildInvitePayload: emails only, no names (owner 2026-10-27)", () => {
   assert.deepEqual(
-    buildInvitePayload({
-      emailText: "a@example.test",
-      firstName: " Ann ",
-      lastName: "",
-      directorId: null,
-      canChooseDirector: false,
-    }),
-    { emails: "a@example.test", first_name: "Ann" },
-  );
-});
-
-test("buildInvitePayload: several addresses drop the name", () => {
-  assert.deepEqual(
-    buildInvitePayload({
-      emailText: "a@example.test; b@example.test",
-      firstName: "Ann",
-      lastName: "Smith",
-      directorId: null,
-      canChooseDirector: false,
-    }),
+    buildInvitePayload({ emailText: "a@example.test; b@example.test", directorId: null, canChooseDirector: false }),
     { emails: "a@example.test, b@example.test" },
   );
 });
 
 test("buildInvitePayload: director_id only for an admin's pick", () => {
-  const base = { emailText: "a@example.test", firstName: "", lastName: "" };
+  const base = { emailText: "a@example.test" };
   assert.equal(buildInvitePayload({ ...base, directorId: 7, canChooseDirector: false }).director_id, undefined);
   assert.equal(buildInvitePayload({ ...base, directorId: 7, canChooseDirector: true }).director_id, 7);
   assert.equal(buildInvitePayload({ ...base, directorId: null, canChooseDirector: true }).director_id, undefined);
