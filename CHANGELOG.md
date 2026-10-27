@@ -3,7 +3,24 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-10-26 — 1.8.1: pending-account screen, roster row fix
+## 2026-10-27 — custom events, walk-on teams, email-only invites (ships in 1.8.0)
+
+**Owner 2026-10-27: 1.8.0 was never released, so everything below (this
+entry and the "1.8.1" one) ships together as 1.8.0 (build 35), Sunday
+Nov 1, with invite-server 0.40.0.**
+
+- **Non-skating events** (party, golf outing, Hockey Fest): "Who's Going"
+  instead of Roster, no goalies / Need Skaters / late-drop bits, guests are a
+  − / + count, cost per person, the creator shows as "Host". Admins and
+  Presidents create them from New event.
+- **Venue details** (any event): arrive-by, venue notes, Directions button,
+  a non-usual price ("Cost per player: $45"); family count on away skates;
+  Manage → Settings edits them.
+- **Walk-ons on pushed teams** are listed under Gold / Black (with the
+  jersey icon), not "Not on a team".
+- **Site invite is email only** — no first / last name boxes.
+
+## 2026-10-26 — 1.8.1 → ships as 1.8.0: pending-account screen, roster row fix
 
 **Pairs with invite-server 0.39.2** (on prod 2026-10-22).
 
