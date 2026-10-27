@@ -17,3 +17,10 @@ test("teams: Gold, Black, Not on a team (with walk-ons), Reserved", () => {
   const s = goingSections([p(1, "Gold"), p(2, "Black"), p(3, null)], [dp(9), dp(8, true)]);
   assert.deepEqual(s.map((x) => x.title), ["Gold Team (1)", "Black Team (1)", "Not on a team (2)", "Reserved by Director (1)"]);
 });
+
+test("a walk-on on a pushed team is listed under it (Gold's walk-on goalie, 2026-10-22)", () => {
+  const goalie = { ...dp(7), is_goalie: true, team: "Gold" } as unknown as DayPlayer;
+  const s = goingSections([p(1, "Gold"), p(2, "Black")], [goalie, dp(9)]);
+  assert.deepEqual(s.map((x) => x.title), ["Gold Team (2)", "Black Team (1)", "Not on a team (1)"]);
+  assert.deepEqual(s[0].dayPlayers.map((d) => d.id), [7]);
+});

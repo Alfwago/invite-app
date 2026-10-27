@@ -387,6 +387,9 @@ function DayPlayerLine({ dp }: { dp: DayPlayer }) {
         <Text style={styles.playerName}>{dp.name}</Text>
         {dp.is_goalie ? <Text style={styles.goldTag}>G</Text> : null}
         <Text style={styles.walkOn}>walk-on</Text>
+        {dp.team ? (
+          <Ionicons name="shirt" size={15} color={TEAM_TINT[dp.team]} accessibilityLabel={`${dp.team} Team`} />
+        ) : null}
       </View>
     </View>
   );

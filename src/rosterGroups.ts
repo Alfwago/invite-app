@@ -1,7 +1,7 @@
 import type { DayPlayer, RosterEntry } from "./api/types.ts";
 
 /** The Going tab once teams are published (server 0.38.0 #4, owner 4a A /
- *  4b A): Gold Team, Black Team, Not on a team (walk-ons too), then the
+ *  4b A): Gold Team, Black Team, Not on a team, then the
  *  director's reserved spots. The server already sends rows in team order
  *  (goalies first, then A-Z); this only splits them into sections. Before
  *  teams are published: one untitled section, then reserved spots. */
@@ -17,13 +17,25 @@ export function goingSections(players: RosterEntry[], dayPlayers: DayPlayer[]): 
   const teams = players.some((p) => p.team === "Gold" || p.team === "Black");
   const out: RosterSection[] = [];
   if (teams) {
-    const gold = players.filter((p) => p.team === "Gold");
-    const black = players.filter((p) => p.team === "Black");
+    // Walk-ons carry their pushed team too (server 0.40.0+; null before) —
+    // a walk-on goalie in Gold's net is on Gold (owner 2026-10-27).
+    const side = (team: string) => ({
+      players: players.filter((p) => p.team === team),
+      dayPlayers: walkOns.filter((d) => d.team === team),
+    });
+    const gold = side("Gold");
+    const black = side("Black");
     const none = players.filter((p) => p.team !== "Gold" && p.team !== "Black");
-    if (gold.length) out.push({ title: `Gold Team (${gold.length})`, players: gold, dayPlayers: [] });
-    if (black.length) out.push({ title: `Black Team (${black.length})`, players: black, dayPlayers: [] });
-    if (none.length || walkOns.length) {
-      out.push({ title: `Not on a team (${none.length + walkOns.length})`, players: none, dayPlayers: walkOns });
+    const noneWalkOns = walkOns.filter((d) => d.team !== "Gold" && d.team !== "Black");
+    const n = (s: { players: unknown[]; dayPlayers: unknown[] }) => s.players.length + s.dayPlayers.length;
+    if (n(gold)) out.push({ title: `Gold Team (${n(gold)})`, ...gold });
+    if (n(black)) out.push({ title: `Black Team (${n(black)})`, ...black });
+    if (none.length || noneWalkOns.length) {
+      out.push({
+        title: `Not on a team (${none.length + noneWalkOns.length})`,
+        players: none,
+        dayPlayers: noneWalkOns,
+      });
     }
   } else if (players.length || walkOns.length) {
     out.push({ title: null, players, dayPlayers: walkOns });

@@ -349,6 +349,8 @@ export interface DayPlayer {
   is_reservation?: boolean;
   /** Directors only ("" for players). */
   reservation_note?: string;
+  /** "Gold"/"Black" once teams are pushed (server 0.40.0+), else null. */
+  team?: "Gold" | "Black" | null;
 }
 
 export interface WaitlistEntry {
