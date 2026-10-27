@@ -29,7 +29,7 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-/** "4 / 12 skaters" style capacity label. */
-export function rosterLabel(skaters: number, capacity: number | null): string {
-  return capacity != null ? `${skaters} / ${capacity} skaters` : `${skaters} skaters`;
+/** "4 / 12 skaters" style capacity label ("4 / 60 going" for a party). */
+export function rosterLabel(skaters: number, capacity: number | null, noun = "skaters"): string {
+  return capacity != null ? `${skaters} / ${capacity} ${noun}` : `${skaters} ${noun}`;
 }

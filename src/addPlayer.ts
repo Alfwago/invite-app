@@ -21,6 +21,8 @@ export interface AddModeInput {
   canBorrow?: boolean;
   /** `manage.can_reserve`: undefined before server 0.38.0 → no Reserve. */
   canReserve?: boolean;
+  /** False for a non-skating event (server 0.40.0+): "Members", no Borrow. */
+  isSkating?: boolean;
 }
 
 /**
@@ -39,13 +41,14 @@ export function addModeOptions(input: AddModeInput): AddModeOption[] {
   const options: AddModeOption[] = [
     {
       key: "group",
-      label: "Skate Group",
+      label: input.isSkating === false ? "Members" : "Skate Group",
       description: input.nightName ? `Members of ${input.nightName}.` : "Players with an account.",
       disabledReason: null,
     },
   ];
-  // An older server never sends can_borrow: leave Borrow out entirely.
-  if (input.canBorrow !== undefined) {
+  // An older server never sends can_borrow: leave Borrow out entirely. A
+  // party has no skate group to borrow into.
+  if (input.canBorrow !== undefined && input.isSkating !== false) {
     options.push({
       key: "borrow",
       label: "Borrow",

@@ -41,7 +41,7 @@ import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
 import { useToast } from "@/src/components/Toast";
 import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented, Tap } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
-import { fillPct, rosterHealth } from "@/src/roster";
+import { fillPct, rosterHealth, spotsOpen } from "@/src/roster";
 import { roleTag } from "@/src/roleTag";
 import {
   useCandidates,
@@ -114,7 +114,7 @@ export default function ManageEventScreen() {
                 adjustsFontSizeToFit
                 minimumFontScale={0.8}
               >
-                {t.label}
+                {t.key === "roster" && event.is_skating === false ? "Who's Going" : t.label}
               </Text>
             </Tap>
           ))}
@@ -154,6 +154,10 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
   const no = event.players.filter((p) => p.status === "NO").length;
   const noResp = manage.invitees.filter((i) => i.status === "NO_RESPONSE").length;
   const pct = fillPct(r);
+  // A non-skating event (party, golf outing — server 0.40.0+): no goalies,
+  // Team Generator or skater wording (owner 2026-10-27).
+  const skating = event.is_skating !== false;
+  const open = spotsOpen(r);
 
   return (
     <>
@@ -167,14 +171,18 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
         {event.location ? <Text style={styles.meta}>{event.location}</Text> : null}
         <View style={styles.badgeRow}>
           <Badge text={event.status} tone="neutral" />
-          {event.rsvp_locked ? <Badge text="SKATERS LOCKED" tone="bad" /> : null}
-          {event.goalie_rsvp_locked ? <Badge text="GOALIES LOCKED" tone="bad" /> : null}
+          {event.rsvp_locked ? (
+            <Badge text={skating ? "SKATERS LOCKED" : "RSVPS LOCKED"} tone="bad" />
+          ) : null}
+          {skating && event.goalie_rsvp_locked ? <Badge text="GOALIES LOCKED" tone="bad" /> : null}
         </View>
-        <Button
-          label="Team generator"
-          variant="secondary"
-          onPress={() => router.push(`/teams?event=${event.id}` as never)}
-        />
+        {skating ? (
+          <Button
+            label="Team generator"
+            variant="secondary"
+            onPress={() => router.push(`/teams?event=${event.id}` as never)}
+          />
+        ) : null}
       </Card>
 
       <Card>
@@ -183,23 +191,27 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
           <StatTile
             value={`${r.skaters}`}
             sub={r.capacity != null ? `/ ${r.capacity}` : undefined}
-            label="Skaters"
+            label={skating ? "Skaters" : "Going"}
           />
-          <StatTile
-            value={`${r.goalies}`}
-            sub={r.goalies_needed != null ? `/ ${r.goalies_needed}` : undefined}
-            label="Goalies"
-          />
+          {skating ? (
+            <StatTile
+              value={`${r.goalies}`}
+              sub={r.goalies_needed != null ? `/ ${r.goalies_needed}` : undefined}
+              label="Goalies"
+            />
+          ) : null}
           <StatTile value={`${r.waitlist}`} label="Waitlist" />
         </View>
         {pct != null ? <FillBar pct={pct} tone={rosterHealth(r)} /> : null}
         <Text style={styles.meta}>
           {r.is_full
-            ? "Roster full"
-            : r.skater_spots_open != null
-              ? `${r.skater_spots_open} skater spot${r.skater_spots_open === 1 ? "" : "s"} open`
-              : `${r.skaters} in`}
-          {(r.goalie_spots_open ?? 0) > 0 ? ` · needs ${r.goalie_spots_open} goalie` : ""}
+            ? skating
+              ? "Roster full"
+              : "Full"
+            : open != null
+              ? `${open} ${skating ? "skater " : ""}spot${open === 1 ? "" : "s"} open`
+              : `${r.skaters} ${skating ? "in" : "going"}`}
+          {skating && (r.goalie_spots_open ?? 0) > 0 ? ` · needs ${r.goalie_spots_open} goalie` : ""}
         </Text>
       </Card>
 
@@ -211,7 +223,7 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
           <CountCell label="No" value={no} />
           <CountCell label="No response" value={noResp} />
           <CountCell label="Guests" value={r.guest_yes} />
-          <CountCell label="Day players" value={r.day_players} />
+          <CountCell label={skating ? "Day players" : "Walk-ons"} value={r.day_players} />
         </View>
       </Card>
 
@@ -292,6 +304,7 @@ function AfterSkateCard({ event }: { event: EventDetail }) {
   const [skateFee, setSkateFee] = useState(hasSkateFee ? String(m.skate_fee) : "");
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
+  const skating = event.is_skating !== false;
 
   function save() {
     setError(null);
@@ -303,11 +316,13 @@ function AfterSkateCard({ event }: { event: EventDetail }) {
 
   return (
     <Card>
-      <Text style={styles.heading}>After the skate</Text>
+      <Text style={styles.heading}>{skating ? "After the skate" : "After the event"}</Text>
       <Text style={styles.hint}>
-        This skate is over, so its other settings are locked. Fines can still be settled.
+        {skating
+          ? "This skate is over, so its other settings are locked. Fines can still be settled."
+          : "This event is over, so its other settings are locked."}
       </Text>
-      {hasFineSetting ? (
+      {hasFineSetting && skating ? (
         <>
           <View style={styles.afterSkateRow}>
             <Text style={styles.label} onPress={() => setFineLateDrops(!fineLateDrops)}>
@@ -331,14 +346,14 @@ function AfterSkateCard({ event }: { event: EventDetail }) {
         </>
       ) : null}
       {hasSkateFee ? (
-        <Field label="Skate fee, $ (a late drop is fined the same)">
-          <NumberField value={skateFee} onChange={setSkateFee} min={0} max={100} placeholder="—" />
+        <Field label={skating ? "Skate fee, $ (a late drop is fined the same)" : "Cost per person, $"}>
+          <NumberField value={skateFee} onChange={setSkateFee} min={0} max={skating ? 100 : 500} placeholder="—" />
         </Field>
       ) : null}
       {hasFineSetting || hasSkateFee ? (
         <>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Button label="Save fine settings" onPress={save} loading={patch.isPending} />
+          <Button label={skating ? "Save fine settings" : "Save"} onPress={save} loading={patch.isPending} />
         </>
       ) : null}
     </Card>
@@ -353,6 +368,13 @@ function SettingsCard({ event }: { event: EventDetail }) {
   const [startTime, setStartTime] = useState(event.start_time?.slice(0, 5) ?? "");
   const [date, setDate] = useState(m.date ?? "");
   const [location, setLocation] = useState(event.location ?? "");
+  // Venue details (server 0.40.0+; hidden on an older server).
+  const skating = event.is_skating !== false;
+  const hasVenue = typeof m.directions_url === "string";
+  const [arriveBy, setArriveBy] = useState(event.arrive_by?.slice(0, 5) ?? "");
+  const [directions, setDirections] = useState(m.directions_url ?? "");
+  const [venueNotes, setVenueNotes] = useState(event.venue_notes ?? "");
+  const [allowFamily, setAllowFamily] = useState(!!event.allow_family);
   const [capacity, setCapacity] = useState(event.capacity != null ? String(event.capacity) : "");
   const [goaliesNeeded, setGoaliesNeeded] = useState(
     event.goalies_needed != null ? String(event.goalies_needed) : "",
@@ -390,6 +412,10 @@ function SettingsCard({ event }: { event: EventDetail }) {
       setError("Pick a valid start time, or clear it.");
       return;
     }
+    if (arriveBy && !/^\d{1,2}:\d{2}$/.test(arriveBy.trim())) {
+      setError("Pick a valid arrive-by time, or clear it.");
+      return;
+    }
     const body: EventPatchBody = {
       title: title.trim(),
       date: date.trim() || undefined,
@@ -406,6 +432,14 @@ function SettingsCard({ event }: { event: EventDetail }) {
       whiskey_guy_enabled: whiskey,
       whiskey_guy_pays: whiskeyPays,
       ...fineSettingsPatch(m, fineLateDrops, skateFee),
+      ...(hasVenue
+        ? {
+            arrive_by: arriveBy.trim() ? `${arriveBy.trim()}:00` : null,
+            directions_url: directions.trim(),
+            venue_notes: venueNotes.trim(),
+            allow_family: skating && allowFamily,
+          }
+        : {}),
     };
     patch.mutate(body, {
       onError: (e) => setError(errText(e)),
@@ -416,7 +450,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
     <Card>
       <Text style={styles.heading}>Event settings</Text>
 
-      <Field label="Title (blank = night name)">
+      <Field label={skating ? "Title (blank = night name)" : "Title"}>
         <TextInput
           style={styles.input}
           value={title}
@@ -448,27 +482,65 @@ function SettingsCard({ event }: { event: EventDetail }) {
         />
       </Field>
 
+      {hasVenue ? (
+        <View style={styles.venueBox}>
+          <Text style={styles.label}>{skating ? "Different venue details" : "Venue details"}</Text>
+          <Field label="Arrive by">
+            <ClockField value={arriveBy} onChange={setArriveBy} placeholder="Optional" />
+          </Field>
+          <Field label="Directions link">
+            <TextInput
+              style={styles.input}
+              value={directions}
+              onChangeText={setDirections}
+              placeholder="Blank = a map of the location"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+            />
+          </Field>
+          <Field label="Venue notes">
+            <TextInput
+              style={[styles.input, styles.multiline]}
+              value={venueNotes}
+              onChangeText={setVenueNotes}
+              placeholder="Parking, entrance…"
+              placeholderTextColor={colors.textMuted}
+              multiline
+            />
+          </Field>
+          {skating ? (
+            <ToggleRow label="Ask how many family are coming" value={allowFamily} onChange={setAllowFamily} />
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={styles.twoCol}>
-        <Field label="Roster limit" style={styles.col}>
+        <Field label={skating ? "Roster limit" : "Headcount limit"} style={styles.col}>
           <NumberField
             value={capacity}
             onChange={setCapacity}
-            min={4}
-            max={60}
+            min={skating ? 4 : 1}
+            max={skating ? 60 : 300}
             placeholder="No limit"
           />
         </Field>
-        <Field label="Goalies needed" style={styles.col}>
-          <NumberField
-            value={goaliesNeeded}
-            onChange={setGoaliesNeeded}
-            min={0}
-            max={6}
-            placeholder="—"
-          />
-        </Field>
+        {skating ? (
+          <Field label="Goalies needed" style={styles.col}>
+            <NumberField
+              value={goaliesNeeded}
+              onChange={setGoaliesNeeded}
+              min={0}
+              max={6}
+              placeholder="—"
+            />
+          </Field>
+        ) : null}
       </View>
 
+      {/* No late-change warning or fines at a non-skating event. */}
+      {skating ? (
       <View style={styles.twoCol}>
         <View style={[styles.field, styles.col]}>
           <Text style={styles.label} onLayout={(e) => setWarnLabelH(e.nativeEvent.layout.height)}>
@@ -522,7 +594,8 @@ function SettingsCard({ event }: { event: EventDetail }) {
           </View>
         ) : null}
       </View>
-      {hasFineSetting ? (
+      ) : null}
+      {hasFineSetting && skating ? (
         <Text style={styles.hint}>
           {fineLateDrops
             ? "A skater who drops inside the warning window owes the skate fee. Goalies, the night's director and comped players never do."
@@ -530,8 +603,14 @@ function SettingsCard({ event }: { event: EventDetail }) {
         </Text>
       ) : null}
       {hasSkateFee ? (
-        <Field label="Skate fee, $ (a late drop is fined the same)">
-          <NumberField value={skateFee} onChange={setSkateFee} min={0} max={100} placeholder="—" />
+        <Field label={skating ? "Skate fee, $ (a late drop is fined the same)" : "Cost per person, $ (0 = free)"}>
+          <NumberField
+            value={skateFee}
+            onChange={setSkateFee}
+            min={0}
+            max={skating ? 100 : 500}
+            placeholder="—"
+          />
         </Field>
       ) : null}
 
@@ -539,19 +618,23 @@ function SettingsCard({ event }: { event: EventDetail }) {
       <View style={styles.toggleGrid}>
         <ToggleButton label="Guests" value={allowGuests} onChange={setAllowGuests} />
         <ToggleButton label="Auto Waitlist" value={autoWaitlist} onChange={setAutoWaitlist} />
-        <ToggleButton label="Beer Guy" value={beer} onChange={setBeer} />
-        <ToggleButton label="Whiskey Guy" value={whiskey} onChange={setWhiskey} />
+        {skating ? <ToggleButton label="Beer Guy" value={beer} onChange={setBeer} /> : null}
+        {skating ? <ToggleButton label="Whiskey Guy" value={whiskey} onChange={setWhiskey} /> : null}
       </View>
-      {whiskey ? (
+      {skating && whiskey ? (
         <ToggleRow label="WG Pays" value={whiskeyPays} onChange={setWhiskeyPays} />
       ) : null}
       <View style={styles.lockRow}>
-        <ToggleButton label="Roster Lock" value={rsvpLocked} onChange={setRsvpLocked} />
-        <ToggleButton label="Goalie Lock" value={goalieLocked} onChange={setGoalieLocked} />
+        <ToggleButton label={skating ? "Roster Lock" : "RSVP Lock"} value={rsvpLocked} onChange={setRsvpLocked} />
+        {skating ? (
+          <ToggleButton label="Goalie Lock" value={goalieLocked} onChange={setGoalieLocked} />
+        ) : null}
       </View>
       <Text style={styles.hint}>
-        Roster and Goalie lock turn on automatically once the first player/goalie is waitlisted. Turn
-        off and save to unlock.
+        {skating
+          ? "Roster and Goalie lock turn on automatically once the first player/goalie is waitlisted."
+          : "RSVP lock turns on automatically once the first person is waitlisted."}{" "}
+        Turn off and save to unlock.
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -1292,6 +1375,7 @@ function RosterCard({
     isPast: event.is_past,
     canBorrow: event.manage?.can_borrow,
     canReserve: event.manage?.can_reserve,
+    isSkating: event.is_skating,
   });
   const mode = resolveAddMode(addMode, modes);
   const current = modes.find((m) => m.key === mode)!;
@@ -1300,7 +1384,7 @@ function RosterCard({
   return (
     <>
       <Card>
-        <Text style={styles.heading}>Roster</Text>
+        <Text style={styles.heading}>{event.is_skating === false ? "Who's Going" : "Roster"}</Text>
 
         <Text style={styles.subhead}>Going ({going.length})</Text>
         {presentEligible.length > 0 || paidEligible.length > 0 ? (
@@ -1555,16 +1639,20 @@ function RosterCard({
                 placeholderTextColor={colors.textMuted}
                 accessibilityLabel="Walk-on name"
               />
-              <Tap
-                onPress={() => setWalkOnGoalie((g) => !g)}
-                style={[styles.goaliePick, walkOnGoalie && styles.goaliePickOn]}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: walkOnGoalie }}
-                accessibilityLabel="Goalie"
-              >
-                <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
-              </Tap>
+              {event.is_skating !== false ? (
+                <Tap
+                  onPress={() => setWalkOnGoalie((g) => !g)}
+                  style={[styles.goaliePick, walkOnGoalie && styles.goaliePickOn]}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: walkOnGoalie }}
+                  accessibilityLabel="Goalie"
+                >
+                  <Text style={[styles.goaliePickText, walkOnGoalie && styles.goaliePickTextOn]}>G</Text>
+                </Tap>
+              ) : null}
             </View>
+            {/* No goalie or rating at a non-skating event. */}
+            {event.is_skating !== false ? (
             <View style={styles.walkOnRow}>
               <TextInput
                 {...walkOnRatingFocus}
@@ -1579,6 +1667,7 @@ function RosterCard({
                 {walkOnGoalie ? "0–3, defaults to 2.0" : "0–5, defaults to 3.0"} · feeds Team Generator
               </Text>
             </View>
+            ) : null}
             <Button
               label="Add walk-on"
               variant="secondary"
@@ -1591,10 +1680,11 @@ function RosterCard({
         {mode === "reserve" ? (
           <ReserveSpotsForm
             busy={busy}
+            skating={event.is_skating !== false}
             onReserve={(count, isGoalie, note) =>
               act(
                 { action: "reserve_spots", count, is_goalie: isGoalie, note },
-                `Reserved ${count} ${isGoalie ? "goalie" : "skater"} spot${count === 1 ? "" : "s"}`,
+                `Reserved ${count} ${isGoalie ? "goalie " : event.is_skating === false ? "" : "skater "}spot${count === 1 ? "" : "s"}`,
               )
             }
           />
@@ -1608,9 +1698,12 @@ function RosterCard({
  *  and a note only directors see. */
 function ReserveSpotsForm({
   busy,
+  skating = true,
   onReserve,
 }: {
   busy: boolean;
+  /** False at a non-skating event: plain spots, no goalie choice. */
+  skating?: boolean;
   onReserve: (count: number, isGoalie: boolean, note: string) => void;
 }) {
   const [count, setCount] = useState(1);
@@ -1640,15 +1733,17 @@ function ReserveSpotsForm({
           <Ionicons name="add" size={18} color={colors.text} />
         </Tap>
         <Text style={[styles.muted, styles.grow]}>spot{count === 1 ? "" : "s"}</Text>
-        <Tap
-          onPress={() => setGoalie((g) => !g)}
-          style={[styles.goaliePick, goalie && styles.goaliePickOn]}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: goalie }}
-          accessibilityLabel="Goalie spots"
-        >
-          <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
-        </Tap>
+        {skating ? (
+          <Tap
+            onPress={() => setGoalie((g) => !g)}
+            style={[styles.goaliePick, goalie && styles.goaliePickOn]}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: goalie }}
+            accessibilityLabel="Goalie spots"
+          >
+            <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
+          </Tap>
+        ) : null}
       </View>
       <TextInput
         {...noteFocus}
@@ -1661,7 +1756,7 @@ function ReserveSpotsForm({
         accessibilityLabel="Reservation note"
       />
       <Button
-        label={`Reserve ${count} ${goalie ? "goalie" : "skater"} spot${count === 1 ? "" : "s"}`}
+        label={`Reserve ${count} ${goalie ? "goalie " : skating ? "skater " : ""}spot${count === 1 ? "" : "s"}`}
         variant="secondary"
         onPress={() => {
           onReserve(count, goalie, note.trim());
@@ -2690,6 +2785,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     color: colors.text,
     fontSize: 16,
+  },
+  multiline: { minHeight: 64, textAlignVertical: "top" },
+  venueBox: {
+    gap: spacing.sm,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
   },
   textarea: {
     backgroundColor: colors.bg,

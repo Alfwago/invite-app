@@ -50,3 +50,8 @@ test("resolveAddMode keeps a usable choice, else Skate Group", () => {
   const off = addModeOptions({ ...open, canBorrow: false });
   assert.equal(resolveAddMode("borrow", off), "group");
 });
+
+test("a non-skating event adds Members, never Borrow", () => {
+  const opts = addModeOptions({ nightName: null, status: "OPEN", canBorrow: false, canReserve: true, isSkating: false });
+  assert.deepEqual(opts.map((o) => o.label), ["Members", "Walk-On", "Reserve"]);
+});

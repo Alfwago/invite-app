@@ -5,7 +5,7 @@ import type { EventSummary, RsvpStatus } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { Badge, FillBar, type BadgeTone } from "@/src/components/ui";
 import { formatEventDate, formatTime, rosterLabel } from "@/src/format";
-import { fillPct, rosterBadges, rosterHealth } from "@/src/roster";
+import { fillPct, isSkating, rosterBadges, rosterHealth } from "@/src/roster";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 const STATUS_TONE: Record<RsvpStatus, BadgeTone> = {
@@ -28,6 +28,7 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
   const status = event.my_rsvp?.status ?? null;
   const r = event.roster;
   const pct = fillPct(r);
+  const skating = isSkating(r);
 
   return (
     <Link href={`/event/${event.id}`} asChild>
@@ -46,13 +47,19 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
           {event.start_time ? ` · ${formatTime(event.start_time)}` : ""}
           {!compact && event.location ? ` · ${event.location}` : ""}
         </Text>
+        {/* A party's cost, or a skate's price when it isn't the usual one (server 0.40.0+). */}
+        {event.cost_per_person ? (
+          <Text style={styles.meta}>
+            Cost per {skating ? "player" : "person"}: ${event.cost_per_person}
+          </Text>
+        ) : null}
 
         {pct != null ? <FillBar pct={pct} tone={rosterHealth(r)} /> : null}
 
         <View style={styles.bottomRow}>
           <Text style={styles.roster}>
-            {rosterLabel(r.skaters, r.capacity)}
-            {r.goalies_needed != null ? ` · ${r.goalies} / ${r.goalies_needed} G` : ""}
+            {rosterLabel(r.skaters, r.capacity, skating ? "skaters" : "going")}
+            {skating && r.goalies_needed != null ? ` · ${r.goalies} / ${r.goalies_needed} G` : ""}
           </Text>
           <View style={styles.badges}>
             {rosterBadges(r).map((b) => (

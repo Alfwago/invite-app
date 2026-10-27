@@ -16,6 +16,8 @@ import { useMutation } from "@tanstack/react-query";
 const CHOICES: RsvpBody["status"][] = ["YES", "NO", "MAYBE"];
 const SKILLS: RsvpGuest["skill"][] = ["A", "B", "C", "D"];
 const MAX_GUESTS = 10;
+// A party's guests and an away skate's family are just a number (server 0.40.0).
+const MAX_COUNT = 20;
 
 // Selected-choice colour for the segmented control (a decision indicator,
 // not a roster-health signal).
@@ -51,12 +53,17 @@ export function RsvpControls({ event }: { event: EventDetail }) {
   const [beerGuy, setBeerGuy] = useState(current?.is_beer_guy ?? false);
   const [whiskeyGuy, setWhiskeyGuy] = useState(current?.is_whiskey_guy ?? false);
   const [guests, setGuests] = useState<RsvpGuest[]>(current?.guests ?? []);
+  const [guestCount, setGuestCount] = useState(current?.guest_count ?? 0);
+  const [familyCount, setFamilyCount] = useState(current?.family_count ?? 0);
   const [notices, setNotices] = useState<string[]>([]);
 
-  const showGoalieToggle = choice === "YES" && !!me?.is_goalie_skater;
+  // Non-skating event (party, golf outing): no goalie question, guests are a count.
+  const skating = event.is_skating !== false;
+  const showGoalieToggle = skating && choice === "YES" && !!me?.is_goalie_skater;
   const showBeer = choice === "YES" && event.beer_guy_enabled;
   const showWhiskey = choice === "YES" && event.whiskey_guy_enabled;
   const showGuests = choice === "YES" && event.allow_guests;
+  const showFamily = skating && choice === "YES" && !!event.allow_family;
 
   function setGuest(i: number, patch: Partial<RsvpGuest>) {
     setGuests((g) => g.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
@@ -121,11 +128,14 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       if (me?.is_goalie_skater) body.is_goalie = asGoalie;
       if (event.beer_guy_enabled) body.beer_guy = beerGuy;
       if (event.whiskey_guy_enabled) body.whiskey_guy = whiskeyGuy;
-      if (event.allow_guests) {
+      if (event.allow_guests && !skating) {
+        body.guest_count = guestCount;
+      } else if (event.allow_guests) {
         const named = guests.map((g) => ({ ...g, name: g.name.trim() })).filter((g) => g.name);
         body.guests = named;
         body.guest_count = named.length;
       }
+      if (event.allow_family) body.family_count = familyCount;
     }
     try {
       const fresh = await rsvp.mutateAsync(body);
@@ -160,8 +170,9 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       {locked ? (
         <Text style={styles.currentLine}>
           You&apos;re in as {current!.status.replace("_", " ")}
-          {current!.is_goalie ? " (goalie)" : ""}
+          {current!.is_goalie && skating ? " (goalie)" : ""}
           {current!.guest_count > 0 ? ` +${current!.guest_count} guest${current!.guest_count === 1 ? "" : "s"}` : ""}
+          {(current!.family_count ?? 0) > 0 ? ` · ${current!.family_count} family` : ""}
         </Text>
       ) : null}
 
@@ -192,7 +203,19 @@ export function RsvpControls({ event }: { event: EventDetail }) {
         <ToggleRow label="I can be Whiskey Guy" value={whiskeyGuy} onChange={setWhiskeyGuy} />
       ) : null}
 
-      {showGuests ? (
+      {showGuests && !skating ? (
+        <CountRow label="Guests you're bringing" value={guestCount} onChange={setGuestCount} />
+      ) : null}
+      {showFamily ? (
+        <CountRow
+          label="Family coming to watch"
+          hint="Family doesn't take a roster spot."
+          value={familyCount}
+          onChange={setFamilyCount}
+        />
+      ) : null}
+
+      {showGuests && skating ? (
         <View style={styles.guests}>
           <View style={styles.guestHead}>
             <Text style={styles.guestTitle}>Guests ({guests.length})</Text>
@@ -266,12 +289,55 @@ export function RsvpControls({ event }: { event: EventDetail }) {
                 setBeerGuy(current.is_beer_guy);
                 setWhiskeyGuy(current.is_whiskey_guy);
                 setGuests(current.guests ?? []);
+                setGuestCount(current.guest_count ?? 0);
+                setFamilyCount(current.family_count ?? 0);
                 setEditing(false);
               }}
             />
           ) : null}
         </>
       )}
+    </View>
+  );
+}
+
+/** A − / + counter for a number of people (0 to MAX_COUNT). */
+function CountRow({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <View style={styles.toggleRow}>
+      <View style={{ flexShrink: 1 }}>
+        <Text style={styles.toggleLabel}>{label}</Text>
+        {hint ? <Text style={styles.countHint}>{hint}</Text> : null}
+      </View>
+      <View style={styles.counter}>
+        <Tap
+          style={[styles.counterBtn, value <= 0 && { opacity: 0.4 }]}
+          disabled={value <= 0}
+          onPress={() => onChange(Math.max(value - 1, 0))}
+          accessibilityLabel={`Fewer: ${label}`}
+        >
+          <Text style={styles.counterBtnText}>−</Text>
+        </Tap>
+        <Text style={styles.counterValue}>{value}</Text>
+        <Tap
+          style={[styles.counterBtn, value >= MAX_COUNT && { opacity: 0.4 }]}
+          disabled={value >= MAX_COUNT}
+          onPress={() => onChange(Math.min(value + 1, MAX_COUNT))}
+          accessibilityLabel={`More: ${label}`}
+        >
+          <Text style={styles.counterBtnText}>+</Text>
+        </Tap>
+      </View>
     </View>
   );
 }
@@ -319,6 +385,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   toggleLabel: { color: colors.text, fontSize: 15 },
+  countHint: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  counter: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  counterBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  counterBtnText: { color: colors.gold, fontSize: 20, fontWeight: "700" },
+  counterValue: { color: colors.text, fontSize: 17, fontWeight: "700", minWidth: 22, textAlign: "center" },
   error: { color: colors.red, fontWeight: "600" },
   notice: { color: colors.amber },
   currentLine: { color: colors.textMuted, fontSize: 13, textAlign: "center" },

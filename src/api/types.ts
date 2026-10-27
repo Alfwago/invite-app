@@ -171,6 +171,11 @@ export interface RosterStats {
   is_full: boolean;
   rsvp_locked: boolean;
   goalie_rsvp_locked: boolean;
+  /** Server 0.40.0+: false = a non-skating event (party, golf outing). Its
+   *  goalie numbers and skater_spots_open are null; open spots are in
+   *  spots_open. Missing on older servers = a skate. */
+  is_skating?: boolean;
+  spots_open?: number | null;
 }
 
 export interface MyRsvp {
@@ -178,6 +183,8 @@ export interface MyRsvp {
   is_goalie: boolean;
   guest_count: number;
   guests: RsvpGuest[];
+  /** Server 0.40.0+: family coming to watch an away skate. */
+  family_count?: number;
   is_beer_guy: boolean;
   is_whiskey_guy: boolean;
   responded_at: string | null;
@@ -247,6 +254,18 @@ export interface EventSummary {
   /** Server archived it (6h after start) — shown read-only under "Recent".
    *  Optional: servers before the Recent-events fix don't send it. */
   is_past?: boolean;
+  /** Custom events (server 0.40.0+; missing on older servers = a skate).
+   *  is_skating false = a party / golf outing: no goalies or hockey, guests
+   *  are a count. A skate somewhere else can carry arrive-by, directions,
+   *  venue notes and a family count. directions_url falls back to a map
+   *  search of the location (or "" for a home-rink skate). cost_per_person
+   *  = a party's cost, or a skate's price when it isn't the usual one. */
+  is_skating?: boolean;
+  arrive_by?: string | null; // HH:MM:SS
+  directions_url?: string;
+  venue_notes?: string;
+  allow_family?: boolean;
+  cost_per_person?: string | null;
 }
 
 export interface RosterGuest {
@@ -272,6 +291,8 @@ export interface RosterEntry {
   pay_override?: PayOverride;
   guest_count: number;
   guest_names: string[];
+  /** Server 0.40.0+: family coming to watch an away skate. */
+  family_count?: number;
   guests: RosterGuest[]; // director view only; [] otherwise
   is_beer_guy: boolean;
   is_whiskey_guy: boolean;
@@ -423,6 +444,10 @@ export interface EventManage {
   /** The skate's price in dollars — also the late-drop fine (server 0.35.0+). */
   skate_fee?: number;
   whiskey_guy_pays: boolean;
+  /** The directions link as the director typed it (server 0.40.0+); the
+   *  event's own directions_url adds a map fallback. Missing on older
+   *  servers → the venue fields are hidden. */
+  directions_url?: string;
   invite_header_image: string | null;
   invites_send_at: string | null;
   batch_invites_enabled: boolean;
@@ -614,6 +639,8 @@ export interface RsvpBody {
   guests?: RsvpGuest[];
   beer_guy?: boolean;
   whiskey_guy?: boolean;
+  /** Server 0.40.0+: family coming to watch (allow_family skates). */
+  family_count?: number;
 }
 
 export interface LeagueNotice {
@@ -769,6 +796,11 @@ export interface EventPatchBody {
   goalie_rsvp_locked?: boolean;
   batch_invites_enabled?: boolean;
   batch_invites_delay_hours?: number;
+  /** Venue details — server 0.40.0+ only (send just when manage.directions_url exists). */
+  arrive_by?: string | null;
+  directions_url?: string;
+  venue_notes?: string;
+  allow_family?: boolean;
 }
 
 // ---- Player directory + skill ratings (director) ---------------------

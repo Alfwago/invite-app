@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -22,7 +22,7 @@ import {
   Loading,
 } from "@/src/components/ui";
 import { formatEventDate, formatTime } from "@/src/format";
-import { fillPct, rosterHealth } from "@/src/roster";
+import { fillPct, isSkating, rosterHealth, spotsOpen } from "@/src/roster";
 import { roleTag } from "@/src/roleTag";
 import { useEvent } from "@/src/hooks/queries";
 import { goingSections } from "@/src/rosterGroups";
@@ -58,18 +58,20 @@ export default function EventDetailScreen() {
 
   const pct = fillPct(roster);
   const health = rosterHealth(roster);
+  // A non-skating event (party, golf outing — server 0.40.0+): "Who's Going",
+  // no goalies, never short of skaters (owner 2026-10-27).
+  const skating = isSkating(roster) && event.is_skating !== false;
+  const open = spotsOpen(roster);
   const goalieTone = (roster.goalie_spots_open ?? 0) > 0 ? "bad" : "good";
-  const skaterTone = roster.is_full
-    ? "good"
-    : (roster.skater_spots_open ?? 0) > 0
-      ? "caution"
-      : "good";
+  const skaterTone = roster.is_full || !skating ? "good" : (open ?? 0) > 0 ? "caution" : "good";
 
   const spotsText = roster.is_full
-    ? "Roster full"
-    : roster.skater_spots_open != null
-      ? `${roster.skater_spots_open} spot${roster.skater_spots_open === 1 ? "" : "s"} left`
-      : `${roster.skaters} in`;
+    ? skating
+      ? "Roster full"
+      : "Full"
+    : open != null
+      ? `${open} spot${open === 1 ? "" : "s"} left`
+      : `${roster.skaters} ${skating ? "in" : "going"}`;
 
   const goingCount =
     event.players.filter((p) => p.status === "YES").length + event.day_players.length;
@@ -99,6 +101,7 @@ export default function EventDetailScreen() {
             {event.start_time ? ` · ${formatTime(event.start_time)}` : ""}
           </Text>
           {event.location ? <Text style={styles.meta}>{event.location}</Text> : null}
+          <VenueDetails event={event} skating={skating} />
           <View style={styles.statusRow}>
             <Badge text={event.status} tone="neutral" />
             {roster.rsvp_locked ? <Badge text="RSVP LOCKED" tone="bad" /> : null}
@@ -127,23 +130,34 @@ export default function EventDetailScreen() {
         <PenaltyBoxCard event={event} />
 
         <CollapsibleCard
-          title="Roster"
+          title={skating ? "Roster" : "Who's Going"}
           defaultOpen
-          right={<Text style={styles.headerCount}>{goingCount} going</Text>}
+          right={
+            <Text style={styles.headerCount}>
+              {/* A party's headline count includes guests; say how it splits. */}
+              {skating || roster.guest_yes === 0
+                ? `${goingCount} going`
+                : `${goingCount} + ${roster.guest_yes} guest${roster.guest_yes === 1 ? "" : "s"}`}
+            </Text>
+          }
           summary={
             <View style={styles.tiles}>
               <StatTile
                 value={`${roster.skaters}`}
                 sub={roster.capacity != null ? `/ ${roster.capacity}` : undefined}
-                label="Skaters"
+                label={skating ? "Skaters" : "Going"}
                 tone={skaterTone}
               />
-              <StatTile
-                value={`${roster.goalies}`}
-                sub={roster.goalies_needed != null ? `/ ${roster.goalies_needed}` : undefined}
-                label="Goalies"
-                tone={goalieTone}
-              />
+              {skating ? (
+                <StatTile
+                  value={`${roster.goalies}`}
+                  sub={roster.goalies_needed != null ? `/ ${roster.goalies_needed}` : undefined}
+                  label="Goalies"
+                  tone={goalieTone}
+                />
+              ) : (
+                <StatTile value={`${roster.guest_yes}`} label="Guests" />
+              )}
               <StatTile value={`${roster.waitlist}`} label="Waitlist" />
             </View>
           }
@@ -152,12 +166,12 @@ export default function EventDetailScreen() {
           <Text style={styles.rosterLine}>
             {spotsText} · {roster.maybe} maybe
           </Text>
-          <RosterTabs event={event} />
+          <RosterTabs event={event} skating={skating} />
         </CollapsibleCard>
 
         {event.is_past ? (
           <Card>
-            <Text style={styles.muted}>This skate is over.</Text>
+            <Text style={styles.muted}>This {skating ? "skate" : "event"} is over.</Text>
           </Card>
         ) : promotion ? null : event.status === "OPEN" ? (
           <CollapsibleCard title="Your RSVP" defaultOpen>
@@ -182,7 +196,9 @@ export default function EventDetailScreen() {
           <Ionicons name="chatbubbles-outline" size={20} color={colors.text} />
           <View style={{ flex: 1 }}>
             <Text style={styles.threadBtnText}>Messages</Text>
-            <Text style={styles.threadBtnSub}>Everyone invited to this skate can see these</Text>
+            <Text style={styles.threadBtnSub}>
+              Everyone invited to this {skating ? "skate" : "event"} can see these
+            </Text>
           </View>
           {event.messages_unread > 0 ? (
             <View style={styles.threadBadge}>
@@ -222,7 +238,7 @@ export default function EventDetailScreen() {
   );
 }
 
-function RosterTabs({ event }: { event: EventDetail }) {
+function RosterTabs({ event, skating }: { event: EventDetail; skating: boolean }) {
   const [tab, setTab] = useState<RsvpStatus>("YES");
 
   const byStatus = useMemo(() => {
@@ -271,7 +287,7 @@ function RosterTabs({ event }: { event: EventDetail }) {
             <View key={section.title ?? `s${i}`} style={styles.rosterSection}>
               {section.title ? <Text style={styles.rosterSectionTitle}>{section.title}</Text> : null}
               {section.players.map((p) => (
-                <PlayerLine key={p.player_id} entry={p} />
+                <PlayerLine key={p.player_id} entry={p} skating={skating} />
               ))}
               {section.dayPlayers.map((dp) => (
                 <DayPlayerLine key={`dp-${dp.id}`} dp={dp} />
@@ -279,9 +295,35 @@ function RosterTabs({ event }: { event: EventDetail }) {
             </View>
           ))
         ) : (
-          rows.map((p) => <PlayerLine key={p.player_id} entry={p} />)
+          rows.map((p) => <PlayerLine key={p.player_id} entry={p} skating={skating} />)
         )}
       </View>
+    </View>
+  );
+}
+
+/** Arrive-by, cost, venue notes and a Directions button (server 0.40.0+):
+ *  a party, or a skate away from the home rink. */
+function VenueDetails({ event, skating }: { event: EventDetail; skating: boolean }) {
+  const directions = event.directions_url ?? "";
+  if (!event.arrive_by && !event.cost_per_person && !event.venue_notes && !directions) return null;
+  return (
+    <View style={styles.venue}>
+      {event.arrive_by ? (
+        <Text style={styles.venueStrong}>Arrive by {formatTime(event.arrive_by)}</Text>
+      ) : null}
+      {event.cost_per_person ? (
+        <Text style={styles.venueText}>
+          Cost per {skating ? "player" : "person"}: ${event.cost_per_person}
+        </Text>
+      ) : null}
+      {event.venue_notes ? <Text style={styles.venueNotes}>{event.venue_notes}</Text> : null}
+      {directions ? (
+        <Tap style={styles.directionsBtn} onPress={() => void Linking.openURL(directions)}>
+          <Ionicons name="navigate" size={16} color={colors.gold} />
+          <Text style={styles.directionsText}>Directions</Text>
+        </Tap>
+      ) : null}
     </View>
   );
 }
@@ -350,7 +392,7 @@ function DayPlayerLine({ dp }: { dp: DayPlayer }) {
   );
 }
 
-function PlayerLine({ entry }: { entry: RosterEntry }) {
+function PlayerLine({ entry, skating }: { entry: RosterEntry; skating: boolean }) {
   return (
     <View>
       <View style={styles.playerRow}>
@@ -390,8 +432,14 @@ function PlayerLine({ entry }: { entry: RosterEntry }) {
           {entry.paid ? <Badge text="PAID" tone="good" /> : null}
         </View>
       </View>
-      {entry.guest_names.length > 0 ? (
+      {/* A party's guests are just a number — the "+N" above says it all. */}
+      {skating && entry.guest_names.length > 0 ? (
         <Text style={styles.guestLine}>with {entry.guest_names.join(", ")}</Text>
+      ) : null}
+      {(entry.family_count ?? 0) > 0 ? (
+        <Text style={styles.guestLine}>
+          {entry.family_count} family coming to watch
+        </Text>
       ) : null}
     </View>
   );
@@ -403,6 +451,23 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: font.lg, fontWeight: "800" },
   meta: { color: colors.textMuted, fontSize: font.sm },
   statusRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs, flexWrap: "wrap" },
+  venue: { gap: 4, marginTop: spacing.sm },
+  venueStrong: { color: colors.text, fontSize: font.sm, fontWeight: "700" },
+  venueText: { color: colors.text, fontSize: font.sm },
+  venueNotes: { color: colors.textMuted, fontSize: font.sm },
+  directionsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: spacing.xs,
+    borderColor: colors.gold,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
+  },
+  directionsText: { color: colors.gold, fontSize: font.sm, fontWeight: "700" },
   headerCount: { color: colors.textMuted, fontSize: font.sm, fontWeight: "600" },
   dirLabel: {
     color: colors.gold,

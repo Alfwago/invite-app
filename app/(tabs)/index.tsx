@@ -155,7 +155,9 @@ export default function HomeScreen() {
 
         {next_skate ? (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Your next skate</Text>
+            <Text style={styles.sectionLabel}>
+              {next_skate.is_skating === false ? "Your next event" : "Your next skate"}
+            </Text>
             <EventCard event={next_skate} />
           </View>
         ) : (
