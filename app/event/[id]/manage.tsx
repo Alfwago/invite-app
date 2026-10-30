@@ -2563,9 +2563,8 @@ function InvitePicker({
   ownKey?: string | null;
 }) {
   const [term, setTerm] = useState("");
-  const [open, setOpen] = useState<Set<string>>(
-    () => new Set(groups.filter((g) => g.key !== ownKey && g.members.length > 0).slice(0, 1).map((g) => g.key)),
-  );
+  // Every group starts collapsed (owner 2026-10-30).
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
   const pickedSet = new Set(picked);
   const searching = term.trim().length > 0;
   const toggleOne = (id: number) =>
