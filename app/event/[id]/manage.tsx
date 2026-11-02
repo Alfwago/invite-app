@@ -37,7 +37,7 @@ import { filterChips, inviteStatus, matchesFilter, removeConfirmText, type Invit
 import { makePermanentCopy, weekdayOf } from "@/src/borrow";
 import { fineBadge, fineSettingsPatch, lateDropLine, lateDropRows } from "@/src/lateDrop";
 import { LATE_SCRATCHES_TITLE, lateScratchControl, postConfirmCopy } from "@/src/lateScratch";
-import { TEAM_TINT } from "@/src/components/TeamAssignmentCard";
+import { JerseyIcon } from "@/src/components/TeamAssignmentCard";
 import { useToast } from "@/src/components/Toast";
 import { Badge, Button, Card, ErrorState, FillBar, Loading, Segmented, Tap } from "@/src/components/ui";
 import { formatDateTime, formatEventDate, formatTime } from "@/src/format";
@@ -2020,7 +2020,7 @@ function RosterAdminRow({
             </Text>
             {goldTag ? <Text style={styles.goldTag}>{goldTag}</Text> : null}
             {team ? (
-              <Ionicons name="shirt" size={15} color={TEAM_TINT[team]} accessibilityLabel={`${team} Team`} />
+              <JerseyIcon team={team} size={15} />
             ) : null}
           </View>
           {hasTags ? (

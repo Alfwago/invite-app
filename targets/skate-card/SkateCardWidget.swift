@@ -34,8 +34,6 @@ private enum Palette {
     static let red = Color(hex: 0xff5a5f)
     static let redDim = Color(hex: 0x1a0000)
     static let fillTrack = Color(hex: 0x1f1f1f)
-    /// TEAM_TINT.Black in src/components/TeamAssignmentCard.tsx.
-    static let blackTeam = Color(hex: 0xc9ced3)
 }
 
 private extension Color {
@@ -376,7 +374,11 @@ private struct JerseySwatch: View {
         case "Gold":
             Circle().fill(Palette.gold).frame(width: size, height: size)
         case "Black":
-            Circle().fill(Palette.blackTeam).frame(width: size, height: size)
+            // Black with a gold ring, like the jersey icons; a solid light
+            // gray dot read as White.
+            Circle().fill(Color.black)
+                .overlay(Circle().stroke(Palette.gold, lineWidth: 2))
+                .frame(width: size, height: size)
         default:
             Circle().stroke(Palette.textMuted, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
                 .frame(width: size, height: size)

@@ -9,8 +9,7 @@ struct JerseyBadge: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
-            Image(systemName: "tshirt.fill")
-                .foregroundStyle(assignment.teamColor)
+            JerseyIcon(team: assignment.team)
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 0) {
                 Text(assignment.team)
@@ -36,4 +35,21 @@ struct JerseyBadge: View {
         JerseyBadge(assignment: WatchTeamAssignment(team: "Black", jersey: "Wear a dark shirt."))
     }
     .padding()
+}
+
+/// Gold's jersey is gold. Black's is a black shirt with a gold outline so it
+/// shows on the black face; a light gray shirt read as White (same as
+/// JerseyIcon in TeamAssignmentCard.tsx).
+private struct JerseyIcon: View {
+    let team: String
+
+    var body: some View {
+        if team == "Gold" {
+            Image(systemName: "tshirt.fill").foregroundStyle(WatchBrand.gold)
+        } else {
+            Image(systemName: "tshirt.fill")
+                .foregroundStyle(.black)
+                .overlay(Image(systemName: "tshirt").foregroundStyle(WatchBrand.gold))
+        }
+    }
 }

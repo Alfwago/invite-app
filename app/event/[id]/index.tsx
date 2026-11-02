@@ -11,7 +11,7 @@ import { PenaltyBoxCard } from "@/src/components/PenaltyBoxCard";
 import { PromotionCard } from "@/src/components/PromotionCard";
 import { RsvpControls } from "@/src/components/RsvpControls";
 import { Tap } from "@/src/components/Tap";
-import { TEAM_TINT, TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
+import { JerseyIcon, TeamAssignmentCard } from "@/src/components/TeamAssignmentCard";
 import {
   Badge,
   Button,
@@ -388,7 +388,7 @@ function DayPlayerLine({ dp }: { dp: DayPlayer }) {
         {dp.is_goalie ? <Text style={styles.goldTag}>G</Text> : null}
         <Text style={styles.walkOn}>walk-on</Text>
         {dp.team ? (
-          <Ionicons name="shirt" size={15} color={TEAM_TINT[dp.team]} accessibilityLabel={`${dp.team} Team`} />
+          <JerseyIcon team={dp.team} size={15} />
         ) : null}
       </View>
     </View>
@@ -416,12 +416,7 @@ function PlayerLine({ entry, skating }: { entry: RosterEntry; skating: boolean }
             </Text>
           ) : null}
           {entry.team ? (
-            <Ionicons
-              name="shirt"
-              size={15}
-              color={TEAM_TINT[entry.team]}
-              accessibilityLabel={`${entry.team} Team`}
-            />
+            <JerseyIcon team={entry.team} size={15} />
           ) : null}
           {entry.is_beer_guy ? (
             <Ionicons name="beer" size={15} color={colors.green} />

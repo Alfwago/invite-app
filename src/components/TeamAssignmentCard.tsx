@@ -6,11 +6,28 @@ import { Tap } from "@/src/components/Tap";
 import { Card } from "@/src/components/ui";
 import { colors, font, radius, spacing } from "@/src/theme";
 
-// Gold ≈ league gold; Black ≈ a light neutral grey so it reads on the black bg.
+// Gold ≈ league gold; Black ≈ a light neutral grey so the team name reads on
+// the black bg. Jerseys use JerseyIcon instead.
 export const TEAM_TINT: Record<TeamAssignment["team"], string> = {
   Gold: colors.gold,
   Black: "#c9ced3",
 };
+
+/** The team's jersey. Black's is a black shirt with a gold outline, so it
+ *  shows on the dark background; it used to be a light grey shirt, which
+ *  read as White (same as the website, 0.40.3). */
+export function JerseyIcon({ team, size }: { team: TeamAssignment["team"]; size: number }) {
+  const label = `${team} Team`;
+  if (team === "Gold") {
+    return <Ionicons name="shirt" size={size} color={colors.gold} accessibilityLabel={label} />;
+  }
+  return (
+    <View accessible accessibilityLabel={label} style={{ width: size, height: size }}>
+      <Ionicons name="shirt" size={size} color="#000" />
+      <Ionicons name="shirt-outline" size={size} color={colors.gold} style={StyleSheet.absoluteFill} />
+    </View>
+  );
+}
 
 function postedAt(iso: string): string {
   try {
@@ -40,7 +57,7 @@ export function TeamAssignmentCard({
   const card = (
     <Card>
       <View style={styles.row}>
-        <Ionicons name="shirt" size={22} color={tint} />
+        <JerseyIcon team={assignment.team} size={22} />
         <Text style={styles.team}>
           You&apos;re on <Text style={[styles.teamName, { color: tint }]}>{assignment.team}</Text>
         </Text>
