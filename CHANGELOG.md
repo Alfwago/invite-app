@@ -3,6 +3,16 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-11-02 — 1.8.0 (iOS build 36): tapping a notification no longer crashes the app
+
+- **Crash fix:** tapping a notification while the app was closed could crash
+  it (TestFlight build 35). The tap tried to open its screen while the app was
+  still starting up; React Navigation looped ("Maximum update depth
+  exceeded") and expo-updates turned that into a crash. The screen now opens
+  once sign-in has loaded and the screens are mounted. Checked in the
+  simulator: an invite opens its event from a cold start, a DM opens the
+  Inbox from the background.
+
 ## 2026-10-27 — custom events, walk-on teams, email-only invites (ships in 1.8.0)
 
 **Owner 2026-10-27: 1.8.0 was never released, so everything below (this

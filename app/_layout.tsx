@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppState, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRootNavigationState, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -81,14 +81,40 @@ type PushResponse = {
   notification: { request: { identifier: string; content: { data: unknown } } };
 };
 
+/** Where a tapped push leads, or null for a push with nowhere to go. */
+function pushRoute(data: unknown): string | null {
+  const d = data as PushData;
+  if (d?.type === "poll" && d.pollId != null) return `/polls/${d.pollId}`;
+  if (d?.kind === "board") return "/(tabs)/messages";
+  if (d?.kind === "dm") return d.from != null ? `/inbox/${d.from}` : "/inbox";
+  if (d?.eventId != null) return `/event/${d.eventId}`;
+  return null;
+}
+
 /**
  * Tapping a push opens what it's about; a push that lands while the app is
  * open refreshes the caches it touches so the UI updates without a manual pull.
+ *
+ * The screen it opens waits until sign-in has loaded and the Stack is
+ * mounted. A tap that launches the app arrives while RootNavigator still
+ * shows "Starting up…"; pushing then made React Navigation loop ("Maximum
+ * update depth exceeded") and expo-updates crashed the app (1.8.0 build 35,
+ * 2026-11-02).
  */
 function useNotificationHandling() {
   const router = useRouter();
   const qc = useQueryClient();
   const toast = useToast();
+  const { ready, token } = useAuth();
+  const navKey = useRootNavigationState()?.key;
+  const navReady = ready && token != null && navKey != null;
+  const [pending, setPending] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!navReady || pending == null) return;
+    setPending(null);
+    router.push(pending as never);
+  }, [navReady, pending, router]);
 
   useEffect(() => {
     // expo-notifications isn't available on web or in Expo Go (SDK 53+).
@@ -101,18 +127,8 @@ function useNotificationHandling() {
     void registerPromotionCategory();
 
     function open(data: unknown) {
-      const d = data as PushData;
-      if (d?.type === "poll" && d.pollId != null) {
-        router.push(`/polls/${d.pollId}` as never);
-      } else if (d?.kind === "board") {
-        router.push("/(tabs)/messages");
-      } else if (d?.kind === "dm") {
-        router.push(d.from != null ? `/inbox/${d.from}` : "/inbox");
-      } else if (d?.type === "team_assignment" && d.eventId != null) {
-        router.push(`/event/${d.eventId}`);
-      } else if (d?.eventId != null) {
-        router.push(`/event/${d.eventId}`);
-      }
+      const route = pushRoute(data);
+      if (route != null) setPending(route);
     }
 
     /** Refresh the queries a foreground push affects. */
@@ -168,7 +184,7 @@ function useNotificationHandling() {
       tapSub.remove();
       recvSub.remove();
     };
-  }, [router, qc, toast]);
+  }, [qc, toast]);
 }
 
 function RootNavigator() {
