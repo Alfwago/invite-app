@@ -3,6 +3,14 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-11-02 — 1.8.0 (iOS build 37): the Black team's jersey looks black
+
+- The Black team's jersey icon was light grey, which players read as White.
+  It's now a black shirt with a gold outline on "You're on Black", the event
+  roster, Manage and the watch; the lock-screen card's dot is black with a
+  gold ring. Gold is unchanged. Matches invite-server 0.40.3. Build 37 also
+  has build 36's notification-tap crash fix.
+
 ## 2026-11-02 — 1.8.0 (iOS build 36): tapping a notification no longer crashes the app
 
 - **Crash fix:** tapping a notification while the app was closed could crash
