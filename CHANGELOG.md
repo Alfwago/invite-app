@@ -3,6 +3,14 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 2026-11-03 — 1.8.1 (not built or submitted yet): "New" tag
+
+- Players approved in the last 14 days show a green NEW tag on the Going
+  list, the director's Manage roster, and the Player profiles list and
+  profile. Reads `is_new` from invite-server 0.40.4 (live); an older server
+  sends no flag and nothing shows. app.json is still 1.8.0 build 37: bump the
+  version and build number before archiving.
+
 ## 2026-11-02 — 1.8.0 (iOS build 37): the Black team's jersey looks black
 
 - The Black team's jersey icon was light grey, which players read as White.
