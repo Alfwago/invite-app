@@ -405,6 +405,7 @@ function PlayerLine({ entry, skating }: { entry: RosterEntry; skating: boolean }
             {entry.guest_count > 0 ? ` +${entry.guest_count}` : ""}
           </Text>
           <RoleTag entry={entry} />
+          {entry.is_new ? <Badge text="NEW" tone="good" /> : null}
           {entry.is_borrowed ? (
             <Text
               style={styles.walkOn}

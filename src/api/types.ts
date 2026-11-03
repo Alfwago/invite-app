@@ -287,6 +287,8 @@ export interface RosterEntry {
   /** The AD standing in for an ND who isn't on the roster ("Acting ND"),
    *  exempt like the ND. Server 0.34+; missing on older servers. */
   is_acting_director?: boolean;
+  /** Approved in the last 14 days: the "New" tag (server 0.40.4+). */
+  is_new?: boolean;
   pays: boolean; // false = goalie / director / beer-or-whiskey guy who's exempt
   /** Director's per-event pay override: "" (usual rule), "comp" or "charge".
    *  Server 0.34+ (missing before — then the control is hidden). */
@@ -852,6 +854,8 @@ export interface PlayerRow {
   profile_id: string;
   is_goalie: boolean;
   player_type: PlayerTypeTag;
+  /** Approved in the last 14 days: the "New" tag (server 0.40.4+). */
+  is_new?: boolean;
   /** That night's ratings when ?night= is set (all 0, rated false otherwise). */
   ratings: SkillRatings;
   rating_source: "night" | "none";
@@ -892,6 +896,8 @@ export interface PlayerDetail {
   is_goalie: boolean;
   is_goalie_skater: boolean;
   player_type: PlayerTypeTag;
+  /** Approved in the last 14 days: the "New" tag (server 0.40.4+). */
+  is_new?: boolean;
   /** Server 0.39.3+, non-playing members only (see PlayerRow). */
   member_title?: string;
   member_title_raw?: string;

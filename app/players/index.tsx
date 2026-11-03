@@ -164,6 +164,7 @@ function PlayerListRow({
           {detail ? <Text style={styles.detail}>{detail}</Text> : null}
         </View>
         {tag ? <Badge text={tag} tone={tag === "Non-Player" ? "neutral" : "goalie"} /> : null}
+        {row.is_new ? <Badge text="NEW" tone="good" /> : null}
       </View>
       <View style={styles.rowRight}>
         <Text style={[styles.ppv, text === NOT_RATED && styles.notRated]}>{text}</Text>

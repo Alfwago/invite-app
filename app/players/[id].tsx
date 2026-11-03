@@ -135,6 +135,7 @@ export default function PlayerDetailScreen() {
             ) : player.is_goalie ? (
               <Badge text="GOALIE" tone="goalie" />
             ) : null}
+            {player.is_new ? <Badge text="NEW" tone="good" /> : null}
           </View>
           <Text style={styles.sub}>
             {player.profile_id || "—"}

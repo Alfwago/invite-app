@@ -1416,6 +1416,7 @@ function RosterCard({
               isHost={p.is_host}
               isAssistantDirector={p.is_assistant_director}
               isActingDirector={p.is_acting_director}
+              isNew={!!p.is_new}
               payOverride={p.pay_override}
               onPayOverride={() =>
                 choosePayOverride(p.name, p.pay_override ?? "", (v) =>
@@ -1920,6 +1921,7 @@ function RosterAdminRow({
   isHost,
   isAssistantDirector,
   isActingDirector,
+  isNew,
   payOverride,
   onPayOverride,
   borrowed,
@@ -1958,6 +1960,8 @@ function RosterAdminRow({
   isAssistantDirector?: boolean;
   /** The AD standing in for an absent ND (server 0.34+). */
   isActingDirector?: boolean;
+  /** Approved in the last 14 days (server 0.40.4+). */
+  isNew?: boolean;
   /** undefined = an older server without the override (control hidden). */
   payOverride?: PayOverride;
   onPayOverride?: () => void;
@@ -2005,7 +2009,7 @@ function RosterAdminRow({
   });
   const hasGuys = (showBeer && onBeer) || (showWhiskey && onWhiskey);
   const hasTags =
-    (!goldTag && walkOn) || borrowed || promotionPending || !!payOverride || (walkOn && ratingPpv != null);
+    (!goldTag && walkOn) || isNew || borrowed || promotionPending || !!payOverride || (walkOn && ratingPpv != null);
   return (
     <View style={styles.adminRow}>
       <View style={styles.adminLine}>
@@ -2026,6 +2030,7 @@ function RosterAdminRow({
           {hasTags ? (
             <View style={styles.adminTagLine}>
               {!goldTag && walkOn ? <Text style={styles.roleTag}>walk-on</Text> : null}
+              {isNew ? <Badge text="NEW" tone="good" /> : null}
               {borrowed ? (
                 <Text
                   style={styles.roleTag}
