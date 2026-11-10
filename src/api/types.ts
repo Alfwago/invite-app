@@ -1055,6 +1055,9 @@ export interface PendingApproval {
   /** Server 0.33+: this user may resend the setup link (sponsor or admin,
    *  setup unfinished). Absent on older servers → no Resend button. */
   can_resend?: boolean;
+  /** Server 0.40.5+: when an unfinished site invite runs out (ISO); the
+   *  account is deleted after it. null/absent otherwise. */
+  invite_expires_at?: string | null;
 }
 
 /** GET /api/approvals/invite/ (server 0.33+). */

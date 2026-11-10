@@ -14,6 +14,7 @@ import {
   useNameChangeApprovals,
   useUsernameChangeApprovals,
 } from "@/src/hooks/queries";
+import { formatDateTime } from "@/src/format";
 import { colors, font, spacing } from "@/src/theme";
 
 export default function ApprovalsScreen() {
@@ -66,6 +67,13 @@ export default function ApprovalsScreen() {
               </View>
               {p.email ? <Text style={styles.meta}>{p.email}</Text> : null}
               {p.sponsor ? <Text style={styles.meta}>Sponsored by {p.sponsor}</Text> : null}
+              {!p.account_ready && p.invite_expires_at ? (
+                // Unfinished site invites are deleted after 30 days (server 0.40.5).
+                <Text style={styles.meta}>
+                  Invite expires {formatDateTime(p.invite_expires_at)}. The account is deleted unless they finish
+                  setup or you resend it.
+                </Text>
+              ) : null}
               {!p.account_ready && p.can_resend ? (
                 <Button
                   label="Resend invite"
