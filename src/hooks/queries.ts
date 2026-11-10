@@ -165,7 +165,10 @@ export function usePostMessage(board: number | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (msg: NewMessage) => api.postMessage(msg),
-    onSuccess: () => {
+    onSuccess: (fresh) => {
+      // Show it now from the reply (1.8.1): before, it appeared only after a
+      // full reload of the board. The refresh still runs in the background.
+      addMessageToCache(qc, keys.messages(board), fresh);
       qc.invalidateQueries({ queryKey: keys.messages(board) });
       qc.invalidateQueries({ queryKey: keys.boards });
     },
@@ -192,6 +195,19 @@ export function useReactMessage(board: number | null) {
       api.reactToMessage(args.id, args.emoji),
     onSuccess: (fresh) => patchMessageInCache(qc, board, fresh),
   });
+}
+
+/** Put a just-posted message at the top of a cached thread (newest first). */
+function addMessageToCache(
+  qc: ReturnType<typeof useQueryClient>,
+  key: readonly unknown[],
+  fresh: BoardMessage,
+) {
+  qc.setQueryData<{ messages: BoardMessage[] }>(key, (prev) =>
+    prev && !prev.messages.some((m) => m.id === fresh.id)
+      ? { ...prev, messages: [fresh, ...prev.messages] }
+      : prev,
+  );
 }
 
 function patchMessageInCache(
@@ -250,7 +266,10 @@ export function useEventThreadActions(id: number | string) {
     post: useMutation({
       mutationFn: (args: { body: string; imageUri?: string }) =>
         api.postEventMessage(id, args.body, args.imageUri),
-      onSuccess: refreshThread,
+      onSuccess: (fresh) => {
+        addMessageToCache(qc, eventMessagesKey(id), fresh);
+        refreshThread();
+      },
     }),
     edit: useMutation({
       mutationFn: (args: { mid: number; body?: string; imageUri?: string }) =>
