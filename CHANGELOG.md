@@ -3,13 +3,25 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-11-03 — 1.8.1 (not built or submitted yet): "New" tag
+## 2026-11-10 — 1.8.1 (iOS build 38, Android versionCode 3)
 
-- Players approved in the last 14 days show a green NEW tag on the Going
-  list, the director's Manage roster, and the Player profiles list and
-  profile. Reads `is_new` from invite-server 0.40.4 (live); an older server
-  sends no flag and nothing shows. app.json is still 1.8.0 build 37: bump the
-  version and build number before archiving.
+Needs invite-server 0.40.6 (live). On an older server the new pieces stay
+hidden.
+
+- **"New" tag:** players approved in the last 14 days show a green NEW tag
+  on the Going list, the director's Manage roster, and Player profiles.
+- **Faster posting:** a board or skate-chat post appears from the server's
+  reply instead of after reloading the thread (server 0.40.5 also stopped
+  holding board posts up while it sent pushes).
+- **Full-screen photos:** tap a posted photo to see it full screen; pinch to
+  zoom (iPhone); tap or X to close. A long press still opens the menu. The
+  viewer stays mounted and toggles visible: one mounted on tap never showed.
+- **Site invites:** Invites & approvals shows when an unfinished invite
+  expires (30 days, server 0.40.5), and the Invite card says so.
+- **Primary night:** Profile and a director's player screen show the
+  primary night's attendance above all nights; chips pick it.
+- **Night Status:** every night's next skate and how full it is, invited or
+  not; an uninvited skate says NOT INVITED and doesn't open.
 
 ## 2026-11-02 — 1.8.0 (iOS build 37): the Black team's jersey looks black
 
