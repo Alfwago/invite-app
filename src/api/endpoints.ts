@@ -168,7 +168,9 @@ export async function fetchNights(signal?: AbortSignal): Promise<Night[]> {
 // ---- Home / notices / message board -------------------------------------
 
 export function fetchHome(signal?: AbortSignal): Promise<HomeData> {
-  return apiFetch("/api/home/", { signal });
+  // night_status=all: Night Status lists every night's next skate, invited
+  // or not (server 0.40.6+; an older server ignores it).
+  return apiFetch("/api/home/?night_status=all", { signal });
 }
 
 export async function fetchNotices(signal?: AbortSignal): Promise<LeagueNotice[]> {

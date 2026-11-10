@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 
+import { useAuth } from "@/src/auth/AuthContext";
+
 import type { EventSummary, RsvpStatus } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { Badge, FillBar, type BadgeTone } from "@/src/components/ui";
@@ -25,20 +27,25 @@ const STATUS_LABEL: Record<RsvpStatus, string> = {
 };
 
 export function EventCard({ event, compact = false }: { event: EventSummary; compact?: boolean }) {
+  const { me } = useAuth();
   const status = event.my_rsvp?.status ?? null;
   const r = event.roster;
   const pct = fillPct(r);
   const skating = isSkating(r);
+  // Night Status shows skates the player isn't invited to (1.8.1): their
+  // date and fill only — the skate page is invite-only, so it doesn't open.
+  const canOpen = status != null || event.can_manage || !!me?.is_director;
 
-  return (
-    <Link href={`/event/${event.id}`} asChild>
-      <Tap feedback="row" style={styles.card}>
+  const body = (
+    <>
         <View style={styles.topRow}>
           <Text style={styles.title}>{event.display_name}</Text>
           {status ? (
             <Badge text={STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
           ) : event.can_manage ? (
             <Badge text="MANAGE" tone="neutral" />
+          ) : !canOpen ? (
+            <Badge text="NOT INVITED" tone="neutral" />
           ) : null}
         </View>
 
@@ -67,6 +74,20 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
             ))}
           </View>
         </View>
+    </>
+  );
+
+  if (!canOpen) {
+    return (
+      <View style={styles.card} accessible accessibilityLabel={`${event.display_name}, not invited`}>
+        {body}
+      </View>
+    );
+  }
+  return (
+    <Link href={`/event/${event.id}`} asChild>
+      <Tap feedback="row" style={styles.card}>
+        {body}
       </Tap>
     </Link>
   );
