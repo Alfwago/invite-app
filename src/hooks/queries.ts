@@ -594,6 +594,14 @@ export function useSaveMemberTitle(playerId: number) {
   });
 }
 
+export function useSavePrimaryNight(playerId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (nightId: number | null) => api.savePlayerPrimaryNight(playerId, nightId),
+    onSuccess: (result) => qc.setQueryData(keys.player(playerId), result),
+  });
+}
+
 export function useSaveRatings(playerId: number) {
   const qc = useQueryClient();
   return useMutation({

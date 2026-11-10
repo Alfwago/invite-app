@@ -15,7 +15,8 @@ import type { GlobalScore, PlayerDetail, PlayerNightRow } from "@/src/api/types"
 import { RatingRadar } from "@/src/components/RatingRadar";
 import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
-import { usePlayer, useSaveMemberTitle, useSaveRatings } from "@/src/hooks/queries";
+import { usePlayer, useSaveMemberTitle, useSavePrimaryNight, useSaveRatings } from "@/src/hooks/queries";
+import { PrimaryNightMetrics } from "@/src/components/PrimaryNightMetrics";
 import { formatScore, obhGrade } from "@/src/ratings";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -33,6 +34,7 @@ export default function PlayerDetailScreen() {
   const playerId = Number(id);
   const query = usePlayer(playerId);
   const save = useSaveRatings(playerId);
+  const savePrimaryNight = useSavePrimaryNight(playerId);
 
   const player = query.data;
   const [nightId, setNightId] = useState<number | null>(null);
@@ -144,6 +146,13 @@ export default function PlayerDetailScreen() {
           </Text>
         </Card>
 
+        <PrimaryNightMetrics
+          metrics={m}
+          choices={player.nights.map((n) => ({ id: n.id, name: n.name }))}
+          onPick={(id) => savePrimaryNight.mutateAsync(id)}
+          Tile={Tile}
+          tileRow={styles.tiles}
+        />
         <View style={styles.tiles}>
           <Tile value={m.invited_count} label="Invites" />
           <Tile value={m.yes_count} label="Yes RSVPs" />

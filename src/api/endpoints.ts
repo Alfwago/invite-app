@@ -595,6 +595,11 @@ export function savePlayerTitle(id: number, memberTitle: string): Promise<Player
   return apiFetch(`/api/players/${id}/`, { method: "PATCH", body: { member_title: memberTitle } });
 }
 
+/** A director sets a player's primary night; null = invited most (server 0.40.5+). */
+export function savePlayerPrimaryNight(id: number, nightId: number | null): Promise<PlayerDetail> {
+  return apiFetch(`/api/players/${id}/`, { method: "PATCH", body: { primary_night_id: nightId } });
+}
+
 export function savePlayerRatings(
   id: number,
   body: RatingPatch,

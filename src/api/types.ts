@@ -72,6 +72,8 @@ export interface Me {
   skill_assessment: string;
   join_year: number | null;
   metrics: MeMetrics;
+  /** Server 0.40.5+: skate groups they can pick as their primary night. */
+  primary_night_choices?: { id: number; name: string }[];
   /** Names are locked — this is the caller's own pending request (any
    * director), or null. See POST/DELETE /api/me/name-change/. */
   pending_name_change: PendingNameChange | null;
@@ -117,6 +119,15 @@ export interface MeMetrics {
   beer_guy_count: number;
   whiskey_guy_count: number;
   invites_by_night: { name: string; count: number }[];
+  /** Server 0.40.5+: the primary skate group (picked, or invited most) and
+   *  its own counts. null = no night to show; absent on older servers. */
+  primary_night?: { id: number; name: string; chosen: boolean } | null;
+  primary?: {
+    invited_count: number;
+    yes_count: number;
+    present_count: number;
+    attendance_pct: number | null;
+  } | null;
 }
 
 /** Push-notification preferences (Profile → Notifications). `all` on = every
@@ -145,6 +156,8 @@ export type NotificationPrefsPatch = Partial<Omit<NotificationPrefs, "nights">> 
 
 export interface ProfilePatch {
   email?: string;
+  /** One of their skate groups, or null for "invited most" (server 0.40.5+). */
+  primary_night_id?: number | null;
   join_year?: number | null;
   phone_number?: string;
   sms_opt_in?: boolean;

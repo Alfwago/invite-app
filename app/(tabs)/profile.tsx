@@ -15,6 +15,7 @@ import type {
 import { useAuth } from "@/src/auth/AuthContext";
 import { AppFooter } from "@/src/components/AppFooter";
 import { KeyboardAwareScrollView } from "@/src/components/KeyboardAwareScrollView";
+import { PrimaryNightMetrics } from "@/src/components/PrimaryNightMetrics";
 import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card } from "@/src/components/ui";
 import { VerifyBanner } from "@/src/components/VerifyBanner";
@@ -74,6 +75,16 @@ export default function ProfileScreen() {
 
       <Card>
         <Text style={styles.heading}>Player metrics</Text>
+        <PrimaryNightMetrics
+          metrics={m}
+          choices={me.primary_night_choices ?? []}
+          onPick={async (id) => {
+            await api.updateMe({ primary_night_id: id });
+            await refreshMe();
+          }}
+          Tile={StatTile}
+          tileRow={styles.tiles}
+        />
         <View style={styles.tiles}>
           <StatTile value={m.years_in_obh ?? "—"} label="Years in OBH" />
           <StatTile value={m.invited_count} label="Invites" />
