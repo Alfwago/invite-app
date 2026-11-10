@@ -1064,6 +1064,8 @@ export interface PendingApproval {
   name: string;
   email: string;
   sponsor: string;
+  /** The approving director's user id (server 0.40.8+): groups the list. */
+  sponsor_id?: number | null;
   account_ready: boolean;
   /** Server 0.33+: this user may resend the setup link (sponsor or admin,
    *  setup unfinished). Absent on older servers → no Resend button. */

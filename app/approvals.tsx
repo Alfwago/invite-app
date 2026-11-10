@@ -1,7 +1,13 @@
+import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { ApiError } from "@/src/api/client";
+import type { PendingApproval } from "@/src/api/types";
+import { groupBySponsor } from "@/src/approvalGroups";
+import { useAuth } from "@/src/auth/AuthContext";
+import { Tap } from "@/src/components/Tap";
 import { Badge, Button, Card, ErrorState, Loading } from "@/src/components/ui";
 import { SiteInviteCard } from "@/src/components/SiteInviteCard";
 import {
@@ -22,6 +28,9 @@ export default function ApprovalsScreen() {
   const approve = useApprovePlayer();
   const resend = useResendSiteInvite();
   const pending = query.data ?? [];
+  const { me } = useAuth();
+  // Groups the director opened or closed; by default yours (or the only one) is open.
+  const [toggled, setToggled] = useState<Set<string>>(new Set());
   // null = server without site invites (pre-0.33): no invite form.
   const inviteOptions = useSiteInviteOptions();
 
@@ -59,57 +68,39 @@ export default function ApprovalsScreen() {
         ) : pending.length === 0 ? (
           <Text style={styles.empty}>No players waiting for approval.</Text>
         ) : (
-          pending.map((p) => (
-            <Card key={p.profile_id}>
-              <View style={styles.row}>
-                <Text style={styles.name}>{p.name}</Text>
-                {!p.account_ready ? <Badge text="SETUP INCOMPLETE" tone="caution" /> : null}
+          groupBySponsor(pending, me?.id).map((g, _i, all) => {
+            const open = (g.mine || all.length === 1) !== toggled.has(g.key);
+            return (
+              <View key={g.key} style={styles.group}>
+                <Tap
+                  feedback="row"
+                  onPress={() =>
+                    setToggled((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(g.key)) next.delete(g.key);
+                      else next.add(g.key);
+                      return next;
+                    })
+                  }
+                  style={styles.groupHead}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: open }}
+                >
+                  <Ionicons name={open ? "chevron-down" : "chevron-forward"} size={16} color={colors.textMuted} />
+                  <Text style={styles.groupName}>
+                    {g.director}
+                    {g.mine ? " (you)" : ""}
+                  </Text>
+                  <Badge text={String(g.items.length)} tone="gold" />
+                </Tap>
+                {open
+                  ? g.items.map((p) => (
+                      <PendingCard key={p.profile_id} p={p} approve={approve} resend={resend} />
+                    ))
+                  : null}
               </View>
-              {p.email ? <Text style={styles.meta}>{p.email}</Text> : null}
-              {p.sponsor ? <Text style={styles.meta}>Sponsored by {p.sponsor}</Text> : null}
-              {!p.account_ready && p.invite_expires_at ? (
-                // Unfinished site invites are deleted after 30 days (server 0.40.5).
-                <Text style={styles.meta}>
-                  Invite expires {formatDateTime(p.invite_expires_at)}. The account is deleted unless they finish
-                  setup or you resend it.
-                </Text>
-              ) : null}
-              {!p.account_ready && p.can_resend ? (
-                <Button
-                  label="Resend invite"
-                  variant="secondary"
-                  labelColor={colors.gold}
-                  onPress={() =>
-                    resend.mutate(p.profile_id, {
-                      onSuccess: (data) =>
-                        Alert.alert(data.sent ? "Invite resent" : "Already sent", data.detail),
-                      onError: (e) =>
-                        Alert.alert(
-                          "Couldn't resend",
-                          e instanceof ApiError ? e.detail : "Try again.",
-                        ),
-                    })
-                  }
-                  loading={resend.isPending && resend.variables === p.profile_id}
-                />
-              ) : (
-                <Button
-                  label={p.account_ready ? "Approve" : "Waiting on the player"}
-                  onPress={() =>
-                    approve.mutate(p.profile_id, {
-                      onError: (e) =>
-                        Alert.alert(
-                          "Couldn't approve",
-                          e instanceof ApiError ? e.detail : "Try again.",
-                        ),
-                    })
-                  }
-                  loading={approve.isPending}
-                  disabled={!p.account_ready}
-                />
-              )}
-            </Card>
-          ))
+            );
+          })
         )}
 
         <Text style={styles.sectionHeading}>Name changes</Text>
@@ -218,7 +209,72 @@ export default function ApprovalsScreen() {
   );
 }
 
+/** One player waiting for approval: their details, and Approve / Resend invite. */
+function PendingCard({
+  p,
+  approve,
+  resend,
+}: {
+  p: PendingApproval;
+  approve: ReturnType<typeof useApprovePlayer>;
+  resend: ReturnType<typeof useResendSiteInvite>;
+}) {
+  return (
+    <Card>
+      <View style={styles.row}>
+        <Text style={styles.name}>{p.name}</Text>
+        {!p.account_ready ? <Badge text="SETUP INCOMPLETE" tone="caution" /> : null}
+      </View>
+      {p.email ? <Text style={styles.meta}>{p.email}</Text> : null}
+      {!p.account_ready && p.invite_expires_at ? (
+        // Unfinished site invites are deleted after 30 days (server 0.40.5).
+        <Text style={styles.meta}>
+          Invite expires {formatDateTime(p.invite_expires_at)}. The account is deleted unless they finish
+          setup or you resend it.
+        </Text>
+      ) : null}
+      {!p.account_ready && p.can_resend ? (
+        <Button
+          label="Resend invite"
+          variant="secondary"
+          labelColor={colors.gold}
+          onPress={() =>
+            resend.mutate(p.profile_id, {
+              onSuccess: (data) =>
+                Alert.alert(data.sent ? "Invite resent" : "Already sent", data.detail),
+              onError: (e) =>
+                Alert.alert(
+                  "Couldn't resend",
+                  e instanceof ApiError ? e.detail : "Try again.",
+                ),
+            })
+          }
+          loading={resend.isPending && resend.variables === p.profile_id}
+        />
+      ) : (
+        <Button
+          label={p.account_ready ? "Approve" : "Waiting on the player"}
+          onPress={() =>
+            approve.mutate(p.profile_id, {
+              onError: (e) =>
+                Alert.alert(
+                  "Couldn't approve",
+                  e instanceof ApiError ? e.detail : "Try again.",
+                ),
+            })
+          }
+          loading={approve.isPending}
+          disabled={!p.account_ready}
+        />
+      )}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  group: { gap: spacing.sm },
+  groupHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xs },
+  groupName: { color: colors.text, fontSize: font.base, fontWeight: "700", flexShrink: 1 },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md },
   empty: { color: colors.textMuted, textAlign: "center", padding: spacing.xl },
