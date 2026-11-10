@@ -62,6 +62,7 @@ export function SiteInviteCard({ options }: { options: SiteInviteOptions }) {
         {options.can_choose_director
           ? " Their approval goes to the director you pick."
           : " You're their approving director."}
+        {" An invite nobody finishes in 30 days is deleted."}
       </Text>
 
       <TextInput
