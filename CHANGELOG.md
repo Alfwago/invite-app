@@ -3,9 +3,11 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 2026-11-10 — 1.8.1 (iOS build 38, Android versionCode 3)
+## 2026-11-10 — 1.8.1 (iOS build 39, Android versionCode 3)
 
-Needs invite-server 0.40.6 (live). On an older server the new pieces stay
+Build 39 is build 38 rebuilt with a higher number; no app changes. The
+invite picker now also lists the skate's own group (server 0.40.7, no app
+change). Needs invite-server 0.40.6+ (live). On an older server the new pieces stay
 hidden.
 
 - **"New" tag:** players approved in the last 14 days show a green NEW tag
