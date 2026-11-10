@@ -25,6 +25,7 @@ import type { ChatMessage, EmojiGroup } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { LinkText } from "@/src/components/LinkText";
+import { ImageViewer } from "@/src/components/chat/ImageViewer";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 const MENTION_TRIGGER = /(?:^|\s)@([\p{L}\p{N}'’.\- ]{0,40})$/u;
@@ -100,6 +101,10 @@ export function ChatThread({
   const [imageUri, setImageUri] = useState<string | undefined>();
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const [sheetFor, setSheetFor] = useState<ChatMessage | null>(null);
+  // The photo open full screen (1.8.1). Its viewer stays mounted beside the
+  // message menu and only toggles visible, like the menu: a viewer mounted
+  // on tap (in the row, or here) never appeared.
+  const [viewing, setViewing] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [picks, setPicks] = useState<{ id: number; name: string }[]>([]);
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -233,6 +238,7 @@ export function ChatThread({
                   msg={item}
                   showAuthor={showAuthor}
                   onLongPress={() => setSheetFor(item)}
+                  onOpenImage={setViewing}
                   onToggleReaction={(emoji) => onReact(item.id, emoji)}
                 />
               </View>
@@ -375,6 +381,7 @@ export function ChatThread({
           </Tap>
         </Tap>
       </Modal>
+      <ImageViewer uri={viewing} onClose={() => setViewing(null)} />
     </KeyboardAvoidingView>
   );
 }
@@ -383,11 +390,13 @@ function MessageRow({
   msg,
   showAuthor,
   onLongPress,
+  onOpenImage,
   onToggleReaction,
 }: {
   msg: ChatMessage;
   showAuthor: boolean;
   onLongPress: () => void;
+  onOpenImage: (uri: string) => void;
   onToggleReaction: (emoji: string) => void;
 }) {
   const mine = msg.mine;
@@ -410,7 +419,18 @@ function MessageRow({
           style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}
         >
           {msg.image_url ? (
-            <Image source={{ uri: msg.image_url }} style={styles.image} resizeMode="cover" />
+            // Tap the photo to see it full screen; a long press still opens
+            // the message's menu (1.8.1).
+            <Tap
+              feedback="none"
+              onPress={() => msg.image_url && onOpenImage(msg.image_url)}
+              onLongPress={onLongPress}
+              delayLongPress={250}
+              accessibilityRole="imagebutton"
+              accessibilityLabel="Photo. Tap to view full screen"
+            >
+              <Image source={{ uri: msg.image_url }} style={styles.image} resizeMode="cover" />
+            </Tap>
           ) : null}
           {msg.body ? (
             <LinkText
