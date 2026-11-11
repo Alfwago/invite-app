@@ -28,6 +28,8 @@ export default function ApprovalsScreen() {
   const approve = useApprovePlayer();
   const resend = useResendSiteInvite();
   const pending = query.data ?? [];
+  // Finished setup, waiting on a director: the green count (1.8.2).
+  const readyTotal = pending.filter((p) => p.account_ready).length;
   const { me } = useAuth();
   // Groups the director opened or closed; by default yours (or the only one) is open.
   const [toggled, setToggled] = useState<Set<string>>(new Set());
@@ -57,7 +59,10 @@ export default function ApprovalsScreen() {
           </>
         ) : null}
 
-        <Text style={styles.sectionHeading}>New accounts</Text>
+        <View style={styles.headingRow}>
+          <Text style={[styles.sectionHeading, styles.headingInRow]}>New accounts</Text>
+          {readyTotal > 0 ? <Badge text={`${readyTotal} ready`} tone="good" /> : null}
+        </View>
         {query.isLoading ? (
           <Loading label="Loading…" />
         ) : query.isError ? (
@@ -92,6 +97,7 @@ export default function ApprovalsScreen() {
                     {g.mine ? " (you)" : ""}
                   </Text>
                   <Badge text={String(g.items.length)} tone="gold" />
+                  {g.readyCount > 0 ? <Badge text={`${g.readyCount} ready`} tone="good" /> : null}
                 </Tap>
                 {open
                   ? g.items.map((p) => (
@@ -278,6 +284,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md },
   empty: { color: colors.textMuted, textAlign: "center", padding: spacing.xl },
+  headingRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
+  headingInRow: { marginTop: 0 },
   sectionHeading: {
     color: colors.gold,
     fontSize: font.md,
