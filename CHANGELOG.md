@@ -11,6 +11,10 @@ Store; Android ships as a direct-download APK from the site.
   the President and Site Director. The order comes from the server: deploy
   invite-server branch `feature/app-directors-night-order` together with
   1.8.2 (it reorders older app versions' lists too). No app code change.
+- **Invites & approvals: ready to approve first.** In each director's
+  group, accounts that finished setup come before unfinished invites, with
+  a green "N ready" count on the group and on New accounts. Matches the
+  website's Pending Approvals (server 0.40.10). App-only.
 
 ## 2026-11-10 — 1.8.1 (iOS build 40, Android versionCode 3)
 
