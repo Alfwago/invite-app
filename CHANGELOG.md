@@ -3,6 +3,15 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
+## 1.8.2 (planned, not built)
+
+- **Skate Directors in night order** like the website's Director contacts:
+  by each director's first night (Sundae, Sunday, Monday ... Thursday,
+  Saturday), the Night Director above the Assistant on the same night, then
+  the President and Site Director. The order comes from the server: deploy
+  invite-server branch `feature/app-directors-night-order` together with
+  1.8.2 (it reorders older app versions' lists too). No app code change.
+
 ## 2026-11-10 — 1.8.1 (iOS build 40, Android versionCode 3)
 
 Build 40 adds: **Invites & approvals grouped by director**, like the
