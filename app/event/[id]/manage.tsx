@@ -151,7 +151,9 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
   const r = event.roster;
   const going = event.players.filter((p) => p.status === "YES").length;
   const maybe = event.players.filter((p) => p.status === "MAYBE").length;
-  const no = event.players.filter((p) => p.status === "NO").length;
+  // From the invite list, where the server sends an unanswered (seeded NO)
+  // invite as NO_RESPONSE, so nobody counts as both No and No response.
+  const no = manage.invitees.filter((i) => i.status === "NO").length;
   const noResp = manage.invitees.filter((i) => i.status === "NO_RESPONSE").length;
   const pct = fillPct(r);
   // A non-skating event (party, golf outing — server 0.40.0+): no goalies,
