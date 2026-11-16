@@ -8,6 +8,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { Tap } from "@/src/components/Tap";
 import { Button } from "@/src/components/ui";
 import { useRsvp } from "@/src/hooks/queries";
+import { isUnanswered } from "@/src/inviteBadge";
 import { lateChangeWarning, lateDropOwedNote } from "@/src/lateChange";
 import { colors, radius, spacing } from "@/src/theme";
 import { Alert } from "react-native";
@@ -42,11 +43,14 @@ export function RsvpControls({ event }: { event: EventDetail }) {
   });
 
   const current = event.my_rsvp;
-  const [editing, setEditing] = useState(!current);
-  const locked = !!current && !editing;
+  // An invite the player hasn't answered carries the server's seeded NO;
+  // show it as a fresh RSVP, not "You're in as NO" (owner 2026-11-16).
+  const answered = current && !isUnanswered(current) ? current : null;
+  const [editing, setEditing] = useState(!answered);
+  const locked = !!answered && !editing;
   const [choice, setChoice] = useState<RsvpBody["status"]>(
-    current && CHOICES.includes(current.status as RsvpBody["status"])
-      ? (current.status as RsvpBody["status"])
+    answered && CHOICES.includes(answered.status as RsvpBody["status"])
+      ? (answered.status as RsvpBody["status"])
       : "YES",
   );
   const [asGoalie, setAsGoalie] = useState(current?.is_goalie ?? me?.is_goalie ?? false);
@@ -169,10 +173,10 @@ export function RsvpControls({ event }: { event: EventDetail }) {
     <View style={styles.wrap}>
       {locked ? (
         <Text style={styles.currentLine}>
-          You&apos;re in as {current!.status.replace("_", " ")}
-          {current!.is_goalie && skating ? " (goalie)" : ""}
-          {current!.guest_count > 0 ? ` +${current!.guest_count} guest${current!.guest_count === 1 ? "" : "s"}` : ""}
-          {(current!.family_count ?? 0) > 0 ? ` · ${current!.family_count} family` : ""}
+          You&apos;re in as {answered!.status.replace("_", " ")}
+          {answered!.is_goalie && skating ? " (goalie)" : ""}
+          {answered!.guest_count > 0 ? ` +${answered!.guest_count} guest${answered!.guest_count === 1 ? "" : "s"}` : ""}
+          {(answered!.family_count ?? 0) > 0 ? ` · ${answered!.family_count} family` : ""}
         </Text>
       ) : null}
 
@@ -271,26 +275,26 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       ) : (
         <>
           <Button
-            label={current ? "Save changes" : "Save RSVP"}
+            label={answered ? "Save changes" : "Save RSVP"}
             onPress={confirmThenSubmit}
             loading={rsvp.isPending}
           />
-          {current ? (
+          {answered ? (
             <Button
               label="Cancel"
               variant="secondary"
               onPress={() => {
                 setChoice(
-                  CHOICES.includes(current.status as RsvpBody["status"])
-                    ? (current.status as RsvpBody["status"])
+                  CHOICES.includes(answered.status as RsvpBody["status"])
+                    ? (answered.status as RsvpBody["status"])
                     : "YES",
                 );
-                setAsGoalie(current.is_goalie);
-                setBeerGuy(current.is_beer_guy);
-                setWhiskeyGuy(current.is_whiskey_guy);
-                setGuests(current.guests ?? []);
-                setGuestCount(current.guest_count ?? 0);
-                setFamilyCount(current.family_count ?? 0);
+                setAsGoalie(answered.is_goalie);
+                setBeerGuy(answered.is_beer_guy);
+                setWhiskeyGuy(answered.is_whiskey_guy);
+                setGuests(answered.guests ?? []);
+                setGuestCount(answered.guest_count ?? 0);
+                setFamilyCount(answered.family_count ?? 0);
                 setEditing(false);
               }}
             />

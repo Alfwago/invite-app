@@ -7,6 +7,7 @@ import type { EventSummary, RsvpStatus } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { Badge, FillBar, type BadgeTone } from "@/src/components/ui";
 import { formatEventDate, formatTime, rosterLabel } from "@/src/format";
+import { eventStarted, isUnanswered } from "@/src/inviteBadge";
 import { fillPct, isSkating, rosterBadges, rosterHealth } from "@/src/roster";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -29,6 +30,9 @@ const STATUS_LABEL: Record<RsvpStatus, string> = {
 export function EventCard({ event, compact = false }: { event: EventSummary; compact?: boolean }) {
   const { me } = useAuth();
   const status = event.my_rsvp?.status ?? null;
+  // Unanswered invites carry the server's seeded NO: ask for an answer
+  // instead of showing NOT GOING (owner 2026-11-16).
+  const unanswered = isUnanswered(event.my_rsvp);
   const r = event.roster;
   const pct = fillPct(r);
   const skating = isSkating(r);
@@ -40,7 +44,13 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
     <>
         <View style={styles.topRow}>
           <Text style={styles.title}>{event.display_name}</Text>
-          {status ? (
+          {unanswered ? (
+            eventStarted(event) ? (
+              <Badge text="NO RESPONSE" tone="neutral" />
+            ) : (
+              <Badge text="RESPOND" tone="gold" />
+            )
+          ) : status ? (
             <Badge text={STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
           ) : event.can_manage ? (
             <Badge text="MANAGE" tone="neutral" />

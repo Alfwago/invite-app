@@ -5,6 +5,7 @@ import { Tabs, useRouter } from "expo-router";
 
 import { Tap } from "@/src/components/Tap";
 import { useBoards, useEvents, useInbox } from "@/src/hooks/queries";
+import { pendingInviteCount } from "@/src/inviteBadge";
 import { setAppBadge } from "@/src/push";
 import { colors } from "@/src/theme";
 
@@ -19,13 +20,11 @@ export default function TabsLayout() {
   const inbox = useInbox();
   const events = useEvents();
   const dmUnread = inbox.data?.unread_total ?? 0;
-  // Mirrors the server's `pending_invite_count`: an open, upcoming invite
-  // this player hasn't acted on yet. `my_rsvp` is null for events the
-  // player can see but isn't invited to (a director's other nights), which
-  // must not count.
-  const pendingInvites = (events.data ?? []).filter(
-    (e) => e.status === "OPEN" && e.my_rsvp != null && e.my_rsvp.responded_at == null,
-  ).length;
+  // Mirrors the server's `pending_invite_count`: an open invite this player
+  // hasn't acted on, for a skate that hasn't started (once it happens it
+  // drops off, answered or not). `my_rsvp` is null for events the player
+  // can see but isn't invited to (a director's other nights).
+  const pendingInvites = pendingInviteCount(events.data ?? []);
   const unread = (boards.data?.unread_total ?? 0) + dmUnread + pendingInvites;
 
   useEffect(() => {
