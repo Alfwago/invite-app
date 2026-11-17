@@ -21,6 +21,11 @@ older servers send no `directors_board`, so its bar stays hidden.
   President, Site Directors and every Night Director and Assistant can read
   and post. Lock icon, red edge, its own unread dot; pushes like a night
   board. Players never see it.
+- **Reply to a board post** like iOS Messages (server 0.41.0+): long-press
+  > Reply, a "Replying to" bar over the box (✕ cancels), and the reply's
+  bubble quotes the original (tap it to scroll there). The original's author
+  gets "replied to you" instead of the usual board push. Hidden on an older
+  server (no `can_reply`). Skate chat is unchanged.
 - **Skate Directors in night order** like the website's Director contacts:
   by each director's first night (Sundae, Sunday, Monday ... Thursday,
   Saturday), the Night Director above the Assistant on the same night, then
