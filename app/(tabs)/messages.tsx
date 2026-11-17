@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   type ImageSourcePropType,
+  Keyboard,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -12,7 +15,15 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
 import type { BoardId } from "@/src/api/types";
-import { boardA11yLabel, boardTileImage, boardTileLayout, nightShortLabel } from "@/src/boardTiles";
+import {
+  boardA11yLabel,
+  boardTileImage,
+  boardTileRow,
+  nightShortLabel,
+  offscreenUnread,
+  ROW_TILE,
+  scrollToShow,
+} from "@/src/boardTiles";
 import { Tap } from "@/src/components/Tap";
 import { ChatThread } from "@/src/components/chat/ChatThread";
 import {
@@ -63,8 +74,7 @@ export default function MessagesScreen() {
 
   // Main is the full-width bar across the top (owner, 2026-10-15: the app
   // keeps the bar; the website has the Main tile). Below it, one tile per
-  // skate group, equal size, spread evenly across the screen and wrapping
-  // into balanced, grid-aligned rows (boardTileLayout).
+  // skate group in a single row (boardTileRow).
   const { width } = useWindowDimensions();
   const mainUnread = boardsQuery.data?.unread_main ?? 0;
   const tiles: TileProps[] = boards.map((b) => {
@@ -79,12 +89,62 @@ export default function MessagesScreen() {
       onPress: () => setBoard(b.id),
     };
   });
-  const layout = boardTileLayout(width - spacing.md * 2, tiles.length);
-  const rows: TileProps[][] = [];
-  for (let i = 0; i < tiles.length; i += layout.columns) rows.push(tiles.slice(i, i + layout.columns));
+  // One row, never a wrapped grid (owner 2026-11-17; Art + Amy): spread out
+  // when it all fits, else a sideways-scrolling row of 52pt tiles.
+  const rowSpec = boardTileRow(width - spacing.md * 2, tiles.length);
+  const keyboardUp = useKeyboardUp();
+
+  const rowRef = useRef<ScrollView>(null);
+  const [scrollX, setScrollX] = useState(0);
+  const [viewW, setViewW] = useState(0);
+  const [contentW, setContentW] = useState(0);
+  const pad = spacing.md;
+  // The row unmounts while the keyboard is up and comes back at the start.
+  useEffect(() => {
+    if (keyboardUp) setScrollX(0);
+  }, [keyboardUp]);
+  const activeIndex = tiles.findIndex((t) => t.active);
+  // Keep the open board's tile in view (also when a push opens it).
+  useEffect(() => {
+    if (!rowSpec.scroll || activeIndex < 0 || viewW <= 0) return;
+    const x = scrollToShow(activeIndex, rowSpec.size, rowSpec.gap, pad, scrollX, viewW);
+    if (x !== scrollX) rowRef.current?.scrollTo({ x, animated: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the board or row changes
+  }, [activeIndex, viewW, rowSpec.scroll, keyboardUp]);
+  const hidden = rowSpec.scroll
+    ? offscreenUnread(tiles.map((t) => t.badge), rowSpec.size, rowSpec.gap, pad, scrollX, viewW)
+    : { left: null, right: null };
+  const moreLeft = rowSpec.scroll && scrollX > 1;
+  const moreRight = rowSpec.scroll && contentW > scrollX + viewW + 1;
+  function revealTile(index: number) {
+    if (!rowSpec.scroll) return;
+    const x = scrollToShow(index, rowSpec.size, rowSpec.gap, pad, scrollX, viewW);
+    rowRef.current?.scrollTo({ x, animated: true });
+  }
+  const boardLabel =
+    board === MAIN ? "Main board" : board === DIRECTORS ? "Directors board" : (activeNight?.name ?? "Board");
 
   return (
     <View style={styles.screen}>
+      {keyboardUp ? (
+        // Typing: the boards give the thread their room; one line says
+        // which board this goes to. Tap it to put the keyboard away (Amy).
+        <Tap
+          feedback="row"
+          onPress={() => Keyboard.dismiss()}
+          accessibilityRole="button"
+          accessibilityLabel={`Posting to ${boardLabel}. Tap to show all boards`}
+          style={styles.compactBar}
+        >
+          {board === DIRECTORS ? (
+            <Ionicons name="lock-closed" size={12} color={colors.gold} />
+          ) : null}
+          <Text style={styles.compactBarText} numberOfLines={1}>
+            {boardLabel}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+        </Tap>
+      ) : (
       <View style={styles.boardBar}>
         <View style={styles.barRow}>
           <Tap
@@ -120,17 +180,43 @@ export default function MessagesScreen() {
             </Tap>
           ) : null}
         </View>
-        {rows.map((row, i) => (
+        {tiles.length === 0 ? null : !rowSpec.scroll ? (
           <View
-            key={i}
-            style={[styles.boardRow, { gap: layout.gap, paddingHorizontal: layout.gap }]}
+            style={[
+              styles.boardRow,
+              { gap: rowSpec.layout.gap, paddingHorizontal: rowSpec.layout.gap },
+            ]}
           >
-            {row.map(({ key, ...tile }) => (
-              <BoardTile key={key} {...tile} size={layout.size} />
+            {tiles.map(({ key, ...tile }) => (
+              <BoardTile key={key} {...tile} size={rowSpec.layout.size} />
             ))}
           </View>
-        ))}
+        ) : (
+          <View style={styles.scrollWrap}>
+            <ScrollView
+              ref={rowRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={32}
+              onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+              onLayout={(e) => setViewW(e.nativeEvent.layout.width)}
+              onContentSizeChange={(w) => setContentW(w)}
+              contentContainerStyle={[styles.scrollRow, { gap: rowSpec.gap, paddingHorizontal: pad }]}
+            >
+              {tiles.map(({ key, ...tile }) => (
+                <BoardTile key={key} {...tile} size={rowSpec.size} />
+              ))}
+            </ScrollView>
+            {moreLeft ? (
+              <EdgeFade side="left" unread={hidden.left} onPress={revealTile} names={tiles} />
+            ) : null}
+            {moreRight ? (
+              <EdgeFade side="right" unread={hidden.right} onPress={revealTile} names={tiles} />
+            ) : null}
+          </View>
+        )}
       </View>
+      )}
 
       <ChatThread
         messages={data?.messages ?? []}
@@ -181,6 +267,72 @@ export default function MessagesScreen() {
         onDelete={(id) => del.mutate(id)}
         onReact={(id, emoji) => react.mutate({ id, emoji })}
       />
+    </View>
+  );
+}
+
+/** True while the on-screen keyboard is up. */
+function useKeyboardUp(): boolean {
+  const [up, setUp] = useState(false);
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const a = Keyboard.addListener(showEvt, () => setUp(true));
+    const b = Keyboard.addListener(hideEvt, () => setUp(false));
+    return () => {
+      a.remove();
+      b.remove();
+    };
+  }, []);
+  return up;
+}
+
+const FADE_STEPS = [0.35, 0.65, 0.85, 1];
+
+/**
+ * The scrolling row's edge: a fade into the page that says "more this way"
+ * (Art), and a red dot when a board out that way has unread posts (Amy).
+ * Tapping it brings that board into view.
+ */
+function EdgeFade({
+  side,
+  unread,
+  onPress,
+  names,
+}: {
+  side: "left" | "right";
+  unread: number | null;
+  onPress: (index: number) => void;
+  names: { name: string }[];
+}) {
+  const steps = side === "right" ? FADE_STEPS : [...FADE_STEPS].reverse();
+  const fade = (
+    <View style={styles.fadeStrips} pointerEvents="none">
+      {steps.map((o) => (
+        <View key={o} style={{ flex: 1, backgroundColor: colors.bg, opacity: o }} />
+      ))}
+    </View>
+  );
+  return (
+    <View style={[styles.edge, side === "right" ? { right: 0 } : { left: 0 }]} pointerEvents="box-none">
+      {fade}
+      {unread !== null ? (
+        <Tap
+          feedback="icon"
+          hitSlop={10}
+          onPress={() => onPress(unread)}
+          accessibilityRole="button"
+          accessibilityLabel={`Unread messages in ${names[unread]?.name ?? "another board"}`}
+          style={styles.edgeMark}
+        >
+          <Ionicons
+            name={side === "right" ? "chevron-forward" : "chevron-back"}
+            size={15}
+            color={colors.gold}
+          />
+          <View style={styles.edgeDot} />
+        </Tap>
+      ) : null}
     </View>
   );
 }
@@ -258,6 +410,53 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   boardRow: { flexDirection: "row" },
+  // The scrolling row runs edge to edge; paddingTop leaves room for the
+  // tiles' corner badges (top: -7) inside the scroll view.
+  scrollWrap: { marginHorizontal: -spacing.md },
+  scrollRow: { paddingTop: 7 },
+  edge: {
+    position: "absolute",
+    top: 7,
+    height: ROW_TILE,
+    width: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fadeStrips: { ...StyleSheet.absoluteFillObject, flexDirection: "row" },
+  // A dark disc so the arrow reads over a logo; the red dot = unread that way.
+  edgeMark: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  edgeDot: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: colors.bg,
+    backgroundColor: BADGE_RED,
+  },
+  // Keyboard up: one line in place of the boards.
+  compactBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+  },
+  compactBarText: { color: colors.gold, fontSize: 14, fontWeight: "800", flexShrink: 1 },
   // Main, and for directors the Directors board beside it (0.41.0).
   barRow: { flexDirection: "row", gap: spacing.md },
   // Director-only: the red left border Card accent="director" uses.

@@ -76,3 +76,73 @@ export function boardTileLayout(width: number, count: number): BoardTileLayout {
   const gap = Math.max(0, Math.floor((width - size * columns) / (columns + 1)));
   return { size, columns, gap };
 }
+
+/** The scrolling row's tile and gap (Art, 2026-11-17). */
+export const ROW_TILE = 52;
+export const ROW_GAP = 8;
+
+export type BoardTileRow =
+  | { scroll: false; layout: BoardTileLayout }
+  | { scroll: true; size: number; gap: number };
+
+/**
+ * One row of tiles, never a wrapped grid (owner 2026-11-17: "with six skate
+ * groups the icons are taking up a lot of space"; Art + Amy: a sideways
+ * row, no collapse arrow, so unread badges never hide behind a control).
+ * When everything fits in one row the tiles keep the spread-out layout
+ * (players in a night or two see no change); otherwise a scrolling row of
+ * ROW_TILE tiles, in day order.
+ */
+export function boardTileRow(width: number, count: number): BoardTileRow {
+  const layout = boardTileLayout(width, count);
+  if (layout.columns >= count) return { scroll: false, layout };
+  return { scroll: true, size: ROW_TILE, gap: ROW_GAP };
+}
+
+/** Left edge of tile `index` in the scrolling row's content (after `pad`). */
+export function rowTileX(index: number, size: number, gap: number, pad: number): number {
+  return pad + index * (size + gap);
+}
+
+/**
+ * Which edges of the scrolling row hide a board with unread posts, so a
+ * red dot can sit in that edge's fade (Amy). `scrollX`/`viewWidth` = the
+ * visible window; a tile counts as hidden unless it's fully in view.
+ * Returns the nearest hidden unread tile index on each side, or null.
+ */
+export function offscreenUnread(
+  unread: number[],
+  size: number,
+  gap: number,
+  pad: number,
+  scrollX: number,
+  viewWidth: number,
+): { left: number | null; right: number | null } {
+  let left: number | null = null;
+  let right: number | null = null;
+  unread.forEach((n, i) => {
+    if (n <= 0) return;
+    const x = rowTileX(i, size, gap, pad);
+    if (x < scrollX) left = i; // keeps the nearest (last) one on the left
+    else if (x + size > scrollX + viewWidth && right === null) right = i;
+  });
+  return { left, right };
+}
+
+/**
+ * Where to scroll so tile `index` is fully in view (unchanged if it already
+ * is): the open board stays visible, including when a push opens it.
+ */
+export function scrollToShow(
+  index: number,
+  size: number,
+  gap: number,
+  pad: number,
+  scrollX: number,
+  viewWidth: number,
+): number {
+  const x = rowTileX(index, size, gap, pad);
+  if (x - pad < scrollX) return Math.max(0, x - pad);
+  if (x + size + pad > scrollX + viewWidth) return x + size + pad - viewWidth;
+  return scrollX;
+}

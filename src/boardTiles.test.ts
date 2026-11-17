@@ -5,7 +5,12 @@ import {
   boardA11yLabel,
   boardTileImage,
   boardTileLayout,
+  boardTileRow,
   nightShortLabel,
+  offscreenUnread,
+  ROW_GAP,
+  ROW_TILE,
+  scrollToShow,
   TILE_MAX,
   TILE_MIN,
 } from "./boardTiles.ts";
@@ -94,4 +99,34 @@ test("tile layout: counts night tiles only (Main is the bar above)", () => {
   const one = boardTileLayout(369, 1);
   assert.deepEqual([one.size, one.columns], [TILE_MAX, 1]);
   assert.equal(one.gap, Math.floor((369 - TILE_MAX) / 2));
+});
+
+// -- one scrolling row (owner 2026-11-17, Art + Amy) ------------------------
+
+test("a night or two keeps the spread-out row", () => {
+  const r = boardTileRow(416, 2);
+  assert.equal(r.scroll, false);
+});
+
+test("seven nights on a phone: one scrolling row, not a grid", () => {
+  const r = boardTileRow(369, 7);
+  assert.equal(r.scroll, true);
+  if (r.scroll) assert.deepEqual([r.size, r.gap], [ROW_TILE, ROW_GAP]);
+});
+
+test("off-screen unread: nearest on each side", () => {
+  // pad 12, 52 + 8: tile i at 12 + 60i. Window 0..300 shows tiles 0-3 fully.
+  const unread = [0, 2, 0, 0, 0, 1, 3];
+  assert.deepEqual(offscreenUnread(unread, 52, 8, 12, 0, 300), { left: null, right: 5 });
+  // Scrolled to 200: tiles 0-3 start before 200 except tile 4 (252).
+  assert.deepEqual(offscreenUnread(unread, 52, 8, 12, 200, 300), { left: 1, right: null });
+  assert.deepEqual(offscreenUnread([0, 0, 0], 52, 8, 12, 0, 100), { left: null, right: null });
+});
+
+test("scrollToShow brings the open tile into view, else leaves it", () => {
+  assert.equal(scrollToShow(1, 52, 8, 12, 0, 300), 0);
+  // Tile 6 at 372..424 (+12 pad) in a 300 window: scroll to 136.
+  assert.equal(scrollToShow(6, 52, 8, 12, 0, 300), 136);
+  // Tile 0 while scrolled right: back to 0.
+  assert.equal(scrollToShow(0, 52, 8, 12, 136, 300), 0);
 });
