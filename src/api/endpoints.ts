@@ -259,6 +259,7 @@ export function postMessage(msg: NewMessage): Promise<BoardMessage> {
     if (msg.board != null) form.append("board", String(msg.board));
     if (msg.notify) form.append("notify", "true");
     (msg.mentionIds ?? []).forEach((id) => form.append("mention_ids", String(id)));
+    if (msg.replyTo != null) form.append("reply_to", String(msg.replyTo));
     form.append("image", imagePart(msg.imageUri));
     return apiFetch("/api/messages/", { method: "POST", form });
   }
@@ -269,6 +270,7 @@ export function postMessage(msg: NewMessage): Promise<BoardMessage> {
       board: msg.board,
       notify: msg.notify ?? false,
       mention_ids: msg.mentionIds ?? [],
+      ...(msg.replyTo != null ? { reply_to: msg.replyTo } : {}),
     },
   });
 }

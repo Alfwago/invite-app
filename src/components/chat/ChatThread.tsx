@@ -21,7 +21,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
-import type { BoardId, ChatMessage, EmojiGroup } from "@/src/api/types";
+import type { BoardId, ChatMessage, EmojiGroup, ReplyQuote } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { LinkText } from "@/src/components/LinkText";
@@ -71,7 +71,15 @@ export interface ChatThreadProps {
   /** Board id (or null for the main board) to enable @mentions. Omit to disable
    *  (e.g. per-event threads). */
   mentionBoard?: BoardId;
-  onSend: (body: string, imageUri?: string, mentionIds?: number[]) => Promise<unknown>;
+  /** Offer Reply in the message menu (boards on server 0.41.0+). The reply's
+   *  target id is passed to onSend. */
+  canReply?: boolean;
+  onSend: (
+    body: string,
+    imageUri?: string,
+    mentionIds?: number[],
+    replyTo?: number,
+  ) => Promise<unknown>;
   onEdit: (id: number, body: string, imageUri?: string, mentionIds?: number[]) => Promise<unknown>;
   onDelete: (id: number) => void;
   onReact: (id: number, emoji: string) => void;
@@ -92,6 +100,7 @@ export function ChatThread({
   placeholder = "Message…",
   accessory,
   mentionBoard,
+  canReply,
   onSend,
   onEdit,
   onDelete,
@@ -101,6 +110,12 @@ export function ChatThread({
   const [imageUri, setImageUri] = useState<string | undefined>();
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const [sheetFor, setSheetFor] = useState<ChatMessage | null>(null);
+  // Replies (1.8.2 / server 0.41.0, owner 2026-11-17: "like iOS text
+  // messages"): the post being answered, shown above the composer.
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  // A quote tapped: its original briefly outlined after the scroll.
+  const [flashId, setFlashId] = useState<number | null>(null);
+  const inputRef = useRef<TextInput>(null);
   // The photo open full screen (1.8.1). Its viewer stays mounted beside the
   // message menu and only toggles visible, like the menu: a viewer mounted
   // on tap (in the row, or here) never appeared.
@@ -148,6 +163,7 @@ export function ChatThread({
     setDraft("");
     setImageUri(undefined);
     setEditing(null);
+    setReplyingTo(null);
   }
 
   async function send() {
@@ -158,7 +174,7 @@ export function ChatThread({
       if (editing) {
         await onEdit(editing.id, text, imageUri, mentionIds);
       } else {
-        await onSend(text, imageUri, mentionIds);
+        await onSend(text, imageUri, mentionIds, replyingTo?.id);
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
       }
       resetComposer();
@@ -172,7 +188,22 @@ export function ChatThread({
     setSheetFor(null);
     setPickerOpen(false);
   }
+  function startReply(msg: ChatMessage) {
+    if (editing) resetComposer(); // the edit's text isn't a reply
+    setReplyingTo(msg);
+    closeSheet();
+    // After the menu's fade-out, or the focus is lost with the modal.
+    setTimeout(() => inputRef.current?.focus(), 350);
+  }
+  function jumpTo(id: number) {
+    const index = messages.findIndex((m) => m.id === id);
+    if (index < 0) return; // older than what's loaded
+    listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+    setFlashId(id);
+    setTimeout(() => setFlashId((cur) => (cur === id ? null : cur)), 1500);
+  }
   function startEdit(msg: ChatMessage) {
+    setReplyingTo(null);
     setEditing(msg);
     setDraft(msg.body);
     setImageUri(undefined);
@@ -212,6 +243,22 @@ export function ChatThread({
           inverted
           keyExtractor={(m) => String(m.id)}
           keyboardShouldPersistTaps="handled"
+          onScrollToIndexFailed={(info) => {
+            // Rows have different heights: get near it, then try again.
+            listRef.current?.scrollToOffset({
+              offset: info.averageItemLength * info.index,
+              animated: true,
+            });
+            setTimeout(
+              () =>
+                listRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: true,
+                  viewPosition: 0.5,
+                }),
+              250,
+            );
+          }}
           refreshControl={
             onRefresh ? (
               <RefreshControl
@@ -240,6 +287,8 @@ export function ChatThread({
                   onLongPress={() => setSheetFor(item)}
                   onOpenImage={setViewing}
                   onToggleReaction={(emoji) => onReact(item.id, emoji)}
+                  onQuotePress={jumpTo}
+                  flash={flashId === item.id}
                 />
               </View>
             );
@@ -253,6 +302,28 @@ export function ChatThread({
           <Text style={styles.editBannerText}>Editing message</Text>
           <Tap feedback="icon" onPress={resetComposer} hitSlop={8}>
             <Text style={styles.editCancel}>Cancel</Text>
+          </Tap>
+        </View>
+      ) : null}
+
+      {replyingTo && !editing ? (
+        <View style={styles.replyBanner}>
+          <Ionicons name="arrow-undo" size={14} color={colors.gold} />
+          <View style={styles.replyBannerText}>
+            <Text style={styles.replyBannerLabel} numberOfLines={1}>
+              Replying to <Text style={styles.replyBannerName}>{replyingTo.author_name}</Text>
+            </Text>
+            <Text style={styles.replyBannerBody} numberOfLines={1}>
+              {replyingTo.body || "📷 Photo"}
+            </Text>
+          </View>
+          <Tap
+            feedback="icon"
+            onPress={() => setReplyingTo(null)}
+            hitSlop={8}
+            accessibilityLabel="Cancel reply"
+          >
+            <Ionicons name="close" size={18} color={colors.textMuted} />
           </Tap>
         </View>
       ) : null}
@@ -287,6 +358,7 @@ export function ChatThread({
           <Ionicons name="image-outline" size={24} color={colors.textMuted} />
         </Tap>
         <TextInput
+          ref={inputRef}
           style={styles.input}
           placeholder={editing ? "Edit message…" : placeholder}
           placeholderTextColor={colors.textMuted}
@@ -362,6 +434,9 @@ export function ChatThread({
                     <Ionicons name="add" size={24} color={colors.text} />
                   </Tap>
                 </View>
+                {canReply && sheetFor ? (
+                  <SheetButton icon="arrow-undo" label="Reply" onPress={() => startReply(sheetFor)} />
+                ) : null}
                 {sheetFor?.can_edit ? (
                   <SheetButton icon="pencil" label="Edit" onPress={() => sheetFor && startEdit(sheetFor)} />
                 ) : null}
@@ -392,12 +467,16 @@ function MessageRow({
   onLongPress,
   onOpenImage,
   onToggleReaction,
+  onQuotePress,
+  flash,
 }: {
   msg: ChatMessage;
   showAuthor: boolean;
   onLongPress: () => void;
   onOpenImage: (uri: string) => void;
   onToggleReaction: (emoji: string) => void;
+  onQuotePress: (id: number) => void;
+  flash: boolean;
 }) {
   const mine = msg.mine;
   return (
@@ -416,8 +495,20 @@ function MessageRow({
           feedback="row"
           onLongPress={onLongPress}
           delayLongPress={250}
-          style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}
+          style={[
+            styles.bubble,
+            mine ? styles.bubbleMine : styles.bubbleTheirs,
+            flash && styles.bubbleFlash,
+          ]}
         >
+          {msg.reply_to ? (
+            <Quote
+              quote={msg.reply_to}
+              mine={mine}
+              onPress={onQuotePress}
+              onLongPress={onLongPress}
+            />
+          ) : null}
           {msg.image_url ? (
             // Tap the photo to see it full screen; a long press still opens
             // the message's menu (1.8.1).
@@ -460,6 +551,45 @@ function MessageRow({
         ) : null}
       </View>
     </View>
+  );
+}
+
+/** The post a reply answers, inside the reply's bubble. Tap to scroll to it. */
+function Quote({
+  quote,
+  mine,
+  onPress,
+  onLongPress,
+}: {
+  quote: ReplyQuote;
+  mine: boolean;
+  onPress: (id: number) => void;
+  onLongPress: () => void;
+}) {
+  if (quote.deleted || quote.id == null) {
+    return (
+      <View style={[styles.quote, mine && styles.quoteMine]}>
+        <Text style={[styles.quoteGone, mine && styles.quoteTextMine]}>Original message deleted</Text>
+      </View>
+    );
+  }
+  const id = quote.id;
+  return (
+    <Tap
+      feedback="none"
+      onPress={() => onPress(id)}
+      onLongPress={onLongPress}
+      delayLongPress={250}
+      style={[styles.quote, mine && styles.quoteMine]}
+      accessibilityLabel={`Reply to ${quote.author_name}. Tap to see the message`}
+    >
+      <Text style={[styles.quoteAuthor, mine && styles.quoteTextMine]} numberOfLines={1}>
+        {quote.author_name}
+      </Text>
+      <Text style={[styles.quoteBody, mine && styles.quoteTextMine]} numberOfLines={2}>
+        {quote.body || (quote.has_image ? "📷 Photo" : "")}
+      </Text>
+    </Tap>
   );
 }
 
@@ -530,6 +660,21 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 6,
   },
   bubbleMine: { backgroundColor: colors.gold, borderTopRightRadius: 6 },
+  bubbleFlash: { borderColor: colors.text, borderWidth: 2 },
+  quote: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.gold,
+    backgroundColor: colors.cardRaised,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  quoteMine: { borderLeftColor: colors.goldText, backgroundColor: "rgba(0,0,0,0.12)" },
+  quoteAuthor: { color: colors.text, fontSize: 12, fontWeight: "700" },
+  quoteBody: { color: colors.textMuted, fontSize: 13, lineHeight: 17 },
+  quoteGone: { color: colors.textMuted, fontSize: 12, fontStyle: "italic" },
+  quoteTextMine: { color: colors.goldText },
   body: { color: colors.text, fontSize: 15, lineHeight: 20 },
   bodyMine: { color: colors.goldText },
   linkMine: { color: colors.goldText, textDecorationLine: "underline", fontWeight: "700" },
@@ -566,6 +711,19 @@ const styles = StyleSheet.create({
   },
   editBannerText: { color: colors.textMuted, fontSize: 13, flex: 1 },
   editCancel: { color: colors.gold, fontWeight: "700", fontSize: 13 },
+  replyBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+  },
+  replyBannerText: { flex: 1, borderLeftWidth: 3, borderLeftColor: colors.gold, paddingLeft: spacing.sm },
+  replyBannerLabel: { color: colors.textMuted, fontSize: 12 },
+  replyBannerName: { color: colors.text, fontWeight: "700" },
+  replyBannerBody: { color: colors.textMuted, fontSize: 13 },
 
   mentionBar: {
     maxHeight: 132,

@@ -153,6 +153,7 @@ export default function MessagesScreen() {
               : "No messages"
         }
         mentionBoard={board}
+        canReply={!!data?.can_reply}
         accessory={
           canEmail ? (
             <Tap
@@ -170,8 +171,8 @@ export default function MessagesScreen() {
             </Tap>
           ) : null
         }
-        onSend={async (body, imageUri, mentionIds) => {
-          await post.mutateAsync({ body, board, imageUri, notify: emailGroup, mentionIds });
+        onSend={async (body, imageUri, mentionIds, replyTo) => {
+          await post.mutateAsync({ body, board, imageUri, notify: emailGroup, mentionIds, replyTo });
           setEmailGroup(false);
         }}
         onEdit={(id, body, imageUri, mentionIds) =>

@@ -733,6 +733,20 @@ export interface ChatMessage {
   reactions: MessageReaction[];
   /** @-mentions on this post (board messages only; [] elsewhere). */
   mentions?: { id: number; name: string }[];
+  /** The post this one replies to (board messages, server 0.41.0+); null or
+   *  missing when it isn't a reply. */
+  reply_to?: ReplyQuote | null;
+}
+
+/** What a reply shows of the post it answers. `deleted` = that post is gone
+ *  (`id` is then null). `body` is one line, already cut short. */
+export interface ReplyQuote {
+  id: number | null;
+  author_id: number | null;
+  author_name: string;
+  body: string;
+  has_image: boolean;
+  deleted: boolean;
 }
 
 export type BoardMessage = ChatMessage;
@@ -768,6 +782,8 @@ export interface MessagesResponse {
   reaction_choices: string[];
   emoji_groups: EmojiGroup[];
   can_email: boolean;
+  /** Server 0.41.0+: the server takes `reply_to`, so the app offers Reply. */
+  can_reply?: boolean;
   unread_total: number;
   messages: BoardMessage[];
 }
@@ -782,6 +798,8 @@ export interface NewMessage {
   notify?: boolean;
   /** ids of @-mentioned board members */
   mentionIds?: number[];
+  /** the post this one replies to (server 0.41.0+) */
+  replyTo?: number;
 }
 
 export interface EditMessage {
