@@ -11,6 +11,7 @@ import { APP_VERSION_CHECK_MS } from "@/src/updateCheck";
 import type { BorrowPanel } from "@/src/borrow";
 import type { SiteInvitePayload } from "@/src/siteInvites";
 import type {
+  BoardId,
   BoardMessage,
   CreateNextEventBody,
   NonSkatingEventBody,
@@ -58,7 +59,7 @@ export const keys = {
   pollResults: (id: number) => ["poll-results", id] as const,
   closedPolls: ["polls", "closed"] as const,
   dmThread: (who: number | "system") => ["dm", who] as const,
-  messages: (board: number | null) => ["messages", board ?? "main"] as const,
+  messages: (board: BoardId) => ["messages", board ?? "main"] as const,
   events: (past: boolean) => ["events", { past }] as const,
   event: (id: number | string) => ["event", String(id)] as const,
 };
@@ -154,14 +155,14 @@ export function useBoards() {
   });
 }
 
-export function useMessages(board: number | null): UseQueryResult<MessagesResponse> {
+export function useMessages(board: BoardId): UseQueryResult<MessagesResponse> {
   return useQuery({
     queryKey: keys.messages(board),
     queryFn: ({ signal }) => api.fetchMessages(board, signal),
   });
 }
 
-export function usePostMessage(board: number | null) {
+export function usePostMessage(board: BoardId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (msg: NewMessage) => api.postMessage(msg),
@@ -175,7 +176,7 @@ export function usePostMessage(board: number | null) {
   });
 }
 
-export function useEditMessage(board: number | null) {
+export function useEditMessage(board: BoardId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: {
@@ -188,7 +189,7 @@ export function useEditMessage(board: number | null) {
   });
 }
 
-export function useReactMessage(board: number | null) {
+export function useReactMessage(board: BoardId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: { id: number; emoji: string }) =>
@@ -212,7 +213,7 @@ function addMessageToCache(
 
 function patchMessageInCache(
   qc: ReturnType<typeof useQueryClient>,
-  board: number | null,
+  board: BoardId,
   fresh: BoardMessage,
 ) {
   qc.setQueryData<MessagesResponse>(keys.messages(board), (prev) =>
@@ -222,7 +223,7 @@ function patchMessageInCache(
   );
 }
 
-export function useDeleteMessage(board: number | null) {
+export function useDeleteMessage(board: BoardId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.deleteMessage(id),

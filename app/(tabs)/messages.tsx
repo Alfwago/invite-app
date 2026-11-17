@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/src/api/client";
+import type { BoardId } from "@/src/api/types";
 import { boardA11yLabel, boardTileImage, boardTileLayout, nightShortLabel } from "@/src/boardTiles";
 import { Tap } from "@/src/components/Tap";
 import { ChatThread } from "@/src/components/chat/ChatThread";
@@ -27,13 +28,14 @@ import { colors, font, radius, spacing } from "@/src/theme";
 import { usePullToRefresh } from "@/src/hooks/usePullToRefresh";
 
 const MAIN = null;
+const DIRECTORS = "directors" as const;
 const TILE_BG = "#161616"; // board tile, a step above colors.cardRaised
 const BADGE_RED = "#d93a3f"; // white on it = 4.5:1
 
 export default function MessagesScreen() {
   const qc = useQueryClient();
   const boardsQuery = useBoards();
-  const [board, setBoard] = useState<number | null>(MAIN);
+  const [board, setBoard] = useState<BoardId>(MAIN);
 
   const messagesQuery = useMessages(board);
 
@@ -54,7 +56,10 @@ export default function MessagesScreen() {
   }, [messagesQuery.dataUpdatedAt, messagesQuery.isSuccess, qc]);
 
   const canEmail = !!data?.can_email;
-  const activeNight = board === MAIN ? null : boards.find((b) => b.id === board);
+  const activeNight = board === MAIN || board === DIRECTORS ? null : boards.find((b) => b.id === board);
+  // The Director board (server 0.41.0+, owner 2026-11-17): directors, Night
+  // Directors and Assistants only. null/missing = not shown.
+  const directorsBoard = boardsQuery.data?.directors_board ?? null;
 
   // Main is the full-width bar across the top (owner, 2026-10-15: the app
   // keeps the bar; the website has the Main tile). Below it, one tile per
@@ -81,16 +86,40 @@ export default function MessagesScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.boardBar}>
-        <Tap
-          onPress={() => setBoard(MAIN)}
-          accessibilityRole="button"
-          accessibilityState={{ selected: board === MAIN }}
-          accessibilityLabel={boardA11yLabel("Main", mainUnread)}
-          style={[styles.mainBar, board === MAIN && styles.mainBarActive]}
-        >
-          <Text style={[styles.mainBarText, board === MAIN && styles.mainBarTextActive]}>Main</Text>
-          {mainUnread > 0 ? <UnreadDot count={mainUnread} style={styles.unreadDotMain} /> : null}
-        </Tap>
+        <View style={styles.barRow}>
+          <Tap
+            onPress={() => setBoard(MAIN)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: board === MAIN }}
+            accessibilityLabel={boardA11yLabel("Main", mainUnread)}
+            style={[styles.mainBar, board === MAIN && styles.mainBarActive]}
+          >
+            <Text style={[styles.mainBarText, board === MAIN && styles.mainBarTextActive]}>Main</Text>
+            {mainUnread > 0 ? <UnreadDot count={mainUnread} style={styles.unreadDotMain} /> : null}
+          </Tap>
+          {directorsBoard ? (
+            <Tap
+              onPress={() => setBoard(DIRECTORS)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: board === DIRECTORS }}
+              accessibilityLabel={`${boardA11yLabel("Directors", directorsBoard.unread)}, directors only`}
+              style={[styles.mainBar, styles.directorsBar, board === DIRECTORS && styles.mainBarActive]}
+            >
+              <Ionicons
+                name="lock-closed"
+                size={13}
+                color={board === DIRECTORS ? colors.gold : colors.textMuted}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[styles.mainBarText, board === DIRECTORS && styles.mainBarTextActive]}>
+                Directors
+              </Text>
+              {directorsBoard.unread > 0 ? (
+                <UnreadDot count={directorsBoard.unread} style={styles.unreadDotMain} />
+              ) : null}
+            </Tap>
+          ) : null}
+        </View>
         {rows.map((row, i) => (
           <View
             key={i}
@@ -117,9 +146,11 @@ export default function MessagesScreen() {
         onRetry={messagesQuery.refetch}
         sending={post.isPending || edit.isPending}
         emptyLabel={
-          activeNight
-            ? `Nothing on the ${activeNight.name} board yet. Say hi to the group.`
-            : "No messages"
+          board === DIRECTORS
+            ? "Nothing on the Directors board yet. Only directors see what's posted here."
+            : activeNight
+              ? `Nothing on the ${activeNight.name} board yet. Say hi to the group.`
+              : "No messages"
         }
         mentionBoard={board}
         accessory={
@@ -226,10 +257,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   boardRow: { flexDirection: "row" },
+  // Main, and for directors the Directors board beside it (0.41.0).
+  barRow: { flexDirection: "row", gap: spacing.md },
+  // Director-only: the red left border Card accent="director" uses.
+  directorsBar: { borderLeftWidth: 4, borderLeftColor: colors.red },
   // Main: the full-width bar, in the tiles' language — dark with a 1px
   // border; open = 2px gold border, gold wash, gold text (padding gives
   // back the extra point so the text doesn't move).
   mainBar: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

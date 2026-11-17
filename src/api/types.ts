@@ -750,14 +750,21 @@ export interface EmojiGroup {
   emoji: string[];
 }
 
+/** A message board: a skate group's night id, null = Main, "directors" =
+ *  the Director board (server 0.41.0+, directors only). */
+export type BoardId = number | "directors" | null;
+
 export interface BoardsResponse {
   boards: Night[];
   unread_main: number;
+  /** Server 0.41.0+: the Director board for directors, null for players;
+   *  missing on older servers. */
+  directors_board?: { unread: number } | null;
   unread_total: number;
 }
 
 export interface MessagesResponse {
-  board: { id: number; name: string } | null;
+  board: { id: number | "directors"; name: string } | null;
   reaction_choices: string[];
   emoji_groups: EmojiGroup[];
   can_email: boolean;
@@ -768,7 +775,7 @@ export interface MessagesResponse {
 /** null board = the Main site-wide board. */
 export interface NewMessage {
   body: string;
-  board: number | null;
+  board: BoardId;
   /** local file uri from expo-image-picker */
   imageUri?: string;
   /** director only — also email the board's members */

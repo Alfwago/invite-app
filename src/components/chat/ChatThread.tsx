@@ -21,7 +21,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 
 import { ApiError } from "@/src/api/client";
 import * as api from "@/src/api/endpoints";
-import type { ChatMessage, EmojiGroup } from "@/src/api/types";
+import type { BoardId, ChatMessage, EmojiGroup } from "@/src/api/types";
 import { Tap } from "@/src/components/Tap";
 import { ErrorState, Loading } from "@/src/components/ui";
 import { LinkText } from "@/src/components/LinkText";
@@ -70,7 +70,7 @@ export interface ChatThreadProps {
   accessory?: ReactNode;
   /** Board id (or null for the main board) to enable @mentions. Omit to disable
    *  (e.g. per-event threads). */
-  mentionBoard?: number | null;
+  mentionBoard?: BoardId;
   onSend: (body: string, imageUri?: string, mentionIds?: number[]) => Promise<unknown>;
   onEdit: (id: number, body: string, imageUri?: string, mentionIds?: number[]) => Promise<unknown>;
   onDelete: (id: number) => void;

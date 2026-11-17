@@ -3,6 +3,7 @@ import { imageMimeType } from "../imageUpload";
 import type { BorrowPanel } from "../borrow";
 import type { SiteInvitePayload } from "../siteInvites";
 import type {
+  BoardId,
   AppVersions,
   Branding,
   DirectoryEntry,
@@ -233,11 +234,13 @@ export function removeNightMember(
 }
 
 export function fetchBoards(signal?: AbortSignal): Promise<BoardsResponse> {
-  return apiFetch("/api/boards/", { signal });
+  // directors=1: this app has the Director board, so its unread counts in
+  // unread_total (server 0.41.0+; older apps leave it out).
+  return apiFetch("/api/boards/?directors=1", { signal });
 }
 
 export function fetchMessages(
-  board: number | null,
+  board: BoardId,
   signal?: AbortSignal,
 ): Promise<MessagesResponse> {
   const qs = board != null ? `?board=${board}` : "";
@@ -290,7 +293,7 @@ export function editMessage(
 }
 
 export function fetchMentionable(
-  board: number | null,
+  board: BoardId,
   q: string,
   signal?: AbortSignal,
 ): Promise<{ players: { id: number; name: string }[] }> {
