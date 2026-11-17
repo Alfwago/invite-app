@@ -3,8 +3,24 @@
 Dates are when the work was done, not released. 1.4.0 is live in the App
 Store; Android ships as a direct-download APK from the site.
 
-## 1.8.2 (planned, not built)
+## 2026-11-17 — 1.8.2 (iOS build 41, Android versionCode 4)
 
+Works against the live server (0.40.11). The Director board appears once
+invite-server 0.41.0 is deployed (held until 1.8.2 is live); until then
+older servers send no `directors_board`, so its bar stays hidden.
+
+- **Unanswered invites say RESPOND, not NOT GOING.** The server seeds a new
+  invite as No, so an ignored invite read as an answer while the icon badge
+  counted it. The card now shows a gold RESPOND badge (neutral NO RESPONSE
+  once the skate has started), and the RSVP controls start blank. Matches
+  the website (server 0.40.11).
+- **Badge drops once a skate starts**, answered or not (owner 2026-11-16).
+- **Manage overview: the No count is real answers only**; unanswered
+  players count as No reply (server 0.40.11).
+- **Director board** (Messages, beside Main, server 0.41.0+): Admin,
+  President, Site Directors and every Night Director and Assistant can read
+  and post. Lock icon, red edge, its own unread dot; pushes like a night
+  board. Players never see it.
 - **Skate Directors in night order** like the website's Director contacts:
   by each director's first night (Sundae, Sunday, Monday ... Thursday,
   Saturday), the Night Director above the Assistant on the same night, then
