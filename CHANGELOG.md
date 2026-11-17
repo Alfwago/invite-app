@@ -26,6 +26,13 @@ older servers send no `directors_board`, so its bar stays hidden.
   bubble quotes the original (tap it to scroll there). The original's author
   gets "replied to you" instead of the usual board push. Hidden on an older
   server (no `can_reply`). Skate chat is unchanged.
+- **Board tiles in one sideways row** (owner 2026-11-17, Art + Amy): with
+  every skate group a director's two rows of tiles squeezed the thread.
+  Now one row of 52pt tiles that scrolls (unchanged when it all fits); the
+  edge fades, a gold arrow with a red dot marks an unread board out of view
+  (tap = scroll there), the open board stays in view, and while typing the
+  boards give way to one "Main board ▾" line. App-only (the website's phone
+  layout matches from server 0.41.0).
 - **Skate Directors in night order** like the website's Director contacts:
   by each director's first night (Sundae, Sunday, Monday ... Thursday,
   Saturday), the Night Director above the Assistant on the same night, then
