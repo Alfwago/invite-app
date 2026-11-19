@@ -353,7 +353,16 @@ function StatTile({
         <Text style={{ color: c }}>{value}</Text>
         {sub ? <Text style={styles.tileSub}> {sub}</Text> : null}
       </Text>
-      <Text style={styles.tileLabel}>{label}</Text>
+      <Text style={styles.tileLabel}>
+        {label === "+1s" ? (
+        // Labels are capitalised; "+1S" reads wrong, so the s stays small.
+        <>
+          +1<Text style={{ textTransform: "none" }}>s</Text>
+        </>
+      ) : (
+        label
+      )}
+      </Text>
     </View>
   );
 }

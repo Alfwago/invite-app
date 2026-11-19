@@ -274,7 +274,16 @@ function CountCell({ label, value }: { label: string; value: number }) {
   return (
     <View style={styles.countCell}>
       <Text style={styles.countValue}>{value}</Text>
-      <Text style={styles.countLabel}>{label}</Text>
+      <Text style={styles.countLabel}>
+        {label === "+1s" ? (
+        // Labels are capitalised; "+1S" reads wrong, so the s stays small.
+        <>
+          +1<Text style={{ textTransform: "none" }}>s</Text>
+        </>
+      ) : (
+        label
+      )}
+      </Text>
     </View>
   );
 }
