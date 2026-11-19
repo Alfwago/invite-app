@@ -1623,6 +1623,7 @@ function RosterCard({
             <WalkOnEditor
               key={`dp-${dp.id}`}
               dp={dp}
+              skating={event.is_skating !== false}
               busy={busy}
               onCancel={() => setEditWalkOn(null)}
               onSave={(patch) => {
@@ -1644,7 +1645,7 @@ function RosterCard({
               }
               walkOn
               walkOnLabel={dp.is_guest ? "guest" : "walk-on"}
-              ratingPpv={dp.rating_ppv}
+              ratingPpv={event.is_skating !== false ? dp.rating_ppv : null}
               present={dp.present}
               paid={dp.paid}
               disabled={busy}
@@ -1974,11 +1975,14 @@ function ReservedSpotRow({
 
 function WalkOnEditor({
   dp,
+  skating = true,
   busy,
   onSave,
   onCancel,
 }: {
   dp: DayPlayer;
+  /** False at a party: no goalie flag or rating, just the name. */
+  skating?: boolean;
   busy?: boolean;
   onSave: (patch: { name: string; is_goalie: boolean; rating_ppv?: string }) => void;
   onCancel: () => void;
@@ -1998,24 +2002,28 @@ function WalkOnEditor({
           placeholder="Name"
           placeholderTextColor={colors.textMuted}
         />
-        <Tap
-          onPress={() => setGoalie((g) => !g)}
-          style={[styles.goaliePick, goalie && styles.goaliePickOn]}
-        >
-          <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
-        </Tap>
+        {skating ? (
+          <Tap
+            onPress={() => setGoalie((g) => !g)}
+            style={[styles.goaliePick, goalie && styles.goaliePickOn]}
+          >
+            <Text style={[styles.goaliePickText, goalie && styles.goaliePickTextOn]}>G</Text>
+          </Tap>
+        ) : null}
       </View>
-      <View style={styles.walkOnRow}>
-        <TextInput
-          style={[styles.input, styles.walkOnRatingInput]}
-          value={rating}
-          onChangeText={setRating}
-          keyboardType="decimal-pad"
-          placeholder={goalie ? "Goalie score" : "PPV"}
-          placeholderTextColor={colors.textMuted}
-        />
-        <Text style={[styles.muted, styles.grow]}>{goalie ? "0–3" : "0–5"}</Text>
-      </View>
+      {skating ? (
+        <View style={styles.walkOnRow}>
+          <TextInput
+            style={[styles.input, styles.walkOnRatingInput]}
+            value={rating}
+            onChangeText={setRating}
+            keyboardType="decimal-pad"
+            placeholder={goalie ? "Goalie score" : "PPV"}
+            placeholderTextColor={colors.textMuted}
+          />
+          <Text style={[styles.muted, styles.grow]}>{goalie ? "0–3" : "0–5"}</Text>
+        </View>
+      ) : null}
       {bad ? <Text style={styles.walkOnErr}>{goalie ? "Goalie score must be 0–3." : "PPV must be 0–5."}</Text> : null}
       <View style={styles.walkOnRow}>
         <Button
@@ -2024,7 +2032,7 @@ function WalkOnEditor({
             onSave({
               name: name.trim() || dp.name,
               is_goalie: goalie,
-              ...(rating.trim() ? { rating_ppv: rating.trim() } : {}),
+              ...(skating && rating.trim() ? { rating_ppv: rating.trim() } : {}),
             })
           }
           disabled={busy || bad || !name.trim()}
