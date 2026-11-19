@@ -156,6 +156,7 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
   // invite as NO_RESPONSE, so nobody counts as both No and No response.
   const no = manage.invitees.filter((i) => i.status === "NO").length;
   const noResp = manage.invitees.filter((i) => i.status === "NO_RESPONSE").length;
+  const emailGuestsGoing = event.day_players.filter((d) => d.is_guest).length;
   const pct = fillPct(r);
   // A non-skating event (party, golf outing — server 0.40.0+): no goalies,
   // Team Generator or skater wording (owner 2026-10-27).
@@ -226,7 +227,10 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
           <CountCell label="No" value={no} />
           <CountCell label="No response" value={noResp} />
           <CountCell label="+1s" value={r.guest_yes} />
-          <CountCell label={skating ? "Day players" : "Walk-ons"} value={r.day_players} />
+          {/* Email guests who said Yes are walk-on rows too (server 0.42.0);
+              a party lists them as Guests, not Walk-ons. */}
+          {!skating && event.can_invite_guests ? <CountCell label="Guests" value={emailGuestsGoing} /> : null}
+          <CountCell label={skating ? "Day players" : "Walk-ons"} value={r.day_players - emailGuestsGoing} />
         </View>
       </Card>
 
