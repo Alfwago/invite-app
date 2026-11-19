@@ -50,6 +50,7 @@ import {
 } from "@/src/teams/lineup";
 import { PDF_GOLD, asImageDataUri, firstLogo, imageMime, pdfLogoCandidates } from "@/src/pdfLogo";
 import { balanceMessage } from "@/src/teams/moves";
+import { GOALIE_BAR_COLOR, SKILL_PARTS, goalieBarPct, ratingBarParts, skillsLabel } from "@/src/teams/ratingBar";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 // The Team Generator shows the event's ONE lineup, which lives on the server
@@ -547,6 +548,16 @@ export default function TeamGeneratorScreen() {
                   ))}
                 </Card>
 
+                {lineup.players.some((p) => p.skills) ? (
+                  <View style={styles.legend} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                    {SKILL_PARTS.map((s) => (
+                      <View key={s.key} style={styles.legendItem}>
+                        <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
+                        <Text style={styles.legendText}>{s.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
                 <View style={styles.teams}>
                   {(["Gold", "Black"] as Team[]).map((team) => (
                     <TeamCol
@@ -707,10 +718,15 @@ function TeamCol({
 
       {goalie ? (
         <View style={styles.pRow}>
-          <Text style={styles.pName} numberOfLines={1}>
-            {goalie.name} <Text style={styles.gBadge}>G</Text>
-            {goalie.pending ? <Text style={styles.pendingTag}> ?</Text> : null}
-          </Text>
+          <View style={styles.pTapArea}>
+            <View style={styles.barBack} pointerEvents="none">
+              <View style={{ width: `${goalieBarPct(goalie.rating)}%`, backgroundColor: GOALIE_BAR_COLOR }} />
+            </View>
+            <Text style={[styles.pName, styles.overBar]} numberOfLines={1}>
+              {goalie.name} <Text style={styles.gBadge}>G</Text>
+              {goalie.pending ? <Text style={styles.pendingTag}> ?</Text> : null}
+            </Text>
+          </View>
           <Text style={styles.pRate}>{Number(goalie.rating || 0).toFixed(2)}</Text>
         </View>
       ) : null}
@@ -729,8 +745,16 @@ function TeamCol({
               feedback="row"
               style={styles.pTapArea}
               onPress={() => (pick ? onPick(k) : onMove(k))}
+              accessibilityHint={p.skills ? skillsLabel(p.skills) : undefined}
             >
-              <Text style={styles.pName} numberOfLines={1}>
+              {p.skills ? (
+                <View style={styles.barBack} pointerEvents="none">
+                  {ratingBarParts(p.skills).map((part) => (
+                    <View key={part.key} style={{ width: `${part.pct}%`, backgroundColor: part.color }} />
+                  ))}
+                </View>
+              ) : null}
+              <Text style={[styles.pName, styles.overBar]} numberOfLines={1}>
                 {p.name}
                 {p.is_goalie ? <Text style={styles.gBadge}> G</Text> : null}
                 {paired ? " 🔗" : ""}
@@ -931,7 +955,24 @@ const styles = StyleSheet.create({
   pRowSel: { backgroundColor: colors.goldDim },
   // Just moved (Auto-balance / tap-to-move) — brighter than the pick highlight.
   pRowFlash: { backgroundColor: "rgba(212, 175, 55, 0.28)" },
-  pTapArea: { flex: 1 },
+  pTapArea: { flex: 1, justifyContent: "center", minHeight: 22 },
+  // The rating bar sits behind the name (owner 2026-11-19): length = rating
+  // out of 5, split by each skill's weighted share (src/teams/ratingBar).
+  barBack: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 1,
+    bottom: 1,
+    flexDirection: "row",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  overBar: { textShadowColor: "rgba(0,0,0,0.9)", textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginBottom: spacing.sm },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  legendSwatch: { width: 12, height: 10, borderRadius: 2 },
+  legendText: { color: colors.textMuted, fontSize: font.xs },
   pName: { color: colors.text, fontSize: font.xs },
   gBadge: {
     color: colors.gold,

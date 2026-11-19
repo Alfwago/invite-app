@@ -1041,6 +1041,9 @@ export interface TeamLineupPlayer {
   is_goalie: boolean;
   present: boolean;
   ppv: number;
+  /** The four skater skills (0-5) behind the PPV — the bar behind the name
+   *  (server 0.42.0+; missing before → no bar). */
+  skills?: { hockey_sense: number; skating: number; defense: number; offense: number };
   goalie_rating: number;
   /** What they balance at: goalie rating in a goalie slot, skater PPV otherwise. */
   rating: number;
