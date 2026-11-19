@@ -175,7 +175,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
         <Text style={styles.currentLine}>
           You&apos;re in as {answered!.status.replace("_", " ")}
           {answered!.is_goalie && skating ? " (goalie)" : ""}
-          {answered!.guest_count > 0 ? ` +${answered!.guest_count} guest${answered!.guest_count === 1 ? "" : "s"}` : ""}
+          {answered!.guest_count > 0 ? ` · ${answered!.guest_count} +1${answered!.guest_count === 1 ? "" : "s"}` : ""}
           {(answered!.family_count ?? 0) > 0 ? ` · ${answered!.family_count} family` : ""}
         </Text>
       ) : null}
@@ -208,7 +208,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       ) : null}
 
       {showGuests && !skating ? (
-        <CountRow label="Guests you're bringing" value={guestCount} onChange={setGuestCount} />
+        <CountRow label="+1s you're bringing" value={guestCount} onChange={setGuestCount} />
       ) : null}
       {showFamily ? (
         <CountRow
@@ -222,13 +222,13 @@ export function RsvpControls({ event }: { event: EventDetail }) {
       {showGuests && skating ? (
         <View style={styles.guests}>
           <View style={styles.guestHead}>
-            <Text style={styles.guestTitle}>Guests ({guests.length})</Text>
+            <Text style={styles.guestTitle}>+1s ({guests.length})</Text>
             <Tap
               onPress={addGuest}
               disabled={guests.length >= MAX_GUESTS}
               style={[styles.addGuest, guests.length >= MAX_GUESTS && { opacity: 0.4 }]}
             >
-              <Text style={styles.addGuestText}>+ Add guest</Text>
+              <Text style={styles.addGuestText}>+ Add a +1</Text>
             </Tap>
           </View>
           {guests.map((g, i) => (
@@ -238,7 +238,7 @@ export function RsvpControls({ event }: { event: EventDetail }) {
                   style={styles.guestInput}
                   value={g.name}
                   onChangeText={(t) => setGuest(i, { name: t })}
-                  placeholder={`Guest ${i + 1} name`}
+                  placeholder={`+1 #${i + 1} name`}
                   placeholderTextColor={colors.textMuted}
                 />
                 <Tap feedback="icon" onPress={() => removeGuest(i)} hitSlop={8}>

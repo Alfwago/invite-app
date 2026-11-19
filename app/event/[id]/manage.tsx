@@ -225,7 +225,7 @@ function OverviewPanel({ event, manage }: { event: EventDetail; manage: EventMan
           <CountCell label="Maybe" value={maybe} />
           <CountCell label="No" value={no} />
           <CountCell label="No response" value={noResp} />
-          <CountCell label="Guests" value={r.guest_yes} />
+          <CountCell label="+1s" value={r.guest_yes} />
           <CountCell label={skating ? "Day players" : "Walk-ons"} value={r.day_players} />
         </View>
       </Card>
@@ -620,7 +620,7 @@ function SettingsCard({ event }: { event: EventDetail }) {
 
       <View style={styles.divider} />
       <View style={styles.toggleGrid}>
-        <ToggleButton label="Guests" value={allowGuests} onChange={setAllowGuests} />
+        <ToggleButton label="+1s" value={allowGuests} onChange={setAllowGuests} />
         <ToggleButton label="Auto Waitlist" value={autoWaitlist} onChange={setAutoWaitlist} />
         {skating ? <ToggleButton label="Beer Guy" value={beer} onChange={setBeer} /> : null}
         {skating ? <ToggleButton label="Whiskey Guy" value={whiskey} onChange={setWhiskey} /> : null}

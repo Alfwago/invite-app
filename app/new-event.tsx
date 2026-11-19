@@ -289,11 +289,11 @@ function NonSkatingForm() {
       <Card>
         <Text style={styles.label}>Headcount limit (optional)</Text>
         <NumberField value={capacity} onChange={setCapacity} min={1} max={300} placeholder="No limit" />
-        <Text style={styles.hint}>Players plus their guests. Extra RSVPs go on the waitlist.</Text>
+        <Text style={styles.hint}>Players plus their +1s. Extra RSVPs go on the waitlist.</Text>
         <Text style={styles.label}>Cost per person, $ (optional)</Text>
         <NumberField value={cost} onChange={setCost} min={0} max={500} step={5} placeholder="Free" icon="cash-outline" />
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Players can bring guests (just a number)</Text>
+          <Text style={styles.switchLabel}>Players can bring +1s (just a number)</Text>
           <Switch
             value={allowGuests}
             onValueChange={setAllowGuests}

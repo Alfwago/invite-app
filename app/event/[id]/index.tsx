@@ -134,10 +134,10 @@ export default function EventDetailScreen() {
           defaultOpen
           right={
             <Text style={styles.headerCount}>
-              {/* A party's headline count includes guests; say how it splits. */}
+              {/* A party's headline count includes +1s; say how it splits. */}
               {skating || roster.guest_yes === 0
                 ? `${goingCount} going`
-                : `${goingCount} + ${roster.guest_yes} guest${roster.guest_yes === 1 ? "" : "s"}`}
+                : `${goingCount} going + ${roster.guest_yes} +1${roster.guest_yes === 1 ? "" : "s"}`}
             </Text>
           }
           summary={
@@ -156,7 +156,7 @@ export default function EventDetailScreen() {
                   tone={goalieTone}
                 />
               ) : (
-                <StatTile value={`${roster.guest_yes}`} label="Guests" />
+                <StatTile value={`${roster.guest_yes}`} label="+1s" />
               )}
               <StatTile value={`${roster.waitlist}`} label="Waitlist" />
             </View>
