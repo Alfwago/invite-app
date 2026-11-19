@@ -140,6 +140,10 @@ export interface NotificationPrefs {
   /** Server 0.35.0+: the caller's skate groups and whether each is muted.
    *  Absent on older servers — hide the "Skate groups" section. */
   nights?: NightMute[];
+  /** Server 0.42.0+: Main board muted. Absent on older servers. */
+  main_muted?: boolean;
+  /** Server 0.42.0+: Directors board muted; null when not on that board. */
+  directors_board_muted?: boolean | null;
 }
 
 export interface NightMute {
@@ -150,8 +154,9 @@ export interface NightMute {
 
 /** PATCH /api/me/ notification_prefs: the switches, plus (0.35.0+) the
  *  full list of muted skate-group ids. */
-export type NotificationPrefsPatch = Partial<Omit<NotificationPrefs, "nights">> & {
+export type NotificationPrefsPatch = Partial<Omit<NotificationPrefs, "nights" | "directors_board_muted">> & {
   muted_night_ids?: number[];
+  directors_board_muted?: boolean;
 };
 
 export interface ProfilePatch {

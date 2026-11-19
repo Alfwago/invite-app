@@ -162,7 +162,9 @@ const NOTIFICATION_OPTIONS: { key: "invites" | "director_messages" | "president_
 ];
 
 /** Saves each switch as it's flipped. With "All notifications" on, every push
- *  comes through; off, only the categories below do. */
+ *  comes through; off, only the categories below do. Server 0.42.0+: the
+ *  Director / President messages switches work on their own, and every board
+ *  the person sees (Main, Directors, each skate group) can be muted. */
 function NotificationsCard({
   prefs,
   onChanged,
@@ -182,8 +184,11 @@ function NotificationsCard({
       );
     },
   });
+  // Server 0.42.0+ sends main_muted; older servers get the old screen.
+  const boardMutes = local.main_muted !== undefined;
 
-  function set(key: "all" | (typeof NOTIFICATION_OPTIONS)[number]["key"], value: boolean) {
+  type SwitchKey = "all" | "main_muted" | "directors_board_muted" | (typeof NOTIFICATION_OPTIONS)[number]["key"];
+  function set(key: SwitchKey, value: boolean) {
     setLocal((p) => ({ ...p, [key]: value }));
     save.mutate({ [key]: value });
   }
@@ -194,6 +199,22 @@ function NotificationsCard({
     setLocal((p) => ({ ...p, nights }));
     save.mutate({ muted_night_ids: nights.filter((n) => n.muted).map((n) => n.id) });
   }
+
+  // With All on, only the switches that work on their own are shown.
+  const options = NOTIFICATION_OPTIONS.filter((o) => !local.all || (boardMutes && o.key !== "invites"));
+  const boards: { key: string; name: string; on: boolean; flip: (on: boolean) => void }[] = [];
+  if (boardMutes) {
+    boards.push({ key: "main", name: "Main", on: !local.main_muted, flip: (on) => set("main_muted", !on) });
+    if (local.directors_board_muted != null)
+      boards.push({
+        key: "directors",
+        name: "Directors",
+        on: !local.directors_board_muted,
+        flip: (on) => set("directors_board_muted", !on),
+      });
+  }
+  for (const n of local.nights ?? [])
+    boards.push({ key: `n${n.id}`, name: n.name, on: !n.muted, flip: (on) => setNight(n.id, on) });
 
   return (
     <Card>
@@ -209,38 +230,48 @@ function NotificationsCard({
       </View>
       <Text style={styles.hint}>
         {local.all
-          ? "You get every push: invites, team picks, messages and chirps."
+          ? boardMutes
+            ? "You get every push except what you turn off below."
+            : "You get every push: invites, team picks, messages and chirps."
           : "Only the notifications switched on below. Emails still arrive."}
       </Text>
-      {local.all
-        ? null
-        : NOTIFICATION_OPTIONS.map((o) => (
-            <View key={o.key} style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>{o.label}</Text>
-              <Switch
-                value={local[o.key]}
-                onValueChange={(v) => set(o.key, v)}
-                trackColor={{ true: colors.gold, false: colors.border }}
-                thumbColor="#fff"
-              />
-            </View>
-          ))}
-      {local.nights && local.nights.length > 0 ? (
+      {options.map((o) => (
+        <View key={o.key} style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>{o.label}</Text>
+          <Switch
+            value={local[o.key]}
+            onValueChange={(v) => set(o.key, v)}
+            trackColor={{ true: colors.gold, false: colors.border }}
+            thumbColor="#fff"
+            accessibilityLabel={o.label}
+          />
+        </View>
+      ))}
+      {local.all && boardMutes ? (
+        <Text style={styles.hint}>
+          Turn off Director or President messages to stop their board posts. You&apos;ll still get
+          their @mentions and direct messages.
+        </Text>
+      ) : null}
+      {boards.length > 0 ? (
         <>
-          <Text style={[styles.subLabel, { marginTop: spacing.md }]}>Skate groups</Text>
-          <Text style={styles.hint}>
-            Turn a group off to stop its invites and board posts. You&apos;ll still hear about your
-            own spot (team picks, waitlist, being added or removed). Emails still arrive.
+          <Text style={[styles.subLabel, { marginTop: spacing.md }]}>
+            {boardMutes ? "Message boards" : "Skate groups"}
           </Text>
-          {local.nights.map((n) => (
-            <View key={n.id} style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>{n.name}</Text>
+          <Text style={styles.hint}>
+            {boardMutes
+              ? "Turn a board off to stop its posts. A skate group's invites stop too. You'll still hear about your own spot (team picks, waitlist, being added or removed). Emails still arrive."
+              : "Turn a group off to stop its invites and board posts. You'll still hear about your own spot (team picks, waitlist, being added or removed). Emails still arrive."}
+          </Text>
+          {boards.map((b) => (
+            <View key={b.key} style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>{b.name}</Text>
               <Switch
-                value={!n.muted}
-                onValueChange={(v) => setNight(n.id, v)}
+                value={b.on}
+                onValueChange={b.flip}
                 trackColor={{ true: colors.gold, false: colors.border }}
                 thumbColor="#fff"
-                accessibilityLabel={`${n.name} notifications`}
+                accessibilityLabel={`${b.name} notifications`}
               />
             </View>
           ))}
