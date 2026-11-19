@@ -127,7 +127,7 @@ export default function EventDetailScreen() {
         {/* Late Scratches + Penalty Box sit right above the roster, as on the
             website (owner LD11, 2026-10-16). */}
         <LateScratchesCard event={event} />
-        <PenaltyBoxCard event={event} />
+        {skating ? <PenaltyBoxCard event={event} /> : null}
 
         <CollapsibleCard
           title={skating ? "Roster" : "Who's Going"}

@@ -676,7 +676,8 @@ function CommunicationsPanel({ event, manage }: { event: EventDetail; manage: Ev
       <InviteListCard event={event} manage={manage} />
       <AddInvitesCard event={event} manage={manage} />
       {event.can_invite_guests ? <EmailGuestsCard event={event} /> : null}
-      <PenaltyBoxCard event={event} manage={manage} />
+      {/* No Penalty Box at a party (owner 2026-11-19). */}
+      {event.is_skating !== false ? <PenaltyBoxCard event={event} manage={manage} /> : null}
     </>
   );
 }
