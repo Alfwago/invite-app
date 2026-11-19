@@ -95,7 +95,7 @@ extension SkateCardAttributes.ContentState {
 
     /// rosterBadges() in src/roster.ts, cut to the single most severe.
     fileprivate var rosterPill: (label: String, tone: Tone)? {
-        if let open = goalieSpotsOpen, open > 0 { return ("NEED GOALIES", .bad) }
+        if let open = goalieSpotsOpen, open > 0 { return (open == 1 ? "NEED GOALIE" : "NEED GOALIES", .bad) }
         if isFull { return ("FULL", .good) }
         if let open = skaterSpotsOpen, open > 0 { return ("NEED SKATERS", .caution) }
         return nil

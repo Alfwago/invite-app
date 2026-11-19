@@ -17,9 +17,16 @@ function stats(patch: Partial<RosterStats>): RosterStats {
 test("a skate still needs skaters and goalies", () => {
   const r = stats({});
   assert.equal(isSkating(r), true);
-  assert.deepEqual(rosterBadges(r).map((b) => b.label), ["NEED SKATERS", "NEED GOALIES"]);
+  assert.deepEqual(rosterBadges(r).map((b) => b.label), ["NEED SKATERS", "NEED GOALIE"]);
   assert.equal(rosterHealth(r), "bad");
   assert.equal(spotsOpen(r), 10);
+});
+
+test("one open goalie spot is NEED GOALIE, two or more NEED GOALIES (owner 2026-11-19)", () => {
+  const label = (open: number) => rosterBadges(stats({ goalie_spots_open: open })).at(-1)?.label;
+  assert.equal(label(1), "NEED GOALIE");
+  assert.equal(label(2), "NEED GOALIES");
+  assert.equal(label(3), "NEED GOALIES");
 });
 
 test("a party never needs skaters or goalies (owner 2026-10-27)", () => {

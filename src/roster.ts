@@ -35,7 +35,9 @@ export function fillPct(r: RosterStats): number | null {
   return (r.skaters / r.capacity) * 100;
 }
 
-/** Short status pills for a roster — "FULL" / "NEED SKATERS" / "NEED GOALIES".
+/** Short status pills for a roster — "FULL" / "NEED SKATERS" / "NEED GOALIE(S)":
+ *  NEED GOALIE for one open goalie spot, NEED GOALIES for two or more
+ *  (owner 2026-11-19).
  *  A non-skating event only ever gets FULL. */
 export function rosterBadges(r: RosterStats): { label: string; tone: BadgeTone }[] {
   const out: { label: string; tone: BadgeTone }[] = [];
@@ -44,6 +46,6 @@ export function rosterBadges(r: RosterStats): { label: string; tone: BadgeTone }
   else if (r.skater_spots_open != null && r.skater_spots_open > 0)
     out.push({ label: "NEED SKATERS", tone: "caution" });
   if (r.goalie_spots_open != null && r.goalie_spots_open > 0)
-    out.push({ label: "NEED GOALIES", tone: "bad" });
+    out.push({ label: r.goalie_spots_open === 1 ? "NEED GOALIE" : "NEED GOALIES", tone: "bad" });
   return out;
 }
