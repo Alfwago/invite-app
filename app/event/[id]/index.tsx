@@ -386,7 +386,7 @@ function DayPlayerLine({ dp }: { dp: DayPlayer }) {
       <View style={styles.playerNameWrap}>
         <Text style={styles.playerName}>{dp.name}</Text>
         {dp.is_goalie ? <Text style={styles.goldTag}>G</Text> : null}
-        <Text style={styles.walkOn}>walk-on</Text>
+        <Text style={styles.walkOn}>{dp.is_guest ? "guest" : "walk-on"}</Text>
         {dp.team ? (
           <JerseyIcon team={dp.team} size={15} />
         ) : null}

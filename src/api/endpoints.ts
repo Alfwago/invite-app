@@ -4,6 +4,7 @@ import type { BorrowPanel } from "../borrow";
 import type { SiteInvitePayload } from "../siteInvites";
 import type {
   BoardId,
+  EmailGuestList,
   AppVersions,
   Branding,
   DirectoryEntry,
@@ -466,6 +467,24 @@ export function removePenaltyBox(
   return apiFetch(`/api/events/${id}/penalty-box/?player_id=${playerId}`, {
     method: "DELETE",
   });
+}
+
+// ---- Email guests for a non-skating event (server 0.42.0) -------------
+
+export function fetchEmailGuests(id: number | string, signal?: AbortSignal): Promise<EmailGuestList> {
+  return apiFetch(`/api/events/${id}/guests/`, { signal });
+}
+
+export function addEmailGuest(id: number | string, body: { name: string; email: string }): Promise<EmailGuestList> {
+  return apiFetch(`/api/events/${id}/guests/`, { method: "POST", body });
+}
+
+export function resendEmailGuest(id: number | string, guestId: number): Promise<EmailGuestList> {
+  return apiFetch(`/api/events/${id}/guests/${guestId}/`, { method: "POST" });
+}
+
+export function removeEmailGuest(id: number | string, guestId: number): Promise<EmailGuestList> {
+  return apiFetch(`/api/events/${id}/guests/${guestId}/`, { method: "DELETE" });
 }
 
 // ---- Penalty-box chirps (any invited player) -------------------------

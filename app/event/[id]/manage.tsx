@@ -50,6 +50,7 @@ import {
   useHeaderImage,
   useInviteSchedule,
   usePatchEvent,
+  useEmailGuests,
   usePenaltyBox,
   usePresetMutations,
   usePresets,
@@ -661,8 +662,126 @@ function CommunicationsPanel({ event, manage }: { event: EventDetail; manage: Ev
       <DirectorMessageCard event={event} manage={manage} />
       <InviteListCard event={event} manage={manage} />
       <AddInvitesCard event={event} manage={manage} />
+      {event.can_invite_guests ? <EmailGuestsCard event={event} /> : null}
       <PenaltyBoxCard event={event} manage={manage} />
     </>
+  );
+}
+
+/** People with no account invited to a party by email (server 0.42.0).
+ *  Their email links to a page where they answer without signing in; a
+ *  Yes shows on Who's Going as a guest and counts toward the limit. */
+function EmailGuestsCard({ event }: { event: EventDetail }) {
+  const guests = useEmailGuests(event.id, true);
+  const toast = useToast();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const data = guests.list.data;
+  const rows = data?.guests ?? [];
+  const open = data?.open ?? false;
+
+  function add() {
+    guests.add.mutate(
+      { name: name.trim(), email: email.trim() },
+      {
+        onSuccess: (res) => {
+          toast.show(res.sent ? `Invite sent to ${name.trim()}` : `Added ${name.trim()}, but the email didn't go out. Try Resend.`);
+          setName("");
+          setEmail("");
+        },
+        onError: (e) => Alert.alert("Couldn't add guest", errText(e)),
+      },
+    );
+  }
+
+  function confirmRemove(id: number, who: string) {
+    Alert.alert(`Remove ${who}?`, "Their invite link stops working and they come off Who's Going.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => guests.remove.mutate(id, { onError: (e) => Alert.alert("Couldn't remove", errText(e)) }),
+      },
+    ]);
+  }
+
+  return (
+    <Card accent="director">
+      <Text style={styles.heading}>
+        Guests by email{rows.length ? <Text style={styles.stepCount}> ({rows.length})</Text> : null}
+      </Text>
+      <Text style={styles.hint}>
+        For people without an OBH account: spouses, sponsors, alumni. They get an email with a link to answer Yes
+        or No, no sign-in. A Yes shows on Who&apos;s Going as a guest and counts toward the limit.
+      </Text>
+      {guests.list.isLoading ? <Loading label="Loading…" /> : null}
+      {rows.map((g) => (
+        <View key={g.id} style={styles.rosterRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.playerName} numberOfLines={1}>
+              {g.name}
+            </Text>
+            <Text style={styles.hint} numberOfLines={1}>
+              {g.email}
+            </Text>
+          </View>
+          <Badge text={g.status_label.toUpperCase()} tone={g.status === "YES" ? "good" : "neutral"} />
+          {open ? (
+            <Tap
+              feedback="icon"
+              hitSlop={8}
+              onPress={() =>
+                guests.resend.mutate(g.id, {
+                  onSuccess: () => toast.show(`Invite sent to ${g.name}`),
+                  onError: (e) => Alert.alert("Couldn't send", errText(e)),
+                })
+              }
+              accessibilityLabel={`${g.sent_at ? "Resend" : "Send"} invite to ${g.name}`}
+            >
+              <Text style={[styles.commsLink, { marginLeft: spacing.sm }]}>{g.sent_at ? "Resend" : "Send"}</Text>
+            </Tap>
+          ) : null}
+          <Tap feedback="icon" hitSlop={8} onPress={() => confirmRemove(g.id, g.name)} accessibilityLabel={`Remove ${g.name}`}>
+            <Text style={[styles.commsLink, { marginLeft: spacing.sm }]}>Remove</Text>
+          </Tap>
+        </View>
+      ))}
+      {open ? (
+        <View style={styles.addPanel}>
+          <Field label="Name">
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={120}
+              accessibilityLabel="Guest name"
+            />
+          </Field>
+          <Field label="Email">
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              accessibilityLabel="Guest email"
+            />
+          </Field>
+          <Button
+            label="Add and send invite"
+            onPress={add}
+            loading={guests.add.isPending}
+            disabled={!name.trim() || !email.trim()}
+          />
+        </View>
+      ) : data ? (
+        <Text style={styles.muted}>This event is over or closed, so guests can&apos;t be added.</Text>
+      ) : null}
+    </Card>
   );
 }
 
@@ -1511,6 +1630,7 @@ function RosterCard({
                 )
               }
               walkOn
+              walkOnLabel={dp.is_guest ? "guest" : "walk-on"}
               ratingPpv={dp.rating_ppv}
               present={dp.present}
               paid={dp.paid}
@@ -1934,6 +2054,7 @@ function RosterAdminRow({
   team,
   pays = true,
   walkOn,
+  walkOnLabel = "walk-on",
   ratingPpv,
   present,
   paid,
@@ -1978,6 +2099,8 @@ function RosterAdminRow({
   team?: "Gold" | "Black" | null;
   pays?: boolean;
   walkOn?: boolean;
+  /** "walk-on", or "guest" for an email guest who said Yes (server 0.42.0). */
+  walkOnLabel?: string;
   ratingPpv?: string | null;
   present: boolean;
   paid: boolean;
@@ -2031,7 +2154,7 @@ function RosterAdminRow({
           </View>
           {hasTags ? (
             <View style={styles.adminTagLine}>
-              {!goldTag && walkOn ? <Text style={styles.roleTag}>walk-on</Text> : null}
+              {!goldTag && walkOn ? <Text style={styles.roleTag}>{walkOnLabel}</Text> : null}
               {isNew ? <Badge text="NEW" tone="good" /> : null}
               {borrowed ? (
                 <Text

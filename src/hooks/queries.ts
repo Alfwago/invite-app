@@ -12,6 +12,7 @@ import type { BorrowPanel } from "@/src/borrow";
 import type { SiteInvitePayload } from "@/src/siteInvites";
 import type {
   BoardId,
+  EmailGuestList,
   BoardMessage,
   CreateNextEventBody,
   NonSkatingEventBody,
@@ -440,6 +441,31 @@ export function usePenaltyBox(id: number | string) {
       mutationFn: (playerId: number) => api.removePenaltyBox(id, playerId),
       onSuccess: done,
     }),
+  };
+}
+
+/** Email guests on a non-skating event (server 0.42.0). Each change also
+ *  refreshes the event, since a guest's Yes is a walk-on on the roster. */
+export function useEmailGuests(id: number | string, enabled: boolean) {
+  const qc = useQueryClient();
+  const key = ["event", String(id), "email-guests"];
+  const list = useQuery({
+    queryKey: key,
+    queryFn: ({ signal }) => api.fetchEmailGuests(id, signal),
+    enabled,
+  });
+  const done = (fresh: EmailGuestList) => {
+    qc.setQueryData(key, fresh);
+    qc.invalidateQueries({ queryKey: keys.event(id), exact: true });
+  };
+  return {
+    list,
+    add: useMutation({
+      mutationFn: (body: { name: string; email: string }) => api.addEmailGuest(id, body),
+      onSuccess: done,
+    }),
+    resend: useMutation({ mutationFn: (gid: number) => api.resendEmailGuest(id, gid), onSuccess: done }),
+    remove: useMutation({ mutationFn: (gid: number) => api.removeEmailGuest(id, gid), onSuccess: done }),
   };
 }
 

@@ -371,6 +371,28 @@ export interface DayPlayer {
   reservation_note?: string;
   /** "Gold"/"Black" once teams are pushed (server 0.40.0+), else null. */
   team?: "Gold" | "Black" | null;
+  /** Server 0.42.0+: an email guest who said Yes — shown as "guest". */
+  is_guest?: boolean;
+}
+
+/** Someone with no account invited to a non-skating event by email
+ *  (server 0.42.0). Directors only. */
+export interface EmailGuest {
+  id: number;
+  name: string;
+  email: string;
+  status: "YES" | "NO" | "NO_RESPONSE";
+  /** "Going" / "Can't make it" / "No reply" / "Not sent" / "Removed". */
+  status_label: string;
+  sent_at: string | null;
+}
+
+export interface EmailGuestList {
+  guests: EmailGuest[];
+  /** False once the event is over, closed or archived: no adding/sending. */
+  open: boolean;
+  /** POST only: whether the invite email went out. */
+  sent?: boolean;
 }
 
 export interface WaitlistEntry {
@@ -512,6 +534,9 @@ export interface EventDetail extends EventSummary {
   invites_sent_at: string | null;
   players: RosterEntry[];
   day_players: DayPlayer[];
+  /** Server 0.42.0+: the caller can email-invite guests (non-skating event
+   *  they manage). Absent on older servers — no Guests card. */
+  can_invite_guests?: boolean;
   waitlist: WaitlistEntry[]; // director view only; [] for players
   messages_unread: number; // unseen director posts on the event thread
   team_assignment: TeamAssignment | null; // set once a director publishes teams
