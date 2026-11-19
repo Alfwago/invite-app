@@ -1,7 +1,8 @@
 # Changelog — OBH Skate Invites app
 
-Dates are when the work was done, not released. 1.4.0 is live in the App
-Store; Android ships as a direct-download APK from the site.
+Dates are when the work was done, not released. iOS ships through the App
+Store (1.8.2 live 2026-11-18); Android ships as a direct-download APK from the
+site's Get the App page.
 
 ## 2026-11-17 — 1.8.2 (iOS build 41, Android versionCode 4)
 
