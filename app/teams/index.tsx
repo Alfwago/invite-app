@@ -552,8 +552,8 @@ export default function TeamGeneratorScreen() {
                 </Card>
 
                 {lineup.players.some((p) => p.skills) ? (
-                  <View style={styles.legend}>
-                    <View style={styles.legendItem}>
+                  <View style={styles.legendBlock}>
+                    <View style={styles.legendToggleRow}>
                       <Text style={styles.legendToggle}>Rating bars</Text>
                       <Switch
                         value={ratingBars}
@@ -564,8 +564,9 @@ export default function TeamGeneratorScreen() {
                         accessibilityLabel="Rating bars"
                       />
                     </View>
-                    {ratingBars
-                      ? SKILL_PARTS.map((s) => (
+                    {ratingBars ? (
+                      <View style={styles.legend}>
+                        {SKILL_PARTS.map((s) => (
                           <View
                             key={s.key}
                             style={styles.legendItem}
@@ -575,8 +576,9 @@ export default function TeamGeneratorScreen() {
                             <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
                             <Text style={styles.legendText}>{s.label}</Text>
                           </View>
-                        ))
-                      : null}
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
                 <View style={styles.teams}>
@@ -1001,12 +1003,15 @@ const styles = StyleSheet.create({
   // A thin dark line between the four parts.
   barGap: { borderRightWidth: 2, borderRightColor: "rgba(0,0,0,0.85)" },
   overBar: { textShadowColor: "rgba(0,0,0,0.9)", textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
-  legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginBottom: spacing.sm },
+  // "Rating bars" switch on its own line, the colour key just under it.
+  legendBlock: { marginBottom: spacing.sm, gap: 2 },
+  legendToggleRow: { flexDirection: "row", alignItems: "center", gap: 2 },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   legendSwatch: { width: 12, height: 10, borderRadius: 2 },
   legendText: { color: colors.textMuted, fontSize: font.xs },
-  legendToggle: { color: colors.text, fontSize: font.sm, fontWeight: "600" },
-  legendSwitch: { transform: [{ scale: 0.8 }] },
+  legendToggle: { color: colors.text, fontSize: font.xs, fontWeight: "600" },
+  legendSwitch: { transform: [{ scale: 0.65 }] },
   pName: { color: colors.text, fontSize: font.xs },
   gBadge: {
     color: colors.gold,
