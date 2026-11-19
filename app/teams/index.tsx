@@ -749,8 +749,11 @@ function TeamCol({
             >
               {p.skills ? (
                 <View style={styles.barBack} pointerEvents="none">
-                  {ratingBarParts(p.skills).map((part) => (
-                    <View key={part.key} style={{ width: `${part.pct}%`, backgroundColor: part.color }} />
+                  {ratingBarParts(p.skills).map((part, i) => (
+                    <View
+                      key={part.key}
+                      style={[{ width: `${part.pct}%`, backgroundColor: part.color }, i < 3 && styles.barGap]}
+                    />
                   ))}
                 </View>
               ) : null}
@@ -968,6 +971,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
+  // A thin dark line between the four parts.
+  barGap: { borderRightWidth: 1, borderRightColor: "rgba(0,0,0,0.55)" },
   overBar: { textShadowColor: "rgba(0,0,0,0.9)", textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginBottom: spacing.sm },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },

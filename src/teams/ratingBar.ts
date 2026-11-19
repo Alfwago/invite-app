@@ -12,12 +12,13 @@ export interface Skills {
 export type SkillKey = keyof Skills;
 
 /** In PPV order, with the weight each skill carries. */
-/** `color` is the bar slice (see-through, behind text); `swatch` the key. */
+/** Gold shades, deep to pale (owner 2026-11-19). `color` is the bar slice
+ *  (see-through, behind text); `swatch` the key. */
 export const SKILL_PARTS: { key: SkillKey; weight: number; label: string; color: string; swatch: string }[] = [
-  { key: "hockey_sense", weight: 0.4, label: "Hockey Sense", color: "rgba(255, 213, 74, 0.38)", swatch: "rgba(255, 213, 74, 0.7)" },
-  { key: "skating", weight: 0.25, label: "Skating", color: "rgba(74, 163, 255, 0.38)", swatch: "rgba(74, 163, 255, 0.7)" },
-  { key: "defense", weight: 0.2, label: "Defense", color: "rgba(61, 220, 132, 0.34)", swatch: "rgba(61, 220, 132, 0.7)" },
-  { key: "offense", weight: 0.15, label: "Offense", color: "rgba(255, 107, 90, 0.38)", swatch: "rgba(255, 107, 90, 0.7)" },
+  { key: "hockey_sense", weight: 0.4, label: "Hockey Sense", color: "rgba(138, 109, 28, 0.80)", swatch: "#8a6d1c" },
+  { key: "skating", weight: 0.25, label: "Skating", color: "rgba(184, 146, 42, 0.62)", swatch: "#b8922a" },
+  { key: "defense", weight: 0.2, label: "Defense", color: "rgba(212, 175, 55, 0.50)", swatch: "#d4af37" },
+  { key: "offense", weight: 0.15, label: "Offense", color: "rgba(232, 207, 122, 0.42)", swatch: "#e8cf7a" },
 ];
 
 export const GOALIE_BAR_COLOR = "rgba(170, 170, 180, 0.32)";
