@@ -4,6 +4,7 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -51,6 +52,7 @@ import {
 import { PDF_GOLD, asImageDataUri, firstLogo, imageMime, pdfLogoCandidates } from "@/src/pdfLogo";
 import { balanceMessage } from "@/src/teams/moves";
 import { GOALIE_BAR_COLOR, SKILL_PARTS, goalieBarPct, ratingBarParts, skillsLabel } from "@/src/teams/ratingBar";
+import { useRatingBarsPref } from "@/src/teams/ratingBarsPref";
 import { colors, font, radius, spacing } from "@/src/theme";
 
 // The Team Generator shows the event's ONE lineup, which lives on the server
@@ -74,6 +76,7 @@ type Opts = {
 export default function TeamGeneratorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ event?: string }>();
+  const [ratingBars, setRatingBars] = useRatingBarsPref();
   const qc = useQueryClient();
   const events = useTeamEvents();
   const [eventId, setEventId] = useState<number | null>(
@@ -549,13 +552,31 @@ export default function TeamGeneratorScreen() {
                 </Card>
 
                 {lineup.players.some((p) => p.skills) ? (
-                  <View style={styles.legend} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                    {SKILL_PARTS.map((s) => (
-                      <View key={s.key} style={styles.legendItem}>
-                        <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
-                        <Text style={styles.legendText}>{s.label}</Text>
-                      </View>
-                    ))}
+                  <View style={styles.legend}>
+                    <View style={styles.legendItem}>
+                      <Text style={styles.legendToggle}>Rating bars</Text>
+                      <Switch
+                        value={ratingBars}
+                        onValueChange={setRatingBars}
+                        trackColor={{ true: colors.gold, false: colors.border }}
+                        thumbColor="#fff"
+                        style={styles.legendSwitch}
+                        accessibilityLabel="Rating bars"
+                      />
+                    </View>
+                    {ratingBars
+                      ? SKILL_PARTS.map((s) => (
+                          <View
+                            key={s.key}
+                            style={styles.legendItem}
+                            accessibilityElementsHidden
+                            importantForAccessibility="no-hide-descendants"
+                          >
+                            <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
+                            <Text style={styles.legendText}>{s.label}</Text>
+                          </View>
+                        ))
+                      : null}
                   </View>
                 ) : null}
                 <View style={styles.teams}>
@@ -573,6 +594,7 @@ export default function TeamGeneratorScreen() {
                       onMove={onMove}
                       onLock={onToggleLock}
                       onPick={onPickPlayer}
+                      showBars={ratingBars}
                     />
                   ))}
                 </View>
@@ -697,8 +719,11 @@ function TeamCol({
   onMove,
   onLock,
   onPick,
+  showBars = true,
 }: {
   name: Team;
+  /** The "Rating bars" switch (this phone). */
+  showBars?: boolean;
   /** Roster order, skating goalies first (lineup.teamRows). */
   players: TeamLineupPlayer[];
   goalie: TeamLineupGoalie | null;
@@ -719,9 +744,11 @@ function TeamCol({
       {goalie ? (
         <View style={styles.pRow}>
           <View style={styles.pTapArea}>
-            <View style={styles.barBack} pointerEvents="none">
-              <View style={{ width: `${goalieBarPct(goalie.rating)}%`, backgroundColor: GOALIE_BAR_COLOR }} />
-            </View>
+            {showBars ? (
+              <View style={styles.barBack} pointerEvents="none">
+                <View style={{ width: `${goalieBarPct(goalie.rating)}%`, backgroundColor: GOALIE_BAR_COLOR }} />
+              </View>
+            ) : null}
             <Text style={[styles.pName, styles.overBar]} numberOfLines={1}>
               {goalie.name} <Text style={styles.gBadge}>G</Text>
               {goalie.pending ? <Text style={styles.pendingTag}> ?</Text> : null}
@@ -745,9 +772,9 @@ function TeamCol({
               feedback="row"
               style={styles.pTapArea}
               onPress={() => (pick ? onPick(k) : onMove(k))}
-              accessibilityHint={p.skills ? skillsLabel(p.skills) : undefined}
+              accessibilityHint={showBars && p.skills ? skillsLabel(p.skills) : undefined}
             >
-              {p.skills ? (
+              {showBars && p.skills ? (
                 <View style={styles.barBack} pointerEvents="none">
                   {ratingBarParts(p.skills).map((part, i) => (
                     <View
@@ -972,12 +999,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   // A thin dark line between the four parts.
-  barGap: { borderRightWidth: 1, borderRightColor: "rgba(0,0,0,0.55)" },
+  barGap: { borderRightWidth: 2, borderRightColor: "rgba(0,0,0,0.85)" },
   overBar: { textShadowColor: "rgba(0,0,0,0.9)", textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginBottom: spacing.sm },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   legendSwatch: { width: 12, height: 10, borderRadius: 2 },
   legendText: { color: colors.textMuted, fontSize: font.xs },
+  legendToggle: { color: colors.text, fontSize: font.sm, fontWeight: "600" },
+  legendSwitch: { transform: [{ scale: 0.8 }] },
   pName: { color: colors.text, fontSize: font.xs },
   gBadge: {
     color: colors.gold,

@@ -15,10 +15,10 @@ export type SkillKey = keyof Skills;
 /** Gold shades, deep to pale (owner 2026-11-19). `color` is the bar slice
  *  (see-through, behind text); `swatch` the key. */
 export const SKILL_PARTS: { key: SkillKey; weight: number; label: string; color: string; swatch: string }[] = [
-  { key: "hockey_sense", weight: 0.4, label: "Hockey Sense", color: "rgba(138, 109, 28, 0.80)", swatch: "#8a6d1c" },
-  { key: "skating", weight: 0.25, label: "Skating", color: "rgba(184, 146, 42, 0.62)", swatch: "#b8922a" },
-  { key: "defense", weight: 0.2, label: "Defense", color: "rgba(212, 175, 55, 0.50)", swatch: "#d4af37" },
-  { key: "offense", weight: 0.15, label: "Offense", color: "rgba(232, 207, 122, 0.42)", swatch: "#e8cf7a" },
+  { key: "hockey_sense", weight: 0.4, label: "Hockey Sense", color: "rgba(95, 70, 10, 0.92)", swatch: "#5f460a" },
+  { key: "skating", weight: 0.25, label: "Skating", color: "rgba(160, 118, 24, 0.80)", swatch: "#a07618" },
+  { key: "defense", weight: 0.2, label: "Defense", color: "rgba(212, 175, 55, 0.62)", swatch: "#d4af37" },
+  { key: "offense", weight: 0.15, label: "Offense", color: "rgba(240, 220, 150, 0.50)", swatch: "#f0dc96" },
 ];
 
 export const GOALIE_BAR_COLOR = "rgba(170, 170, 180, 0.32)";
