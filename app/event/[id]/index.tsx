@@ -137,7 +137,7 @@ export default function EventDetailScreen() {
               {/* A party's headline count includes +1s; say how it splits. */}
               {skating || roster.guest_yes === 0
                 ? `${goingCount} going`
-                : `${goingCount} going + ${roster.guest_yes} +1${roster.guest_yes === 1 ? "" : "s"}`}
+                : `${goingCount} going · ${roster.guest_yes} +1${roster.guest_yes === 1 ? "" : "s"}`}
             </Text>
           }
           summary={
