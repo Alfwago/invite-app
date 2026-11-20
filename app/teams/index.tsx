@@ -718,8 +718,7 @@ function BarBtn({
 }
 
 /** Under the Team Rating (owner 2026-11-20): the team's average rating as a
- *  bar (with its percentage of a perfect 5), and what share of it each skill
- *  makes up. Averages, not totals: the teams can differ in size. */
+ *  bar, and what share of it each skill makes up. Averages, not totals: the teams can differ in size. */
 function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar: boolean }) {
   const team = teamSkillAverages(players);
   if (!team) return null;
@@ -729,7 +728,7 @@ function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar
     <View
       style={styles.teamSkills}
       accessible
-      accessibilityLabel={`Team average ${team.ppv.toFixed(2)}, ${Math.round(team.pct)} percent. ${SKILL_PARTS.map((s) => `${s.label} ${shares[s.key]} percent`).join(", ")}`}
+      accessibilityLabel={`Team average ${team.ppv.toFixed(2)}. ${SKILL_PARTS.map((s) => `${s.label} ${shares[s.key]} percent`).join(", ")}`}
     >
       {showBar ? (
         <View style={styles.teamBar}>
@@ -742,7 +741,7 @@ function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar
             ))}
           </View>
           <Text style={[styles.teamBarText, styles.overBar]}>
-            Avg {team.ppv.toFixed(2)} · {Math.round(team.pct)}%
+            Avg {team.ppv.toFixed(2)}
           </Text>
         </View>
       ) : null}
