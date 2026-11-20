@@ -595,6 +595,7 @@ export default function TeamGeneratorScreen() {
                       key={team}
                       name={team}
                       players={teamRows(lineup, team)}
+                      otherCount={teamRows(lineup, team === "Gold" ? "Black" : "Gold").length}
                       goalie={team === "Gold" ? lineup.gold_goalie : lineup.black_goalie}
                       total={team === "Gold" ? lineup.gold_total : lineup.black_total}
                       pick={pick}
@@ -769,8 +770,11 @@ function TeamCol({
   onLock,
   onPick,
   showBars = true,
+  otherCount,
 }: {
   name: Team;
+  /** Skaters on the other team, for the "+1" flag (owner 2026-11-20). */
+  otherCount: number;
   /** The "Rating bars" switch (this phone). */
   showBars?: boolean;
   /** Roster order, skating goalies first (lineup.teamRows). */
@@ -788,7 +792,17 @@ function TeamCol({
   return (
     <View style={[styles.col, name === "Gold" ? styles.colGold : styles.colBlack]}>
       <Text style={[styles.colHead, name === "Gold" && { color: colors.gold }]}>{name} Team</Text>
-      <Text style={styles.colTotal}>Team Rating: {total.toFixed(2)}</Text>
+      {/* Skater count, and +N on the bigger team (owner 2026-11-20): the
+          average treats both teams as the same size, so say when they aren't.
+          Shown with Rating bars off too. */}
+      <Text style={styles.colTotal}>
+        Team Rating: {total.toFixed(2)} · {players.length} skater{players.length === 1 ? "" : "s"}
+        {players.length > otherCount ? (
+          <Text style={styles.extraSkaters} accessibilityLabel={`${players.length - otherCount} more than the other team`}>
+            {" "}+{players.length - otherCount}
+          </Text>
+        ) : null}
+      </Text>
       <TeamSkills players={players} showBar={showBars} />
 
       {goalie ? (
@@ -1058,6 +1072,7 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   legendSwatch: { width: 12, height: 10, borderRadius: 2 },
   legendText: { color: colors.textMuted, fontSize: font.xs },
+  extraSkaters: { color: colors.gold, fontWeight: "700" },
   teamSkills: { marginTop: spacing.xs, marginBottom: spacing.xs, gap: 4 },
   teamBar: { minHeight: 20, justifyContent: "center", paddingHorizontal: 4 },
   teamBarText: { color: colors.text, fontSize: 11, fontWeight: "600" },
