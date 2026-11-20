@@ -63,3 +63,22 @@ export function teamSkillAverages(
   const ppv = SKILL_PARTS.reduce((sum, { key, weight }) => sum + skills[key] * weight, 0);
   return { skills, ppv, pct: (ppv / 5) * 100, count: rated.length };
 }
+
+/** What share of a rating each skill makes up — the four slices of its bar
+ *  as whole percents that always add up to 100 (owner 2026-11-20). */
+export function skillShares(skills: Skills): Record<SkillKey, number> {
+  const parts = SKILL_PARTS.map(({ key, weight }) => ({ key, value: clamp(skills[key], 5) * weight }));
+  const total = parts.reduce((sum, p) => sum + p.value, 0);
+  const out = { hockey_sense: 0, skating: 0, defense: 0, offense: 0 } as Record<SkillKey, number>;
+  if (total <= 0) return out;
+  // Largest remainder, so rounding never makes 99% or 101%.
+  const raw = parts.map((p) => ({ key: p.key, exact: (p.value / total) * 100 }));
+  for (const r of raw) out[r.key] = Math.floor(r.exact);
+  let left = 100 - raw.reduce((sum, r) => sum + Math.floor(r.exact), 0);
+  for (const r of [...raw].sort((a, b) => (b.exact % 1) - (a.exact % 1))) {
+    if (left <= 0) break;
+    out[r.key] += 1;
+    left -= 1;
+  }
+  return out;
+}

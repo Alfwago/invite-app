@@ -56,6 +56,7 @@ import {
   SKILL_PARTS,
   goalieBarPct,
   ratingBarParts,
+  skillShares,
   skillsLabel,
   teamSkillAverages,
 } from "@/src/teams/ratingBar";
@@ -717,16 +718,18 @@ function BarBtn({
 }
 
 /** Under the Team Rating (owner 2026-11-20): the team's average rating as a
- *  bar (with its percentage of a perfect 5) and the four skill averages.
- *  Averages, not totals: the teams can differ in size. */
+ *  bar (with its percentage of a perfect 5), and what share of it each skill
+ *  makes up. Averages, not totals: the teams can differ in size. */
 function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar: boolean }) {
   const team = teamSkillAverages(players);
   if (!team) return null;
+  // What share of the team's rating each skill makes up (owner 2026-11-20).
+  const shares = skillShares(team.skills);
   return (
     <View
       style={styles.teamSkills}
       accessible
-      accessibilityLabel={`Team average ${team.ppv.toFixed(2)}, ${Math.round(team.pct)} percent. ${skillsLabel(team.skills)}`}
+      accessibilityLabel={`Team average ${team.ppv.toFixed(2)}, ${Math.round(team.pct)} percent. ${SKILL_PARTS.map((s) => `${s.label} ${shares[s.key]} percent`).join(", ")}`}
     >
       {showBar ? (
         <View style={styles.teamBar}>
@@ -747,7 +750,7 @@ function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar
         {SKILL_PARTS.map((s) => (
           <View key={s.key} style={styles.teamSkillItem}>
             <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
-            <Text style={styles.teamSkillValue}>{team.skills[s.key].toFixed(1)}</Text>
+            <Text style={styles.teamSkillValue}>{shares[s.key]}%</Text>
           </View>
         ))}
       </View>
