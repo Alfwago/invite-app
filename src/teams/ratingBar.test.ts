@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { goalieBarPct, ratingBarParts, skillsLabel } from "./ratingBar.ts";
+import { goalieBarPct, ratingBarParts, skillsLabel, teamSkillAverages } from "./ratingBar.ts";
 
 test("the slices add up to the rating out of 5", () => {
   const skills = { hockey_sense: 4, skating: 3, defense: 5, offense: 2 };
@@ -25,4 +25,19 @@ test("goalie bar is out of 3, and the label reads each skill", () => {
   assert.equal(goalieBarPct(4), 100);
   assert.equal(skillsLabel({ hockey_sense: 4, skating: 3.5, defense: 3, offense: 2 }),
     "Hockey Sense 4.0, Skating 3.5, Defense 3.0, Offense 2.0");
+});
+
+test("team averages, average rating and its percentage", () => {
+  const team = teamSkillAverages([
+    { skills: { hockey_sense: 4, skating: 4, defense: 4, offense: 4 } },
+    { skills: { hockey_sense: 2, skating: 3, defense: 5, offense: 1 } },
+    { skills: undefined }, // no scores (older server) — left out
+  ]);
+  assert.ok(team);
+  assert.equal(team.count, 2);
+  assert.deepEqual(team.skills, { hockey_sense: 3, skating: 3.5, defense: 4.5, offense: 2.5 });
+  // 3*.4 + 3.5*.25 + 4.5*.2 + 2.5*.15 = 3.35
+  assert.ok(Math.abs(team.ppv - 3.35) < 1e-9);
+  assert.ok(Math.abs(team.pct - 67) < 1e-9);
+  assert.equal(teamSkillAverages([{ skills: undefined }]), null);
 });

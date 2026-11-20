@@ -43,3 +43,23 @@ export function goalieBarPct(rating: number): number {
 export function skillsLabel(skills: Skills): string {
   return SKILL_PARTS.map(({ key, label }) => `${label} ${clamp(skills[key], 5).toFixed(1)}`).join(", ");
 }
+
+/** A team's average skills (skaters with scores; the goalie slot isn't
+ *  in the list) and its average rating, for the team bar (owner
+ *  2026-11-20). Averages, not totals: teams can differ in size. Null when
+ *  nobody has scores. */
+export function teamSkillAverages(
+  players: { skills?: Skills | null }[],
+): { skills: Skills; ppv: number; pct: number; count: number } | null {
+  const rated = players.map((p) => p.skills).filter((s): s is Skills => !!s);
+  if (rated.length === 0) return null;
+  const avg = (key: SkillKey) => rated.reduce((sum, s) => sum + clamp(s[key], 5), 0) / rated.length;
+  const skills: Skills = {
+    hockey_sense: avg("hockey_sense"),
+    skating: avg("skating"),
+    defense: avg("defense"),
+    offense: avg("offense"),
+  };
+  const ppv = SKILL_PARTS.reduce((sum, { key, weight }) => sum + skills[key] * weight, 0);
+  return { skills, ppv, pct: (ppv / 5) * 100, count: rated.length };
+}

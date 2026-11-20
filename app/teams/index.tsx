@@ -51,7 +51,14 @@ import {
 } from "@/src/teams/lineup";
 import { PDF_GOLD, asImageDataUri, firstLogo, imageMime, pdfLogoCandidates } from "@/src/pdfLogo";
 import { balanceMessage } from "@/src/teams/moves";
-import { GOALIE_BAR_COLOR, SKILL_PARTS, goalieBarPct, ratingBarParts, skillsLabel } from "@/src/teams/ratingBar";
+import {
+  GOALIE_BAR_COLOR,
+  SKILL_PARTS,
+  goalieBarPct,
+  ratingBarParts,
+  skillsLabel,
+  teamSkillAverages,
+} from "@/src/teams/ratingBar";
 import { useRatingBarsPref } from "@/src/teams/ratingBarsPref";
 import { colors, font, radius, spacing } from "@/src/theme";
 
@@ -709,6 +716,45 @@ function BarBtn({
   );
 }
 
+/** Under the Team Rating (owner 2026-11-20): the team's average rating as a
+ *  bar (with its percentage of a perfect 5) and the four skill averages.
+ *  Averages, not totals: the teams can differ in size. */
+function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar: boolean }) {
+  const team = teamSkillAverages(players);
+  if (!team) return null;
+  return (
+    <View
+      style={styles.teamSkills}
+      accessible
+      accessibilityLabel={`Team average ${team.ppv.toFixed(2)}, ${Math.round(team.pct)} percent. ${skillsLabel(team.skills)}`}
+    >
+      {showBar ? (
+        <View style={styles.teamBar}>
+          <View style={styles.barBack} pointerEvents="none">
+            {ratingBarParts(team.skills).map((part, i) => (
+              <View
+                key={part.key}
+                style={[{ width: `${part.pct}%`, backgroundColor: part.color }, i < 3 && styles.barGap]}
+              />
+            ))}
+          </View>
+          <Text style={[styles.teamBarText, styles.overBar]}>
+            Avg {team.ppv.toFixed(2)} · {Math.round(team.pct)}%
+          </Text>
+        </View>
+      ) : null}
+      <View style={styles.teamSkillRow}>
+        {SKILL_PARTS.map((s) => (
+          <View key={s.key} style={styles.teamSkillItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
+            <Text style={styles.teamSkillValue}>{team.skills[s.key].toFixed(1)}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function TeamCol({
   name,
   players,
@@ -742,6 +788,7 @@ function TeamCol({
     <View style={[styles.col, name === "Gold" ? styles.colGold : styles.colBlack]}>
       <Text style={[styles.colHead, name === "Gold" && { color: colors.gold }]}>{name} Team</Text>
       <Text style={styles.colTotal}>Team Rating: {total.toFixed(2)}</Text>
+      <TeamSkills players={players} showBar={showBars} />
 
       {goalie ? (
         <View style={styles.pRow}>
@@ -1010,6 +1057,12 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   legendSwatch: { width: 12, height: 10, borderRadius: 2 },
   legendText: { color: colors.textMuted, fontSize: font.xs },
+  teamSkills: { marginTop: spacing.xs, marginBottom: spacing.xs, gap: 4 },
+  teamBar: { minHeight: 20, justifyContent: "center", paddingHorizontal: 4 },
+  teamBarText: { color: colors.text, fontSize: 11, fontWeight: "600" },
+  teamSkillRow: { flexDirection: "row", justifyContent: "space-between" },
+  teamSkillItem: { flexDirection: "row", alignItems: "center", gap: 3 },
+  teamSkillValue: { color: colors.textMuted, fontSize: 11, fontVariant: ["tabular-nums"] },
   legendToggle: { color: colors.text, fontSize: font.xs, fontWeight: "600" },
   legendSwitch: { transform: [{ scale: 0.65 }] },
   pName: { color: colors.text, fontSize: font.xs },
