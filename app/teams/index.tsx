@@ -721,7 +721,8 @@ function BarBtn({
  *  bar, and what share of it each skill makes up. Averages, not totals: the teams can differ in size. */
 function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar: boolean }) {
   const team = teamSkillAverages(players);
-  if (!team) return null;
+  // The Rating bars switch hides the whole team summary (owner 2026-11-20).
+  if (!team || !showBar) return null;
   // What share of the team's rating each skill makes up (owner 2026-11-20).
   const shares = skillShares(team.skills);
   return (
@@ -730,21 +731,19 @@ function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar
       accessible
       accessibilityLabel={`Team average ${team.ppv.toFixed(2)}. ${SKILL_PARTS.map((s) => `${s.label} ${shares[s.key]} percent`).join(", ")}`}
     >
-      {showBar ? (
-        <View style={styles.teamBar}>
-          <View style={styles.barBack} pointerEvents="none">
-            {ratingBarParts(team.skills).map((part, i) => (
-              <View
-                key={part.key}
-                style={[{ width: `${part.pct}%`, backgroundColor: part.color }, i < 3 && styles.barGap]}
-              />
-            ))}
-          </View>
-          <Text style={[styles.teamBarText, styles.overBar]}>
-            Avg {team.ppv.toFixed(2)}
-          </Text>
+      <View style={styles.teamBar}>
+        <View style={styles.barBack} pointerEvents="none">
+          {ratingBarParts(team.skills).map((part, i) => (
+            <View
+              key={part.key}
+              style={[{ width: `${part.pct}%`, backgroundColor: part.color }, i < 3 && styles.barGap]}
+            />
+          ))}
         </View>
-      ) : null}
+        <Text style={[styles.teamBarText, styles.overBar]}>
+          Avg {team.ppv.toFixed(2)}
+        </Text>
+      </View>
       <View style={styles.teamSkillRow}>
         {SKILL_PARTS.map((s) => (
           <View key={s.key} style={styles.teamSkillItem}>
