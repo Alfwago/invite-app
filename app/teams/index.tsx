@@ -795,8 +795,9 @@ function TeamCol({
       {/* Skater count, and +N on the bigger team (owner 2026-11-20): the
           average treats both teams as the same size, so say when they aren't.
           Shown with Rating bars off too. */}
+      <Text style={styles.colTotal}>Team Rating: {total.toFixed(2)}</Text>
       <Text style={styles.colTotal}>
-        Team Rating: {total.toFixed(2)} · {players.length} skater{players.length === 1 ? "" : "s"}
+        {players.length} skater{players.length === 1 ? "" : "s"}
         {players.length > otherCount ? (
           <Text style={styles.extraSkaters} accessibilityLabel={`${players.length - otherCount} more than the other team`}>
             {" "}+{players.length - otherCount}
