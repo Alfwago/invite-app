@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { goalieBarPct, healthBarParts, ratingBarParts, skillShares, skillsLabel, teamHealth, teamSkillAverages } from "./ratingBar.ts";
+import { goalieBarPct, healthBarParts, ratingBarParts, skillShares, skillsLabel, teamHealth, teamSkillAverages, teamSkillPoints } from "./ratingBar.ts";
 
 test("the slices add up to the rating out of 5", () => {
   const skills = { hockey_sense: 4, skating: 3, defense: 5, offense: 2 };
@@ -71,4 +71,19 @@ test("team health: balanced, heavy, light", () => {
 test("health bar slices are equal-weight shares", () => {
   const parts = healthBarParts({ hockey_sense: 2, skating: 2, defense: 2, offense: 2 });
   assert.deepEqual(parts.map((p) => p.pct), [25, 25, 25, 25]);
+});
+
+test("rating points per skill add up to the skaters' rating", () => {
+  const players = [
+    { skills: { hockey_sense: 4, skating: 3, defense: 5, offense: 2 } }, // 1.6 .75 1.0 .3 = 3.65
+    { skills: { hockey_sense: 3, skating: 3, defense: 3, offense: 3 } }, // 1.2 .75 .6 .45 = 3.0
+    { skills: undefined },
+  ];
+  const pts = teamSkillPoints(players);
+  const close = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} vs ${b}`);
+  close(pts.hockey_sense, 2.8);
+  close(pts.skating, 1.5);
+  close(pts.defense, 1.6);
+  close(pts.offense, 0.75);
+  close(pts.total, 6.65);
 });

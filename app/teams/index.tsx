@@ -60,6 +60,7 @@ import {
   skillsLabel,
   teamHealth,
   teamSkillAverages,
+  teamSkillPoints,
 } from "@/src/teams/ratingBar";
 import { useRatingBarsPref } from "@/src/teams/ratingBarsPref";
 import { colors, font, radius, spacing } from "@/src/theme";
@@ -719,9 +720,10 @@ function BarBtn({
   );
 }
 
-/** Under the Team Rating (owner 2026-11-20): team health. A full-width bar
+/** Under the Team Rating (owner 2026-11-20): team health — a full-width bar
  *  split by each skill's equal-weight share (~25% each when well-rounded),
- *  labelled Balanced / Heavy on … / Light on …, with the four shares. Averages, not totals: the teams can differ in size. */
+ *  labelled Balanced / Heavy on … / Light on … — then the Team Rating points
+ *  each skill adds (score x weight, summed over the skaters). Averages, not totals: the teams can differ in size. */
 function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar: boolean }) {
   const team = teamSkillAverages(players);
   // The Rating bars switch hides the whole team summary (owner 2026-11-20).
@@ -729,12 +731,13 @@ function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar
   // Team health (owner 2026-11-20): each skill's equal-weight share, and
   // whether the team is heavy or light on one.
   const health = teamHealth(team.skills);
-  const shares = health.shares;
+  // Under the bar: the Team Rating points each skill adds (owner 2026-11-20).
+  const points = teamSkillPoints(players);
   return (
     <View
       style={styles.teamSkills}
       accessible
-      accessibilityLabel={`${health.label}. ${SKILL_PARTS.map((s) => `${s.label} ${shares[s.key]} percent`).join(", ")}`}
+      accessibilityLabel={`${health.label}. Rating points: ${SKILL_PARTS.map((s) => `${s.label} ${points[s.key].toFixed(1)}`).join(", ")}, ${points.total.toFixed(1)} from skaters`}
     >
       <View style={styles.teamBar}>
         <View style={styles.barBack} pointerEvents="none">
@@ -753,7 +756,7 @@ function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar
         {SKILL_PARTS.map((s) => (
           <View key={s.key} style={styles.teamSkillItem}>
             <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
-            <Text style={styles.teamSkillValue}>{shares[s.key]}%</Text>
+            <Text style={styles.teamSkillValue}>{points[s.key].toFixed(1)}</Text>
           </View>
         ))}
       </View>

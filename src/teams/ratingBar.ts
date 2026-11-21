@@ -128,3 +128,19 @@ export function healthBarParts(skills: Skills): { key: SkillKey; pct: number; co
   const total = SKILL_PARTS.reduce((sum, { key }) => sum + clamp(skills[key], 5), 0);
   return SKILL_PARTS.map(({ key, color }) => ({ key, color, pct: total > 0 ? (clamp(skills[key], 5) / total) * 100 : 0 }));
 }
+
+/** How many Team Rating points each skill adds (owner 2026-11-20): each
+ *  skater's score x the skill's weight, added up. The four sum to the
+ *  skaters' part of Team Rating (the goalie slot adds the rest). */
+export function teamSkillPoints(players: { skills?: Skills | null }[]): Record<SkillKey, number> & { total: number } {
+  const out = { hockey_sense: 0, skating: 0, defense: 0, offense: 0, total: 0 };
+  for (const p of players) {
+    if (!p.skills) continue;
+    for (const { key, weight } of SKILL_PARTS) {
+      const v = clamp(p.skills[key], 5) * weight;
+      out[key] += v;
+      out.total += v;
+    }
+  }
+  return out;
+}
