@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { goalieBarPct, ratingBarParts, skillShares, skillsLabel, teamSkillAverages } from "./ratingBar.ts";
+import { goalieBarPct, healthBarParts, ratingBarParts, skillShares, skillsLabel, teamHealth, teamSkillAverages } from "./ratingBar.ts";
 
 test("the slices add up to the rating out of 5", () => {
   const skills = { hockey_sense: 4, skating: 3, defense: 5, offense: 2 };
@@ -52,4 +52,23 @@ test("skill shares are whole percents of the rating that add to 100", () => {
   assert.equal(Object.values(odd).reduce((a, b) => a + b, 0), 100);
   assert.deepEqual(skillShares({ hockey_sense: 0, skating: 0, defense: 0, offense: 0 }),
     { hockey_sense: 0, skating: 0, defense: 0, offense: 0 });
+});
+
+test("team health: balanced, heavy, light", () => {
+  const even = teamHealth({ hockey_sense: 3, skating: 3.2, defense: 2.9, offense: 3.1 });
+  assert.equal(even.label, "Balanced");
+  assert.equal(Object.values(even.shares).reduce((a, b) => a + b, 0), 100);
+  // Snipers: offense 4.5, defense 2 of 13.5 → 33% / 15%
+  const snipers = teamHealth({ hockey_sense: 3.5, skating: 3.5, defense: 2, offense: 4.5 });
+  assert.equal(snipers.heavy, "offense");
+  assert.equal(snipers.light, "defense");
+  assert.equal(snipers.label, "Heavy on Offense · Light on Defense");
+  const slow = teamHealth({ hockey_sense: 3.5, skating: 2.3, defense: 3.4, offense: 3.4 }); // 18.5% skating
+  assert.equal(slow.label, "Light on Skating");
+  assert.equal(teamHealth({ hockey_sense: 0, skating: 0, defense: 0, offense: 0 }).label, "");
+});
+
+test("health bar slices are equal-weight shares", () => {
+  const parts = healthBarParts({ hockey_sense: 2, skating: 2, defense: 2, offense: 2 });
+  assert.deepEqual(parts.map((p) => p.pct), [25, 25, 25, 25]);
 });

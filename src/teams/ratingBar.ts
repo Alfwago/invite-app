@@ -82,3 +82,49 @@ export function skillShares(skills: Skills): Record<SkillKey, number> {
   }
   return out;
 }
+
+/** Team health (owner 2026-11-20): is the team well-rounded, or heavy or
+ *  light on one skill? Each skill counts the same here (not the PPV
+ *  weights), so a well-rounded team splits ~25/25/25/25. A share at least
+ *  HEALTH_MARGIN points over 25 is "heavy", that far under is "light". */
+export const HEALTH_MARGIN = 4;
+
+const SHORT: Record<SkillKey, string> = {
+  hockey_sense: "Hockey Sense",
+  skating: "Skating",
+  defense: "Defense",
+  offense: "Offense",
+};
+
+export function teamHealth(skills: Skills): {
+  shares: Record<SkillKey, number>;
+  heavy: SkillKey | null;
+  light: SkillKey | null;
+  label: string;
+} {
+  const raw = SKILL_PARTS.map(({ key }) => ({ key, value: clamp(skills[key], 5) }));
+  const total = raw.reduce((sum, r) => sum + r.value, 0);
+  const shares = { hockey_sense: 0, skating: 0, defense: 0, offense: 0 } as Record<SkillKey, number>;
+  if (total <= 0) return { shares, heavy: null, light: null, label: "" };
+  const exact = raw.map((r) => ({ key: r.key, pct: (r.value / total) * 100 }));
+  for (const e of exact) shares[e.key] = Math.floor(e.pct);
+  let left = 100 - exact.reduce((sum, e) => sum + Math.floor(e.pct), 0);
+  for (const e of [...exact].sort((a, b) => (b.pct % 1) - (a.pct % 1))) {
+    if (left <= 0) break;
+    shares[e.key] += 1;
+    left -= 1;
+  }
+  // Judge on the exact shares so rounding never flips the verdict.
+  const top = exact.reduce((a, b) => (b.pct > a.pct ? b : a));
+  const low = exact.reduce((a, b) => (b.pct < a.pct ? b : a));
+  const heavy = top.pct >= 25 + HEALTH_MARGIN ? top.key : null;
+  const light = low.pct <= 25 - HEALTH_MARGIN ? low.key : null;
+  const parts = [heavy && `Heavy on ${SHORT[heavy]}`, light && `Light on ${SHORT[light]}`].filter(Boolean);
+  return { shares, heavy, light, label: parts.length ? parts.join(" · ") : "Balanced" };
+}
+
+/** Bar slices for team health: each skill's equal-weight share (0-100). */
+export function healthBarParts(skills: Skills): { key: SkillKey; pct: number; color: string }[] {
+  const total = SKILL_PARTS.reduce((sum, { key }) => sum + clamp(skills[key], 5), 0);
+  return SKILL_PARTS.map(({ key, color }) => ({ key, color, pct: total > 0 ? (clamp(skills[key], 5) / total) * 100 : 0 }));
+}

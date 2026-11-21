@@ -55,9 +55,10 @@ import {
   GOALIE_BAR_COLOR,
   SKILL_PARTS,
   goalieBarPct,
+  healthBarParts,
   ratingBarParts,
-  skillShares,
   skillsLabel,
+  teamHealth,
   teamSkillAverages,
 } from "@/src/teams/ratingBar";
 import { useRatingBarsPref } from "@/src/teams/ratingBarsPref";
@@ -718,31 +719,34 @@ function BarBtn({
   );
 }
 
-/** Under the Team Rating (owner 2026-11-20): the team's average rating as a
- *  bar, and what share of it each skill makes up. Averages, not totals: the teams can differ in size. */
+/** Under the Team Rating (owner 2026-11-20): team health. A full-width bar
+ *  split by each skill's equal-weight share (~25% each when well-rounded),
+ *  labelled Balanced / Heavy on … / Light on …, with the four shares. Averages, not totals: the teams can differ in size. */
 function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar: boolean }) {
   const team = teamSkillAverages(players);
   // The Rating bars switch hides the whole team summary (owner 2026-11-20).
   if (!team || !showBar) return null;
-  // What share of the team's rating each skill makes up (owner 2026-11-20).
-  const shares = skillShares(team.skills);
+  // Team health (owner 2026-11-20): each skill's equal-weight share, and
+  // whether the team is heavy or light on one.
+  const health = teamHealth(team.skills);
+  const shares = health.shares;
   return (
     <View
       style={styles.teamSkills}
       accessible
-      accessibilityLabel={`Team average ${team.ppv.toFixed(2)}. ${SKILL_PARTS.map((s) => `${s.label} ${shares[s.key]} percent`).join(", ")}`}
+      accessibilityLabel={`${health.label}. ${SKILL_PARTS.map((s) => `${s.label} ${shares[s.key]} percent`).join(", ")}`}
     >
       <View style={styles.teamBar}>
         <View style={styles.barBack} pointerEvents="none">
-          {ratingBarParts(team.skills).map((part, i) => (
+          {healthBarParts(team.skills).map((part, i) => (
             <View
               key={part.key}
               style={[{ width: `${part.pct}%`, backgroundColor: part.color }, i < 3 && styles.barGap]}
             />
           ))}
         </View>
-        <Text style={[styles.teamBarText, styles.overBar]}>
-          Avg {team.ppv.toFixed(2)}
+        <Text style={[styles.teamBarText, styles.overBar]} numberOfLines={2}>
+          {health.label}
         </Text>
       </View>
       <View style={styles.teamSkillRow}>
