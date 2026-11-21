@@ -144,3 +144,34 @@ export function teamSkillPoints(players: { skills?: Skills | null }[]): Record<S
   }
   return out;
 }
+
+/** The matchup (owner 2026-11-20): is this a fair game? Team Ratings within
+ *  EVEN_MARGIN points read "Even"; otherwise the gap, from this team's side. */
+export const EVEN_MARGIN = 2;
+
+export function matchup(
+  mine: number,
+  other: number,
+): { label: string; tone: "even" | "stronger" | "weaker"; gap: number } {
+  const gap = Math.abs(mine - other);
+  if (gap < EVEN_MARGIN) return { label: "Even", tone: "even", gap };
+  return mine > other
+    ? { label: `Stronger by ${gap.toFixed(1)}`, tone: "stronger", gap }
+    : { label: `Weaker by ${gap.toFixed(1)}`, tone: "weaker", gap };
+}
+
+/** ▲ / ▼ per skill against the other team's rating points; within
+ *  EDGE_MARGIN points it's a wash (no arrow). */
+export const EDGE_MARGIN = 0.5;
+
+export function skillEdges(
+  mine: Record<SkillKey, number>,
+  other: Record<SkillKey, number>,
+): Record<SkillKey, "up" | "down" | null> {
+  const out = { hockey_sense: null, skating: null, defense: null, offense: null } as Record<SkillKey, "up" | "down" | null>;
+  for (const { key } of SKILL_PARTS) {
+    const d = mine[key] - other[key];
+    out[key] = d >= EDGE_MARGIN ? "up" : d <= -EDGE_MARGIN ? "down" : null;
+  }
+  return out;
+}

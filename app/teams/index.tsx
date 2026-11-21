@@ -56,7 +56,9 @@ import {
   SKILL_PARTS,
   goalieBarPct,
   healthBarParts,
+  matchup,
   ratingBarParts,
+  skillEdges,
   skillsLabel,
   teamHealth,
   teamSkillAverages,
@@ -598,6 +600,8 @@ export default function TeamGeneratorScreen() {
                       name={team}
                       players={teamRows(lineup, team)}
                       otherCount={teamRows(lineup, team === "Gold" ? "Black" : "Gold").length}
+                      otherPlayers={teamRows(lineup, team === "Gold" ? "Black" : "Gold")}
+                      otherTotal={team === "Gold" ? lineup.black_total : lineup.gold_total}
                       goalie={team === "Gold" ? lineup.gold_goalie : lineup.black_goalie}
                       total={team === "Gold" ? lineup.gold_total : lineup.black_total}
                       pick={pick}
@@ -720,26 +724,41 @@ function BarBtn({
   );
 }
 
-/** Under the Team Rating (owner 2026-11-20): team health — a full-width bar
- *  split by each skill's equal-weight share (~25% each when well-rounded),
- *  labelled Balanced / Heavy on … / Light on … — then the Team Rating points
- *  each skill adds (score x weight, summed over the skaters). Averages, not totals: the teams can differ in size. */
-function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar: boolean }) {
+/** Under the Team Rating (owner 2026-11-20). The bar's label is the
+ *  matchup: "Even" when the Team Ratings are within 2 points, otherwise
+ *  "Stronger / Weaker by N" with an amber outline. Below it, the Team Rating
+ *  points each skill adds, ▲/▼ against the other team, and — only when it
+ *  fires — whether this team is heavy or light on one skill. */
+function TeamSkills({
+  players,
+  showBar,
+  total,
+  otherPlayers,
+  otherTotal,
+}: {
+  players: TeamLineupPlayer[];
+  showBar: boolean;
+  total: number;
+  otherPlayers: TeamLineupPlayer[];
+  otherTotal: number;
+}) {
   const team = teamSkillAverages(players);
-  // The Rating bars switch hides the whole team summary (owner 2026-11-20).
+  // The Rating bars switch hides the whole team summary.
   if (!team || !showBar) return null;
-  // Team health (owner 2026-11-20): each skill's equal-weight share, and
-  // whether the team is heavy or light on one.
+  const game = matchup(total, otherTotal);
   const health = teamHealth(team.skills);
-  // Under the bar: the Team Rating points each skill adds (owner 2026-11-20).
   const points = teamSkillPoints(players);
+  const edges = skillEdges(points, teamSkillPoints(otherPlayers));
   return (
     <View
       style={styles.teamSkills}
       accessible
-      accessibilityLabel={`${health.label}. Rating points: ${SKILL_PARTS.map((s) => `${s.label} ${points[s.key].toFixed(1)}`).join(", ")}, ${points.total.toFixed(1)} from skaters`}
+      accessibilityLabel={`${game.label}. Rating points: ${SKILL_PARTS.map(
+        (s) =>
+          `${s.label} ${points[s.key].toFixed(1)}${edges[s.key] === "up" ? ", ahead" : edges[s.key] === "down" ? ", behind" : ""}`,
+      ).join("; ")}.${health.label !== "Balanced" ? ` ${health.label}.` : ""}`}
     >
-      <View style={styles.teamBar}>
+      <View style={[styles.teamBar, game.tone !== "even" && styles.teamBarUneven]}>
         <View style={styles.barBack} pointerEvents="none">
           {healthBarParts(team.skills).map((part, i) => (
             <View
@@ -748,18 +767,26 @@ function TeamSkills({ players, showBar }: { players: TeamLineupPlayer[]; showBar
             />
           ))}
         </View>
-        <Text style={[styles.teamBarText, styles.overBar]} numberOfLines={2}>
-          {health.label}
+        <Text style={[styles.teamBarText, styles.overBar]} numberOfLines={1}>
+          {game.label}
         </Text>
       </View>
       <View style={styles.teamSkillRow}>
         {SKILL_PARTS.map((s) => (
           <View key={s.key} style={styles.teamSkillItem}>
             <View style={[styles.legendSwatch, { backgroundColor: s.swatch }]} />
-            <Text style={styles.teamSkillValue}>{points[s.key].toFixed(1)}</Text>
+            <Text style={styles.teamSkillValue}>
+              {points[s.key].toFixed(1)}
+              {edges[s.key] ? (
+                <Text style={edges[s.key] === "up" ? styles.edgeUp : styles.edgeDown}>
+                  {edges[s.key] === "up" ? "▲" : "▼"}
+                </Text>
+              ) : null}
+            </Text>
           </View>
         ))}
       </View>
+      {health.label !== "Balanced" ? <Text style={styles.mixNote}>{health.label}</Text> : null}
     </View>
   );
 }
@@ -778,10 +805,15 @@ function TeamCol({
   onPick,
   showBars = true,
   otherCount,
+  otherPlayers,
+  otherTotal,
 }: {
   name: Team;
   /** Skaters on the other team, for the "+1" flag (owner 2026-11-20). */
   otherCount: number;
+  /** The other team, for the matchup label and ▲/▼ (owner 2026-11-20). */
+  otherPlayers: TeamLineupPlayer[];
+  otherTotal: number;
   /** The "Rating bars" switch (this phone). */
   showBars?: boolean;
   /** Roster order, skating goalies first (lineup.teamRows). */
@@ -811,7 +843,13 @@ function TeamCol({
           </Text>
         ) : null}
       </Text>
-      <TeamSkills players={players} showBar={showBars} />
+      <TeamSkills
+        players={players}
+        showBar={showBars}
+        total={total}
+        otherPlayers={otherPlayers}
+        otherTotal={otherTotal}
+      />
 
       {goalie ? (
         <View style={styles.pRow}>
@@ -1082,7 +1120,12 @@ const styles = StyleSheet.create({
   legendText: { color: colors.textMuted, fontSize: font.xs },
   extraSkaters: { color: colors.gold, fontWeight: "700" },
   teamSkills: { marginTop: spacing.xs, marginBottom: spacing.xs, gap: 4 },
-  teamBar: { minHeight: 20, justifyContent: "center", paddingHorizontal: 4 },
+  teamBar: { minHeight: 20, justifyContent: "center", paddingHorizontal: 4, borderRadius: 4 },
+  // Not an even game: an amber outline round the bar.
+  teamBarUneven: { borderWidth: 1.5, borderColor: colors.amber },
+  edgeUp: { color: colors.green, fontSize: 9 },
+  edgeDown: { color: colors.amber, fontSize: 9 },
+  mixNote: { color: colors.textMuted, fontSize: 11, fontStyle: "italic" },
   teamBarText: { color: colors.text, fontSize: 11, fontWeight: "600" },
   teamSkillRow: { flexDirection: "row", justifyContent: "space-between" },
   teamSkillItem: { flexDirection: "row", alignItems: "center", gap: 3 },

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { goalieBarPct, healthBarParts, ratingBarParts, skillShares, skillsLabel, teamHealth, teamSkillAverages, teamSkillPoints } from "./ratingBar.ts";
+import { goalieBarPct, healthBarParts, ratingBarParts, skillShares, skillsLabel, matchup, skillEdges, teamHealth, teamSkillAverages, teamSkillPoints } from "./ratingBar.ts";
 
 test("the slices add up to the rating out of 5", () => {
   const skills = { hockey_sense: 4, skating: 3, defense: 5, offense: 2 };
@@ -86,4 +86,19 @@ test("rating points per skill add up to the skaters' rating", () => {
   close(pts.defense, 1.6);
   close(pts.offense, 0.75);
   close(pts.total, 6.65);
+});
+
+test("matchup: even within 2 points, else stronger / weaker by the gap", () => {
+  assert.deepEqual(matchup(34.76, 34.39).label, "Even");
+  assert.equal(matchup(41.27, 27.88).label, "Stronger by 13.4");
+  assert.equal(matchup(27.88, 41.27).label, "Weaker by 13.4");
+  assert.equal(matchup(27.88, 41.27).tone, "weaker");
+  assert.equal(matchup(30, 32).label, "Weaker by 2.0"); // 2 is not even
+});
+
+test("skill edges: arrows only past half a point", () => {
+  const gold = { hockey_sense: 16.8, skating: 8.9, defense: 6.8, offense: 6.0 };
+  const black = { hockey_sense: 9.6, skating: 7.2, defense: 6.6, offense: 3.5 };
+  assert.deepEqual(skillEdges(gold, black), { hockey_sense: "up", skating: "up", defense: null, offense: "up" });
+  assert.deepEqual(skillEdges(black, gold), { hockey_sense: "down", skating: "down", defense: null, offense: "down" });
 });
