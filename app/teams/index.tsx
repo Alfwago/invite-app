@@ -562,14 +562,14 @@ export default function TeamGeneratorScreen() {
                 {lineup.players.some((p) => p.skills) ? (
                   <View style={styles.legendBlock}>
                     <View style={styles.legendToggleRow}>
-                      <Text style={styles.legendToggle}>Rating bars</Text>
+                      <Text style={styles.legendToggle}>Team breakdown</Text>
                       <Switch
                         value={ratingBars}
                         onValueChange={setRatingBars}
                         trackColor={{ true: colors.gold, false: colors.border }}
                         thumbColor="#fff"
                         style={styles.legendSwitch}
-                        accessibilityLabel="Rating bars"
+                        accessibilityLabel="Team breakdown"
                       />
                     </View>
                     {ratingBars ? (
@@ -739,7 +739,7 @@ function TeamSkills({
   otherTotal: number;
 }) {
   const team = teamSkillAverages(players);
-  // The Rating bars switch hides the whole team summary.
+  // The Team breakdown switch hides the whole team summary.
   if (!team || !showBar) return null;
   const game = matchup(total, otherTotal);
   const health = teamHealth(team.skills);
@@ -810,7 +810,7 @@ function TeamCol({
   /** The other team, for the matchup label and ▲/▼ (owner 2026-11-20). */
   otherPlayers: TeamLineupPlayer[];
   otherTotal: number;
-  /** The "Rating bars" switch (this phone). */
+  /** The "Team breakdown" switch (this phone). */
   showBars?: boolean;
   /** Roster order, skating goalies first (lineup.teamRows). */
   players: TeamLineupPlayer[];
@@ -829,7 +829,7 @@ function TeamCol({
       <Text style={[styles.colHead, name === "Gold" && { color: colors.gold }]}>{name} Team</Text>
       {/* Skater count, and +N on the bigger team (owner 2026-11-20): the
           average treats both teams as the same size, so say when they aren't.
-          Shown with Rating bars off too. */}
+          Shown with Team breakdown off too. */}
       <Text style={styles.colTotal}>Team Rating: {total.toFixed(2)}</Text>
       <Text style={styles.colTotal}>
         {players.length} skater{players.length === 1 ? "" : "s"}
@@ -1091,7 +1091,7 @@ const styles = StyleSheet.create({
   // A thin dark line between the four parts.
   barGap: { borderRightWidth: 2, borderRightColor: "rgba(0,0,0,0.85)" },
   overBar: { textShadowColor: "rgba(0,0,0,0.9)", textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
-  // "Rating bars" switch on its own line, the colour key just under it.
+  // "Team breakdown" switch on its own line, the colour key just under it.
   legendBlock: { marginBottom: spacing.sm, gap: 2 },
   legendToggleRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },

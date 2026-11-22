@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import * as SecureStore from "expo-secure-store";
 
-// "Rating bars" on the Team Generator (owner 2026-11-19): on unless turned
+// "Team breakdown" on the Team Generator (owner 2026-11-19): on unless turned
 // off, remembered on this phone. Same idea as the "Vibration on tap" setting.
 
 const KEY = "obh.teams.ratingBars";
