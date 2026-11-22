@@ -52,14 +52,10 @@ import {
 import { PDF_GOLD, asImageDataUri, firstLogo, imageMime, pdfLogoCandidates } from "@/src/pdfLogo";
 import { balanceMessage } from "@/src/teams/moves";
 import {
-  GOALIE_BAR_COLOR,
   SKILL_PARTS,
-  goalieBarPct,
   healthBarParts,
   matchup,
-  ratingBarParts,
   skillEdges,
-  skillsLabel,
   teamHealth,
   teamSkillAverages,
   teamSkillPoints,
@@ -854,12 +850,7 @@ function TeamCol({
       {goalie ? (
         <View style={styles.pRow}>
           <View style={styles.pTapArea}>
-            {showBars ? (
-              <View style={styles.barBack} pointerEvents="none">
-                <View style={{ width: `${goalieBarPct(goalie.rating)}%`, backgroundColor: GOALIE_BAR_COLOR }} />
-              </View>
-            ) : null}
-            <Text style={[styles.pName, styles.overBar]} numberOfLines={1}>
+            <Text style={styles.pName} numberOfLines={1}>
               {goalie.name} <Text style={styles.gBadge}>G</Text>
               {goalie.pending ? <Text style={styles.pendingTag}> ?</Text> : null}
             </Text>
@@ -882,19 +873,8 @@ function TeamCol({
               feedback="row"
               style={styles.pTapArea}
               onPress={() => (pick ? onPick(k) : onMove(k))}
-              accessibilityHint={showBars && p.skills ? skillsLabel(p.skills) : undefined}
             >
-              {showBars && p.skills ? (
-                <View style={styles.barBack} pointerEvents="none">
-                  {ratingBarParts(p.skills).map((part, i) => (
-                    <View
-                      key={part.key}
-                      style={[{ width: `${part.pct}%`, backgroundColor: part.color }, i < 3 && styles.barGap]}
-                    />
-                  ))}
-                </View>
-              ) : null}
-              <Text style={[styles.pName, styles.overBar]} numberOfLines={1}>
+              <Text style={styles.pName} numberOfLines={1}>
                 {p.name}
                 {p.is_goalie ? <Text style={styles.gBadge}> G</Text> : null}
                 {paired ? " 🔗" : ""}
